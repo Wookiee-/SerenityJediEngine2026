@@ -9910,11 +9910,11 @@ static void JediHandleSpacing(gentity_t* self)
 // =====================
 // Counterattack Handler
 // =====================
-#define AIFLAG_COUNTERATTACK   (1 << 20)
-#define AIFLAG_HEAVYCOUNTER    (1 << 21)
-#define AIFLAG_RIPOSTE         (1 << 22)
-#define AIFLAG_FORCECOUNTER    (1 << 23)
-#define AIFLAG_SPINCOUNTER     (1 << 24)
+constexpr auto AIFLAG_COUNTERATTACK = (1 << 20);
+constexpr auto AIFLAG_HEAVYCOUNTER = (1 << 21);
+constexpr auto AIFLAG_RIPOSTE = (1 << 22);
+constexpr auto AIFLAG_FORCECOUNTER = (1 << 23);
+constexpr auto AIFLAG_SPINCOUNTER = (1 << 24);
 
 // =====================
 // Counterattack Handler
@@ -10951,10 +10951,10 @@ static void Jedi_Attack()
 	// =====================
 
 	// If NAV is not moving us but ucmds are, set movement speed manually
-	if (VectorCompare(NPC->client->ps.moveDir, vec3_origin) &&
-		(ucmd.forwardmove || ucmd.rightmove))
+	if (VectorCompare(NPC->client->ps.moveDir, vec3_origin) == qtrue &&
+		(ucmd.forwardmove != 0 || ucmd.rightmove != 0))
 	{
-		if (ucmd.buttons & BUTTON_WALKING)
+		if ((ucmd.buttons & BUTTON_WALKING) != 0)
 		{
 			NPC->client->ps.speed = NPCInfo->stats.walkSpeed;
 		}

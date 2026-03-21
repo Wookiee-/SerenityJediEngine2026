@@ -2458,9 +2458,9 @@ void ForceSpeed(gentity_t* self, const int forceDuration)
 	G_PlayBoltedEffect(G_EffectIndex("misc/breath.efx"), self, "*head_front");
 }
 
-static void ForceDashAnim(gentity_t* self)
+static void ForceHopAnim(gentity_t* self)
 {
-	const int setAnimOverride = SETANIM_AFLAG_PACE;
+	const int setAnimOverride = SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD;
 
 	if (self->client->pers.cmd.rightmove > 0)
 	{
@@ -2482,7 +2482,7 @@ static void ForceDashAnim(gentity_t* self)
 
 void ForceDashAnimDash(gentity_t* self)
 {
-	const int setAnimOverride = SETANIM_AFLAG_PACE;
+	const int setAnimOverride = SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD;
 
 	if (self->client->pers.cmd.rightmove > 0)
 	{
@@ -2575,7 +2575,7 @@ static void ForceSpeedDash(gentity_t* self)
 	{
 		if (PM_RunningAnim(self->client->ps.legsAnim))
 		{
-			ForceDashAnim(self);
+			ForceHopAnim(self);
 			WP_ForcePowerStop(self, FP_SPEED);
 		}
 		else
@@ -2953,13 +2953,12 @@ void ForceLightning(gentity_t* self)
 
 	if (self->client->ps.fd.forcePowerLevel[FP_LIGHTNING] < FORCE_LEVEL_2)
 	{
-		//short burst
-		//G_SoundOnEnt(self, CHAN_BODY, "sound/weapons/force/lightning3.mp3");
+		G_Sound(self, CHAN_BODY, G_SoundIndex("sound/weapons/force/lightning3.wav"));
 	}
 	else
 	{
 		//holding it
-		self->s.loopSound = G_SoundIndex("sound/weapons/force/lightning.mp3");
+		G_Sound(self, CHAN_BODY, G_SoundIndex("sound/weapons/force/lightning2.wav"));
 	}
 
 	WP_ForcePowerStart(self, FP_LIGHTNING, 500);
@@ -3152,11 +3151,27 @@ static void force_lightning_damage(gentity_t* self, gentity_t* traceEnt, vec3_t 
 					|| self->client->ps.torsoAnim == BOTH_FORCE_2HANDEDLIGHTNING_HOLD
 					|| self->client->ps.torsoAnim == BOTH_FORCE_2HANDEDLIGHTNING_RELEASE)
 				{
-					dmg *= 2;
+					if (self->client->pers.botclass == BCLASS_FORCE_DARK_NO_SABER
+						|| self->client->pers.botclass == BCLASS_FORCE_LIGHT_NO_SABER)
+					{
+						dmg = Q_irand(1, 2);
+					}
+					else
+					{
+						dmg *= 2;
+					}
 				}
 				else
 				{
-					dmg = Q_irand(1, 3);
+					if (self->client->pers.botclass == BCLASS_FORCE_DARK_NO_SABER
+						|| self->client->pers.botclass == BCLASS_FORCE_LIGHT_NO_SABER)
+					{
+						dmg = Q_irand(1, 2);
+					}
+					else
+					{
+						dmg = Q_irand(1, 3);
+					}
 				}
 				const qboolean saber_lightning_blocked = saber_block_lightning(self, traceEnt);
 				const qboolean hand_lightning_blocked = melee_block_lightning(self, traceEnt);
@@ -8342,6 +8357,7 @@ static qboolean G_SpecialRollGetup(gentity_t* self)
 extern qboolean PM_SaberInBrokenParry(int move);
 extern qboolean PM_InKnockDown(const playerState_t* ps);
 void Flamethrower_Fire(gentity_t* self);
+extern qboolean Bot_Is_Allowed_to_use_force(gentity_t* ent);
 
 void WP_ForcePowersUpdate(gentity_t* self, usercmd_t* ucmd)
 {
@@ -8356,6 +8372,11 @@ void WP_ForcePowersUpdate(gentity_t* self, usercmd_t* ucmd)
 	}
 
 	if (!self->client)
+	{
+		return;
+	}
+
+	if (self->r.svFlags & SVF_BOT && !Bot_Is_Allowed_to_use_force(self))
 	{
 		return;
 	}
@@ -8927,41 +8948,55 @@ void WP_ForcePowersUpdate(gentity_t* self, usercmd_t* ucmd)
 		&& self->client->ps.weaponTime <= 0
 		&& self->client->ps.groundEntityNum != ENTITYNUM_NONE)
 	{
-		//when not using the force, regenerate at 1 point per half second
+		// regen loop: 1 point per half-second baseline
 		while (self->client->ps.fd.forcePowerRegenDebounceTime < level.time)
 		{
-			if (level.gametype != GT_HOLOCRON || g_maxHolocronCarry.value)
+			int regenAmount = 0;
+			int regenDelay = 0;
+
+			// --- Special gametype: Holocron ---
+			if (level.gametype == GT_HOLOCRON && !g_maxHolocronCarry.value)
 			{
+				int holoregen = 0;
+				for (int i = 0; i < NUM_FORCE_POWERS; i++)
+				{
+					if (self->client->ps.holocronsCarried[i])
+						holoregen++;
+				}
+				regenAmount = holoregen;
+			}
+			else
+			{
+				// --- Normal regen rules ---
 				if (self->client->ps.powerups[PW_FORCE_BOON])
 				{
-					WP_ForcePowerRegenerate(self, 6);
+					regenAmount = 6;
 				}
 				else if (self->client->ps.isJediMaster && level.gametype == GT_JEDIMASTER)
 				{
-					WP_ForcePowerRegenerate(self, 4); //jedi master regenerates 4 times as fast
+					regenAmount = 4;
 				}
 				else if (PM_RestAnim(self->client->ps.legsAnim))
 				{
-					WP_ForcePowerRegenerate(self, 10);
+					regenAmount = 10;
 					BG_ReduceSaberMishapLevel(&self->client->ps);
-					self->client->ps.powerups[PW_MEDITATE] = level.time + self->client->ps.torsoTimer + 3000;
+					self->client->ps.powerups[PW_MEDITATE] =
+						level.time + self->client->ps.torsoTimer + 3000;
 				}
 				else if (PM_CrouchAnim(self->client->ps.legsAnim))
 				{
-					WP_ForcePowerRegenerate(self, 8);
+					regenAmount = 8;
 					BG_ReduceSaberMishapLevel(&self->client->ps);
 				}
 				else if (is_holding_block_button || is_holding_block_button_and_attack)
 				{
-					//regen half as fast
-					self->client->ps.fd.forcePowerRegenDebounceTime += 2000; //1 point per 1 seconds.. super slow
-					WP_ForcePowerRegenerate(self, 1);
+					regenAmount = 1;
+					regenDelay = 2000;
 				}
 				else if (self->client->ps.saberInFlight)
 				{
-					//regen half as fast
-					self->client->ps.fd.forcePowerRegenDebounceTime += 2000; //1 point per 1 seconds.. super slow
-					WP_ForcePowerRegenerate(self, 1);
+					regenAmount = 1;
+					regenDelay = 2000;
 				}
 				else if (PM_SaberInAttack(self->client->ps.saber_move)
 					|| pm_saber_in_special_attack(self->client->ps.torsoAnim)
@@ -8969,65 +9004,78 @@ void WP_ForcePowersUpdate(gentity_t* self, usercmd_t* ucmd)
 					|| PM_SaberInParry(self->client->ps.saber_move)
 					|| PM_SaberInReturn(self->client->ps.saber_move))
 				{
-					//regen half as fast
-					self->client->ps.fd.forcePowerRegenDebounceTime += 4000; //1 point per 1 seconds.. super slow
-					WP_ForcePowerRegenerate(self, 1);
+					regenAmount = 1;
+					regenDelay = 4000;
+				}
+				else if (self->client->pers.botclass == BCLASS_FORCE_DARK_NO_SABER
+					|| self->client->pers.botclass == BCLASS_FORCE_LIGHT_NO_SABER)
+				{
+					regenAmount = 5;
 				}
 				else
 				{
-					WP_ForcePowerRegenerate(self, 0);
+					regenAmount = 0;
 				}
 			}
-			else
+
+			// Apply the regen
+			WP_ForcePowerRegenerate(self, regenAmount);
+
+			// --- Apply regen delay (gametype‑dependent) ---
+			if (regenDelay == 0)
 			{
-				//regenerate based on the number of holocrons carried
-				int holoregen = 0;
-				int holo = 0;
-				while (holo < NUM_FORCE_POWERS)
+				// default regen delay rules
+				if (level.gametype == GT_SIEGE)
 				{
-					if (self->client->ps.holocronsCarried[holo])
-						holoregen++;
-					holo++;
+					if (self->client->holdingObjectiveItem &&
+						g_entities[self->client->holdingObjectiveItem].inuse &&
+						g_entities[self->client->holdingObjectiveItem].genericValue15)
+					{
+						regenDelay = 7000;
+					}
+					else if (self->client->siegeClass != -1 &&
+						(bgSiegeClasses[self->client->siegeClass].classflags & (1 << CFL_FASTFORCEREGEN)))
+					{
+						regenDelay = Q_max(g_forceRegenTime.integer * 0.2f, 1);
+					}
+					else
+					{
+						regenDelay = Q_max(g_forceRegenTime.integer, 1);
+					}
 				}
-
-				WP_ForcePowerRegenerate(self, holoregen);
-			}
-
-			if (level.gametype == GT_SIEGE)
-			{
-				if (self->client->holdingObjectiveItem && g_entities[self->client->holdingObjectiveItem].inuse &&
-					g_entities[self->client->holdingObjectiveItem].genericValue15)
-					self->client->ps.fd.forcePowerRegenDebounceTime += 7000; //1 point per 7 seconds.. super slow
-				else if (self->client->siegeClass != -1 && bgSiegeClasses[self->client->siegeClass].classflags & 1 <<
-					CFL_FASTFORCEREGEN)
-					self->client->ps.fd.forcePowerRegenDebounceTime += Q_max(g_forceRegenTime.integer * 0.2, 1);
-				//if this is siege and our player class has the fast force regen ability, then recharge with 1/5th the usual delay
-				else
-					self->client->ps.fd.forcePowerRegenDebounceTime += Q_max(g_forceRegenTime.integer, 1);
-			}
-			else
-			{
-				if (level.gametype == GT_POWERDUEL && self->client->sess.duelTeam == DUELTEAM_LONE)
+				else if (level.gametype == GT_POWERDUEL &&
+					self->client->sess.duelTeam == DUELTEAM_LONE)
 				{
 					if (duel_fraglimit.integer)
-						self->client->ps.fd.forcePowerRegenDebounceTime += Q_max(
-							g_forceRegenTime.integer * (0.6 + (.3 * (float)self->client->sess.wins / (float)
-								duel_fraglimit.integer)), 1);
+					{
+						float scale = 0.6f + (0.3f * (float)self->client->sess.wins /
+							(float)duel_fraglimit.integer);
+						regenDelay = Q_max(g_forceRegenTime.integer * scale, 1);
+					}
 					else
-						self->client->ps.fd.forcePowerRegenDebounceTime += Q_max(g_forceRegenTime.integer * 0.7, 1);
+					{
+						regenDelay = Q_max(g_forceRegenTime.integer * 0.7f, 1);
+					}
 				}
 				else
-					self->client->ps.fd.forcePowerRegenDebounceTime += Q_max(g_forceRegenTime.integer, 1);
+				{
+					regenDelay = Q_max(g_forceRegenTime.integer, 1);
+				}
 			}
+
+			self->client->ps.fd.forcePowerRegenDebounceTime += regenDelay;
 		}
-		if (self->client->ps.fd.forcePower > self->client->ps.fd.forcePowerMax * FATIGUEDTHRESHHOLD)
+
+		// Cancel fatigue if FP is high enough
+		if (self->client->ps.fd.forcePower >
+			self->client->ps.fd.forcePowerMax * FATIGUEDTHRESHHOLD)
 		{
-			//You gained some FP back.  Cancel the Fatigue status.
 			self->client->ps.userInt3 &= ~(1 << FLAG_FATIGUED);
 		}
 	}
 	else
 	{
+		// Reset regen timer when using force or unable to regen
 		self->client->ps.fd.forcePowerRegenDebounceTime = level.time;
 	}
 

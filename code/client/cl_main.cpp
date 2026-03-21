@@ -1345,8 +1345,8 @@ void CL_Init()
 
 	Com_Printf("-----------------------------------------------------------------\n");
 	Com_Printf("---------- Genuine SerenityJediEngine-(Solaris Edition)----------\n");
-	Com_Printf("---------------------Build date 15/03/2026-----------------------\n"); // build date
-	Com_Printf("---------------------------Build 04------------------------------\n");
+	Com_Printf("---------------------Build date 21/03/2026-----------------------\n"); // build date
+	Com_Printf("---------------------------Build 05------------------------------\n");
 	Com_Printf("-----------------------------------------------------------------\n");
 	Com_Printf("------------------------LightSaber-------------------------------\n");
 	Com_Printf("-----------An elegant weapon for a more civilized age------------\n");
@@ -1476,7 +1476,7 @@ void CL_Init()
 		Cvar_Get("name", "Jaden", CVAR_USERINFO | CVAR_ARCHIVE_ND);
 	}
 
-	Cvar_Get("snaps", "20", CVAR_USERINFO | CVAR_ARCHIVE_ND);
+	Cvar_Get("snaps", "120", CVAR_USERINFO | CVAR_ARCHIVE_ND);
 
 	if (com_outcast->integer == 0) //playing academy
 	{

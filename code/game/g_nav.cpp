@@ -23,6 +23,20 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "b_local.h"
 #include "g_nav.h"
 #include "g_navigator.h"
+#include <qcommon\q_platform.h>
+#include <qcommon\q_math.h>
+#include "bg_public.h"
+#include "g_public.h"
+#include "b_public.h"
+#include "g_shared.h"
+#include <cassert>
+#include "ghoul2_shared.h"
+#include <qcommon\q_shared.h>
+#include "surfaceflags.h"
+#include <qcommon\q_color.h>
+#include "g_local.h"
+#include <qcommon\q_string.h>
+#include <cstdlib>
 
 //Global navigator
 //CNavigator		navigator;

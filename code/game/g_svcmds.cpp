@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "wp_saber.h"
 #include "g_functions.h"
 #include <qcommon\q_math.h>
+#include "b_public.h"
 
 extern void G_NextTestAxes();
 extern void G_ChangePlayerModel(gentity_t* ent, const char* newModel);

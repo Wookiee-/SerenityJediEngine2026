@@ -6221,7 +6221,7 @@ void G_Stumble(gentity_t* hit_ent)
 	if (PM_InGetUp(&hit_ent->client->ps) || PM_InForceGetUp(&hit_ent->client->ps))
 		return;
 
-	const int anim = stumble_sp[irand(0, 6)];
+	const int anim = stumble_sp[Q_irand(0, 6)];
 
 	G_PlayTorsoAnim_SP(hit_ent, anim);
 	G_HandleMassiveBounce_SP(hit_ent);
@@ -6250,7 +6250,7 @@ void G_Stagger(gentity_t* hit_ent)
 	if (PM_InGetUp(&hit_ent->client->ps) || PM_InForceGetUp(&hit_ent->client->ps))
 		return;
 
-	const int anim = stag_hit_sp[irand(0, 6)];
+	const int anim = stag_hit_sp[Q_irand(0, 6)];
 
 	G_PlayTorsoAnim_SP(hit_ent, anim);
 	G_HandleMassiveBounce_SP(hit_ent);
@@ -6306,7 +6306,7 @@ void G_StaggerAttacker(gentity_t* atk)
 		return;
 
 	const int style = clamp_int(atk->client->ps.saberAnimLevel, 0, SS_STAFF);
-	const int anim = stag_table_sp[style][irand(0, 7)];
+	const int anim = stag_table_sp[style][Q_irand(0, 7)];
 
 	G_PlayTorsoAnim_SP(atk, anim);
 	G_HandleMassiveBounce_SP(atk);
@@ -6379,7 +6379,7 @@ void G_BounceAttacker(gentity_t* atk)
 		return;
 
 	const int style = clamp_int(atk->client->ps.saberAnimLevel, 0, SS_STAFF);
-	const int anim = bounce_table_sp[style][irand(0, 6)];
+	const int anim = bounce_table_sp[style][Q_irand(0, 6)];
 
 	G_PlayTorsoAnim_SP(atk, anim);
 	G_HandleMassiveBounce_SP(atk);
@@ -6428,7 +6428,7 @@ void g_fatigue_bp_knockaway(gentity_t* blocker)
 		return;
 
 	const int style = clamp_int(blocker->client->ps.saberAnimLevel, 0, SS_STAFF);
-	const int anim = knock_table_sp[style][irand(0, 5)];
+	const int anim = knock_table_sp[style][Q_irand(0, 5)];
 
 	G_PlayTorsoAnim_SP(blocker, anim);
 	G_HandleMassiveBounce_SP(blocker);
@@ -11747,13 +11747,13 @@ float manual_forceblocking(const gentity_t* defender)
 
 	if (defender->client->ps.forcePower <= BLOCKPOINTS_FATIGUE)
 	{
-		return qfalse;
+		return 0.0f;
 	}
 
 	if (!(defender->client->ps.forcePowersKnown & 1 << FP_ABSORB))
 	{
 		//doesn't have absorb
-		return qfalse;
+		return 0.0f;
 	}
 
 	if (defender->health <= 1
@@ -11767,7 +11767,7 @@ float manual_forceblocking(const gentity_t* defender)
 		|| !walk_check(defender)
 		|| in_camera)
 	{
-		return qfalse;
+		return 0.0f;
 	}
 
 	if (!(defender->client->buttons & BUTTON_BLOCK))
@@ -11777,36 +11777,36 @@ float manual_forceblocking(const gentity_t* defender)
 			//bots just randomly parry to make up for them not intelligently parrying.
 			return block_factor;
 		}
-		return qfalse;
+		return 0.0f;
 	}
-	return qtrue;
+	return 1.0f;
 }
 
 float manual_npc_saberblocking(const gentity_t* defender)
 {
 	if (defender->s.number < MAX_CLIENTS || G_ControlledByPlayer(defender))
 	{
-		return qfalse;
+		return 0.0f;
 	}
 
 	if (BG_IsAlreadyinTauntAnim(defender->client->ps.torsoAnim))
 	{
-		return qfalse;
+		return 0.0f;
 	}
 
 	if (defender->NPC && !G_ControlledByPlayer(defender) && defender->client->ps.weapon != WP_SABER)
 	{
-		return qfalse;
+		return 0.0f;
 	}
 
 	if (PM_SaberInKata(static_cast<saber_moveName_t>(defender->client->ps.saber_move)))
 	{
-		return qfalse;
+		return 0.0f;
 	}
 
 	if (defender->s.eFlags & EF_FORCE_DRAINED || defender->s.eFlags & EF_FORCE_GRIPPED || defender->s.eFlags & EF_FORCE_GRABBED)
 	{
-		return qfalse;
+		return 0.0f;
 	}
 
 	if (defender->health <= 1
@@ -11826,41 +11826,40 @@ float manual_npc_saberblocking(const gentity_t* defender)
 		|| defender->client->ps.blockPoints < BLOCKPOINTS_FIVE
 		|| defender->client->ps.forcePower < BLOCKPOINTS_FIVE)
 	{
-		return qfalse;
+		return 0.0f;
 	}
 
 	if (defender->client->ps.weapon != WP_SABER
 		|| defender->client->ps.weapon == WP_NONE
 		|| defender->client->ps.weapon == WP_MELEE) //saber not here
 	{
-		return qfalse;
+		return 0.0f;
 	}
 
 	if (defender->client->ps.weapon == WP_SABER
 		&& defender->client->ps.saberInFlight)
 	{
 		//saber not currently in use or available, attempt to use our hands instead.
-		return qfalse;
+		return 0.0f;
 	}
 
 	if (defender->client->ps.weapon == WP_SABER && !defender->client->ps.SaberActive())
 	{
 		//saber not currently in use or available, attempt to use our hands instead.
-		return qfalse;
+		return 0.0f;
 	}
 
 	if (PM_SaberInMassiveBounce(defender->client->ps.torsoAnim) || PM_SaberInBashedAnim(defender->client->ps.torsoAnim))
 	{
-		return qfalse;
+		return 0.0f;
 	}
 
 	if (SaberAttacking(defender) && defender->client->ps.saberFatigueChainCount < MISHAPLEVEL_HUDFLASH)
 	{
-		//bots just randomly parry to make up for them not intelligently parrying.
-		return qtrue;
+		return 1.0f;
 	}
 
-	return qtrue;
+	return 1.0f;
 }
 
 int PlayerCanAbsorbKick(const gentity_t* defender, const vec3_t push_dir) //Can the player absorb a kick
@@ -18504,47 +18503,47 @@ void ForceSpeed(gentity_t* self, const int duration)
 	CG_PlayEffectBolted("misc/breath.efx", self->playerModel, self->headBolt, self->s.number, self->currentOrigin);
 }
 
-static void ForceDashAnim(gentity_t* self)
+static void ForceHopAnim(gentity_t* self)
 {
-	constexpr int set_anim_override = SETANIM_AFLAG_PACE;
+	constexpr int setAnimOverride = SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD;
 
 	if (self->client->pers.cmd.rightmove > 0)
 	{
-		NPC_SetAnim(self, SETANIM_BOTH, BOTH_HOP_R, set_anim_override);
+		NPC_SetAnim(self, SETANIM_BOTH, BOTH_HOP_R, setAnimOverride);
 	}
 	else if (self->client->pers.cmd.rightmove < 0)
 	{
-		NPC_SetAnim(self, SETANIM_BOTH, BOTH_HOP_L, set_anim_override);
+		NPC_SetAnim(self, SETANIM_BOTH, BOTH_HOP_L, setAnimOverride);
 	}
 	else if (self->client->pers.cmd.forwardmove < 0)
 	{
-		NPC_SetAnim(self, SETANIM_BOTH, BOTH_HOP_B, set_anim_override);
+		NPC_SetAnim(self, SETANIM_BOTH, BOTH_HOP_B, setAnimOverride);
 	}
 	else
 	{
-		NPC_SetAnim(self, SETANIM_BOTH, BOTH_HOP_F, set_anim_override);
+		NPC_SetAnim(self, SETANIM_BOTH, BOTH_HOP_F, setAnimOverride);
 	}
 }
 
 void ForceDashAnimDash(gentity_t* self)
 {
-	constexpr int set_anim_override = SETANIM_AFLAG_PACE;
+	constexpr int setAnimOverride = SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD;
 
 	if (self->client->pers.cmd.rightmove > 0)
 	{
-		NPC_SetAnim(self, SETANIM_BOTH, BOTH_DASH_R, set_anim_override);
+		NPC_SetAnim(self, SETANIM_BOTH, BOTH_DASH_R, setAnimOverride);
 	}
 	else if (self->client->pers.cmd.rightmove < 0)
 	{
-		NPC_SetAnim(self, SETANIM_BOTH, BOTH_DASH_L, set_anim_override);
+		NPC_SetAnim(self, SETANIM_BOTH, BOTH_DASH_L, setAnimOverride);
 	}
 	else if (self->client->pers.cmd.forwardmove < 0)
 	{
-		NPC_SetAnim(self, SETANIM_BOTH, BOTH_DASH_B, set_anim_override);
+		NPC_SetAnim(self, SETANIM_BOTH, BOTH_DASH_B, setAnimOverride);
 	}
 	else
 	{
-		NPC_SetAnim(self, SETANIM_BOTH, BOTH_DASH_F, set_anim_override);
+		NPC_SetAnim(self, SETANIM_BOTH, BOTH_DASH_F, setAnimOverride);
 	}
 }
 
@@ -18616,7 +18615,7 @@ static void ForceSpeedDash(gentity_t* self)
 	{
 		if (PM_RunningAnim(self->client->ps.legsAnim))
 		{
-			ForceDashAnim(self);
+			ForceHopAnim(self);
 			WP_ForcePowerStop(self, FP_SPEED);
 		}
 		else
@@ -22376,17 +22375,15 @@ void ForceLightning(gentity_t* self)
 	//don't finish whatever saber anim you may have been in
 	self->client->ps.saberBlocked = BLOCKED_NONE;
 
-	G_SoundOnEnt(self, CHAN_BODY, "sound/weapons/force/lightning2.wav");
-
 	if (self->client->ps.forcePowerLevel[FP_LIGHTNING] < FORCE_LEVEL_2)
 	{
 		//short burst
-		//G_SoundOnEnt(self, CHAN_BODY, "sound/weapons/force/lightning3.mp3");
+		G_SoundOnEnt(self, CHAN_BODY, "sound/weapons/force/lightning2.wav");
 	}
 	else
 	{
 		//holding it
-		self->s.loopSound = G_SoundIndex("sound/weapons/force/lightning.mp3");
+		G_SoundOnEnt(self, CHAN_BODY, "sound/weapons/force/lightning2.wav");
 	}
 
 	self->client->ps.weaponTime = self->client->ps.torsoAnimTimer;

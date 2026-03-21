@@ -41,6 +41,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "g_functions.h"
 #include "wp_saber.h"
 #include "g_vehicles.h"
+#include <qcommon\q_platform.h>
+#include <qcommon\q_shared.h>
+#include "surfaceflags.h"
+#include "g_local.h"
 
 extern qboolean G_CheckInSolid(gentity_t* self, qboolean fix);
 extern void client_userinfo_changed(int clientNum);
@@ -51,13 +55,11 @@ extern cvar_t* com_outcast;
 extern int wp_set_saber_model(gclient_t* client, class_t npc_class);
 extern qboolean is_outcast_map();
 extern qboolean PM_SaberInAttack(int move);
-
+extern qboolean G_ControlledByPlayer(const gentity_t* self);
 extern void G_MatchPlayerWeapon(gentity_t* ent);
 extern void Q3_SetParm(int entID, int parmNum, const char* parmValue);
-
 extern void PM_SetTorsoAnimTimer(gentity_t* ent, int* torsoAnimTimer, int time);
 extern void PM_SetLegsAnimTimer(gentity_t* ent, int* legsAnimTimer, int time);
-
 extern int wp_saber_init_blade_data(gentity_t* ent);
 extern void ST_ClearTimers(const gentity_t* ent);
 extern void jedi_clear_timers(const gentity_t* ent);
@@ -267,7 +269,6 @@ extern void SandCreature_ClearTimers(gentity_t* ent);
 extern void NPC_GalakMech_Init(gentity_t* ent);
 extern cvar_t* g_noAutoFollow;
 extern qboolean droideka_npc(const gentity_t* ent);
-
 static void NPC_SetMiscDefaultData(gentity_t* ent)
 {
 	if (ent->spawnflags & SFB_CINEMATIC)
@@ -313,10 +314,18 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 			ent->flags |= FL_BOBAFETT; //low-level shots bounce off, no knockback
 		}
 	}
+	else if (ent->client->NPC_class == CLASS_LUKE &&
+		com_outcast->integer == 1 &&
+		(ent->s.number >= MAX_CLIENTS && G_ControlledByPlayer(ent) == qfalse) &&
+		(Q_stricmp(level.mapname, "cairn_bay") == 0))
+	{
+		// AI Luke is unkillable on cairn_bay when Outcast mode is active
+		NPC->flags |= FL_UNDYING;
+	}
 	else if (ent->client->NPC_class == CLASS_OBJECT)
 	{
 		//set some stuff, precache
-		NPC->flags |= FL_UNDYING; // Can't Kill Boba
+		NPC->flags |= FL_UNDYING; // Can't Kill
 		ent->flags |= FL_SHIELDED; //reflect normal shots
 	}
 	else if (ent->client->NPC_class == CLASS_MANDO)
@@ -1218,8 +1227,7 @@ NPC_SpawnEffect
 */
 
 static void NPC_SpawnEffect(gentity_t* ent)
-{
-}
+{}
 
 //--------------------------------------------------------------
 // NPC_SetFX_SpawnStates

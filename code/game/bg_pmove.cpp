@@ -9918,7 +9918,7 @@ static void PM_SwimFloatAnim()
 PM_Footsteps
 ===============
 */
-static void PM_Footsteps()
+static void PM_Footsteps(void)
 {
 	float bobmove;
 	int old;

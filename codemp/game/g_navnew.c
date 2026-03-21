@@ -22,10 +22,17 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "b_local.h"
 #include "g_nav.h"
+#include "g_public.h"
+#include "g_local.h"
+#include <qcommon\q_platform.h>
+#include <qcommon\q_math.h>
+#include <qcommon\q_shared.h>
+#include "surfaceflags.h"
+#include "bg_public.h"
+#include <math.h>
 
 qboolean NAV_CheckAhead(const gentity_t* self, vec3_t end, trace_t* trace, int clipmask);
 qboolean NAV_TestForBlocked(gentity_t* self, gentity_t* goal, gentity_t* blocker, float distance, int* flags);
-
 void G_Line(vec3_t start, vec3_t end, vec3_t color, float alpha);
 void G_Cube(vec3_t mins, vec3_t maxs, vec3_t color, float alpha);
 void G_CubeOutline(vec3_t mins, vec3_t maxs, int time, unsigned int color, float alpha);
@@ -53,7 +60,7 @@ qboolean NAV_CheckNodeFailedForEnt(const gentity_t* ent, const int nodeNum)
 NPC_UnBlocked
 -------------------------
 */
-void NPC_ClearBlocked(const gentity_t* self)
+static void NPC_ClearBlocked(const gentity_t* self)
 {
 	if (self->NPC == NULL)
 		return;
@@ -62,7 +69,7 @@ void NPC_ClearBlocked(const gentity_t* self)
 	self->NPC->blockingEntNum = ENTITYNUM_NONE;
 }
 
-void NPC_SetBlocked(const gentity_t* self, const gentity_t* blocker)
+static void NPC_SetBlocked(const gentity_t* self, const gentity_t* blocker)
 {
 	if (self->NPC == NULL)
 		return;
@@ -90,13 +97,7 @@ int NAVNEW_ClearPathBetweenPoints(vec3_t start, vec3_t end, vec3_t mins, vec3_t 
 
 	trap->Trace(&trace, start, mins, maxs, end, ignore, clipmask, qfalse, 0, 0);
 
-	//if( ( ( trace.startsolid == false ) && ( trace.allsolid == false ) ) && ( trace.fraction < 1.0f ) )
-	//{//FIXME: check for drops?
-	//FIXME: if startsolid or allsolid, then the path isn't clear... but returning ENTITYNUM_NONE indicates to CheckFailedEdge that is is clear...?
 	return trace.entityNum;
-	//}
-
-	//return ENTITYNUM_NONE;
 }
 
 /*
@@ -104,7 +105,7 @@ int NAVNEW_ClearPathBetweenPoints(vec3_t start, vec3_t end, vec3_t mins, vec3_t 
 NAVNEW_PushBlocker
 -------------------------
 */
-void NAVNEW_PushBlocker(const gentity_t* self, const gentity_t* blocker, vec3_t right, const qboolean setBlockedInfo)
+static void NAVNEW_PushBlocker(const gentity_t* self, const gentity_t* blocker, vec3_t right, const qboolean setBlockedInfo)
 {
 	//try pushing blocker to one side
 	trace_t tr;
@@ -210,7 +211,7 @@ void NAVNEW_PushBlocker(const gentity_t* self, const gentity_t* blocker, vec3_t 
 NAVNEW_DanceWithBlocker
 -------------------------
 */
-qboolean NAVNEW_DanceWithBlocker(gentity_t* self, const gentity_t* blocker, vec3_t movedir, vec3_t right)
+static qboolean NAVNEW_DanceWithBlocker(gentity_t* self, const gentity_t* blocker, vec3_t movedir, vec3_t right)
 {
 	//sees if blocker has any lateral movement
 	if (blocker->client && !VectorCompare(blocker->client->ps.velocity, vec3_origin))
@@ -236,17 +237,6 @@ qboolean NAVNEW_DanceWithBlocker(gentity_t* self, const gentity_t* blocker, vec3
 			VectorNormalize(movedir);
 			return qtrue;
 		}
-		/*
-		vec3_t	block_pos;
-		trace_t	tr;
-		VectorScale( blocker_movedir, -1, blocker_movedir );
-		VectorMA( self->r.currentOrigin, blocked_dist, blocker_movedir, block_pos );
-		if ( NAVNEW_CheckAhead( self, block_pos, tr, ( self->clipmask & ~CONTENTS_BODY )|CONTENTS_BOTCLIP ) )
-		{
-			VectorCopy( blocker_movedir, movedir );
-			return qtrue;
-		}
-		*/
 	}
 	return qfalse;
 }
@@ -256,7 +246,7 @@ qboolean NAVNEW_DanceWithBlocker(gentity_t* self, const gentity_t* blocker, vec3
 NAVNEW_SidestepBlocker
 -------------------------
 */
-qboolean NAVNEW_SidestepBlocker(const gentity_t* self, const gentity_t* blocker, vec3_t blocked_dir,
+static qboolean NAVNEW_SidestepBlocker(const gentity_t* self, const gentity_t* blocker, vec3_t blocked_dir,
 	const float blocked_dist,
 	vec3_t movedir, vec3_t right)
 {
@@ -278,14 +268,6 @@ qboolean NAVNEW_SidestepBlocker(const gentity_t* self, const gentity_t* blocker,
 
 	//See if we're inside our avoidance radius
 	float arcAngle = blocked_dist <= avoidRadius ? 135 : avoidRadius / blocked_dist * 90;
-
-	/*
-	float dot = DotProduct( blocked_dir, right );
-
-	//Go right on the first try if that works better
-	if ( dot < 0.0f )
-		arcAngle *= -1;
-	*/
 
 	VectorClear(avoidAngles);
 

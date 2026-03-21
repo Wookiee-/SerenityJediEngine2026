@@ -7163,8 +7163,6 @@ void PM_SetSaberMove(saber_moveName_t new_move)
 			|| new_move == LS_A_FLIP_SLASH
 			|| new_move == LS_JUMPATTACK_DUAL
 			|| new_move == LS_GRIEVOUS_LUNGE
-			|| new_move == LS_JUMPATTACK_ARIAL_LEFT
-			|| new_move == LS_JUMPATTACK_ARIAL_RIGHT
 			|| new_move == LS_JUMPATTACK_CART_LEFT
 			|| new_move == LS_JUMPATTACK_CART_RIGHT
 			|| new_move == LS_JUMPATTACK_STAFF_LEFT

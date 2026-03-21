@@ -1494,17 +1494,14 @@ class c_game_rag_doll_update_params final : public CRagDollUpdateParams
 	}
 
 	void RagDollBegin() override
-	{
-	}
+	{}
 
 	void RagDollSettled() override
-	{
-	}
+	{}
 
 	void Collision() override
 		// we had a collision, please stop animating and (sometime soon) call SetRagDoll RP_DEATH_COLLISION
-	{
-	}
+	{}
 
 #ifdef _DEBUG
 	void DebugLine(vec3_t p1, vec3_t p2, const int color, const bool bbox) override

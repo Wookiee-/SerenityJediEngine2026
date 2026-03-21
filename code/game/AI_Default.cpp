@@ -63,7 +63,7 @@ void npc_check_speak(gentity_t* speaker_npc)
 		return; // not yet...
 	}
 
-	speaker_npc->check_speach_time = level.time + 5000 + irand(0, 10000);
+	speaker_npc->check_speach_time = level.time + 5000 + Q_irand(0, 10000);
 
 	if (NPC->enemy && NPC_ClearLOS(NPC->enemy)
 		&& enemy_dist < 512 && enemy_dist > 64) // Have enemy...
