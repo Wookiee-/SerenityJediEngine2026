@@ -49,7 +49,7 @@ extern void NPC_Jedi_PlayConfusionSound(const gentity_t* self);
 extern void NPC_UseResponse(gentity_t* self, const gentity_t* user, qboolean useWhenDone);
 //NEEDED FOR MIND-TRICK on NPCS=========================================================
 extern void Jedi_Decloak(gentity_t* self);
-extern qboolean walk_check(const gentity_t* self);
+extern qboolean WalkCheck(const gentity_t* self);
 extern float manual_forceblocking(const gentity_t* defender);
 extern qboolean BG_FullBodyTauntAnim(int anim);
 extern qboolean PM_SaberInBrokenParry(int move);
@@ -1041,12 +1041,12 @@ int ForcePowerUsableOn(const gentity_t* attacker, const gentity_t* other, const 
 		case FORCE_LEVEL_3:
 			return 0;
 		case FORCE_LEVEL_2:
-			if (!walk_check(other) && PM_RunningAnim(other->client->ps.legsAnim))
+			if (!WalkCheck(other) && PM_RunningAnim(other->client->ps.legsAnim))
 				return 0;
 			break;
 
 		case FORCE_LEVEL_1:
-			if (!walk_check(other))
+			if (!WalkCheck(other))
 				return 0;
 			break;
 		default:;
@@ -1057,7 +1057,7 @@ int ForcePowerUsableOn(const gentity_t* attacker, const gentity_t* other, const 
 		switch (other->client->ps.fd.forcePowerLevel[FP_ABSORB])
 		{
 		case FORCE_LEVEL_1: //Can only block if walking
-			if (!walk_check(other))
+			if (!WalkCheck(other))
 				return 1;
 			break;
 		case FORCE_LEVEL_2: //Can block if walking or running
@@ -2180,7 +2180,7 @@ static qboolean WP_CounterForce(const gentity_t* attacker, const gentity_t* defe
 	if (abilityDef >= 2)
 	{
 		//defender is largely weaker than the attacker (2 levels)
-		if (!walk_check(defender) || defender->client->ps.groundEntityNum == ENTITYNUM_NONE)
+		if (!WalkCheck(defender) || defender->client->ps.groundEntityNum == ENTITYNUM_NONE)
 		{
 			//can't block much stronger Force power while running or in mid-air
 			return qfalse;
@@ -2972,7 +2972,7 @@ static qboolean melee_block_lightning_counter_force(gentity_t* attacker, const g
 		return qfalse;
 	}
 
-	if (!walk_check(defender) || defender->client->ps.groundEntityNum == ENTITYNUM_NONE)
+	if (!WalkCheck(defender) || defender->client->ps.groundEntityNum == ENTITYNUM_NONE)
 	{
 		//can't block  Force power while running or in mid-air
 		return qfalse;
@@ -6529,7 +6529,7 @@ void ForceThrow(gentity_t* self, qboolean pull)
 
 					if (!pull)
 					{
-						if (walk_check(push_target[x])
+						if (WalkCheck(push_target[x])
 							|| push_target[x]->client->ps.fd.blockPoints >= BLOCKPOINTS_HALF && push_target[x]->client->
 							pers.cmd.buttons & BUTTON_BLOCK
 							|| push_target[x]->client->ps.BlasterAttackChainCount <= BLASTERMISHAPLEVEL_HEAVYER && !
@@ -6568,7 +6568,7 @@ void ForceThrow(gentity_t* self, qboolean pull)
 								}
 							}
 						}
-						else if (BG_KnockDownable(&push_target[x]->client->ps) && dir_len <= 128.0f && !walk_check(
+						else if (BG_KnockDownable(&push_target[x]->client->ps) && dir_len <= 128.0f && !WalkCheck(
 							push_target[x]))
 						{
 							//can only do a knockdown if fairly close
@@ -6596,7 +6596,7 @@ void ForceThrow(gentity_t* self, qboolean pull)
 							}
 						}
 						else if (!InFront(push_target[x]->r.currentOrigin, self->r.currentOrigin,
-							self->client->ps.viewangles, 0.3f) && !walk_check(push_target[x]))
+							self->client->ps.viewangles, 0.3f) && !WalkCheck(push_target[x]))
 						{
 							G_Knockdown(push_target[x], self, push_dir, 300, qtrue);
 							G_Sound(push_target[x], CHAN_BODY, G_SoundIndex("sound/weapons/force/pushed.mp3"));
@@ -6649,7 +6649,7 @@ void ForceThrow(gentity_t* self, qboolean pull)
 					}
 					else if (pull)
 					{
-						if (walk_check(push_target[x])
+						if (WalkCheck(push_target[x])
 							|| push_target[x]->client->ps.fd.blockPoints >= BLOCKPOINTS_HALF && push_target[x]->client->
 							pers.cmd.buttons & BUTTON_BLOCK
 							|| push_target[x]->client->ps.BlasterAttackChainCount <= BLASTERMISHAPLEVEL_HEAVYER && !
@@ -6688,7 +6688,7 @@ void ForceThrow(gentity_t* self, qboolean pull)
 								}
 							}
 						}
-						else if (BG_KnockDownable(&push_target[x]->client->ps) && dir_len <= 128.0f && !walk_check(
+						else if (BG_KnockDownable(&push_target[x]->client->ps) && dir_len <= 128.0f && !WalkCheck(
 							push_target[x]))
 						{
 							//can only do a knockdown if fairly close
@@ -6716,7 +6716,7 @@ void ForceThrow(gentity_t* self, qboolean pull)
 							}
 						}
 						else if (!InFront(push_target[x]->r.currentOrigin, self->r.currentOrigin,
-							self->client->ps.viewangles, 0.3f) && !walk_check(push_target[x]))
+							self->client->ps.viewangles, 0.3f) && !WalkCheck(push_target[x]))
 						{
 							G_Knockdown(push_target[x], self, push_dir, 300, qtrue);
 							push_power_mod = 200;
@@ -8944,7 +8944,7 @@ void WP_ForcePowersUpdate(gentity_t* self, usercmd_t* ucmd)
 
 	if (!using_force
 		&& !PM_InKnockDown(&self->client->ps)
-		&& walk_check(self)
+		&& WalkCheck(self)
 		&& self->client->ps.weaponTime <= 0
 		&& self->client->ps.groundEntityNum != ENTITYNUM_NONE)
 	{
@@ -9084,7 +9084,7 @@ void WP_ForcePowersUpdate(gentity_t* self, usercmd_t* ucmd)
 		&& !PM_InKnockDown(&self->client->ps) && self->client->ps.forceHandExtend != HANDEXTEND_DODGE
 		&& self->client->ps.saberLockTime < level.time //not in a saber lock.
 		&& self->client->ps.groundEntityNum != ENTITYNUM_NONE //can't regen while in the air.
-		&& walk_check(self))
+		&& WalkCheck(self))
 	{
 		if (self->client->ps.fd.forcePower > self->client->ps.fd.forcePowerMax * FATIGUEDTHRESHHOLD + 1
 			&& self->client->ps.stats[STAT_DODGE] < self->client->ps.stats[STAT_MAX_DODGE])
@@ -9158,7 +9158,7 @@ void WP_BlockPointsUpdate(const gentity_t* self)
 	{
 		if (!PM_InKnockDown(&self->client->ps)
 			&& self->client->ps.groundEntityNum != ENTITYNUM_NONE
-			&& walk_check(self)
+			&& WalkCheck(self)
 			&& !PM_SaberInAttack(self->client->ps.saber_move)
 			&& !pm_saber_in_special_attack(self->client->ps.torsoAnim)
 			&& !PM_SpinningSaberAnim(self->client->ps.torsoAnim)

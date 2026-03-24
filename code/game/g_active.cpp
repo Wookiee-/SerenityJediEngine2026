@@ -117,7 +117,7 @@ extern qboolean manual_meleeblocking(const gentity_t* defender);
 extern qboolean manual_melee_dodging(const gentity_t* defender);
 extern qboolean WP_ForcePowerUsable(const gentity_t* self, forcePowers_t force_power, int override_amt);
 extern int PM_InGrappleMove(int move);
-extern qboolean walk_check(const gentity_t* self);
+extern qboolean WalkCheck(const gentity_t* self);
 extern qboolean PM_SaberInBrokenParry(int move);
 extern qboolean BG_SprintAnim(int anim);
 extern qboolean BG_SaberSprintAnim(int anim);

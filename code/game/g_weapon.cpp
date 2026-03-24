@@ -53,7 +53,7 @@ extern qboolean PM_RunningAnim(int anim);
 extern qboolean PM_WalkingAnim(int anim);
 extern qboolean PM_InKnockDown(const playerState_t* ps);
 extern Vehicle_t* G_IsRidingVehicle(const gentity_t* pEnt);
-extern qboolean walk_check(const gentity_t* self);
+extern qboolean WalkCheck(const gentity_t* self);
 extern qboolean PM_ReloadAnim(int anim);
 extern qboolean PM_WeponRestAnim(int anim);
 
@@ -1400,7 +1400,7 @@ static void G_AddBlasterAttackChainCount(const gentity_t* ent, int amount)
 		return;
 	}
 
-	if (!walk_check(ent))
+	if (!WalkCheck(ent))
 	{
 		if (amount > 0)
 		{

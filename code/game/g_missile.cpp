@@ -90,7 +90,7 @@ extern gentity_t* jedi_find_enemy_in_cone(const gentity_t* self, gentity_t* fall
 extern qboolean FighterIsLanded(const Vehicle_t* p_veh, const playerState_t* parent_ps);
 extern qboolean WP_SaberBlockBolt(gentity_t* self, vec3_t hitloc, qboolean missileBlock);
 extern qboolean WP_BrokenBoltBlockKnockBack(gentity_t* victim);
-extern int WP_SaberBoltBlockCost(gentity_t* defender, const gentity_t* attacker);
+extern int WP_SaberBlockCost(gentity_t* defender, const gentity_t* attacker, vec3_t hit_locs);
 extern void WP_BlockPointsDrain(const gentity_t* self, int fatigue);
 extern void CGCam_BlockShakeSP(float intensity, int duration);
 extern void G_KnockOver(gentity_t* self, gentity_t* attacker, const vec3_t push_dir, float strength, const qboolean breakSaberLock);
@@ -946,7 +946,7 @@ static void wp_handle_bolt_block(gentity_t* ent, gentity_t* missile, vec3_t forw
 		}
 		else
 		{
-			block_points_used_used = WP_SaberBoltBlockCost(blocker, missile);
+			block_points_used_used = WP_SaberBlockCost(blocker, missile, missile->currentOrigin);
 		}
 
 		if (blocker->client->ps.blockPoints < block_points_used_used)
@@ -1039,7 +1039,7 @@ static void wp_handle_bolt_block(gentity_t* ent, gentity_t* missile, vec3_t forw
 			}
 			else
 			{
-				block_points_used_used = WP_SaberBoltBlockCost(blocker, missile);
+				block_points_used_used = WP_SaberBlockCost(blocker, missile, missile->currentOrigin);
 			}
 
 			if (blocker->client->ps.blockPoints < block_points_used_used)
@@ -1127,7 +1127,7 @@ static void wp_handle_bolt_block(gentity_t* ent, gentity_t* missile, vec3_t forw
 			}
 			else
 			{
-				block_points_used_used = WP_SaberBoltBlockCost(blocker, missile);
+				block_points_used_used = WP_SaberBlockCost(blocker, missile, missile->currentOrigin);
 			}
 
 			if (blocker->client->ps.blockPoints < block_points_used_used)
@@ -2796,7 +2796,6 @@ gentity_t* fire_stun(gentity_t* self, vec3_t start, vec3_t dir)
 
 	return stun;
 }
-
 
 static qhandle_t stasisLoopSound = 0;
 gentity_t* tgt_list[MAX_GENTITIES];

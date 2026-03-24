@@ -83,7 +83,7 @@ extern float manual_npc_saberblocking(const gentity_t* defender);
 extern qboolean WP_BrokenBoltBlockKnockBack(gentity_t* victim);
 extern qboolean WP_SaberBlockBolt(gentity_t* self, vec3_t hitloc, qboolean missileBlock);
 void wp_handle_bolt_block(gentity_t* bolt, gentity_t* blocker, trace_t* trace, vec3_t fwd);
-extern int WP_SaberBoltBlockCost(gentity_t* defender, const gentity_t* attacker);
+extern int WP_SaberBlockCost(gentity_t* defender, const gentity_t* attacker, vec3_t hit_locs);
 extern void WP_BlockPointsDrain(const gentity_t* self, int fatigue);
 extern void G_KnockOver(gentity_t* self, const gentity_t* attacker, const vec3_t push_dir, float strength,
 	qboolean breakSaberLock);
@@ -243,8 +243,6 @@ static void g_missile_bouncedoff_saber(const gentity_t* ent, gentity_t* missile,
 		missile->nextthink = 0;
 	}
 }
-
-
 
 static void g_deflect_missile_to_attacker(const gentity_t* ent, gentity_t* missile, vec3_t forward)
 {
@@ -2175,7 +2173,7 @@ void wp_handle_bolt_block(gentity_t* bolt, gentity_t* blocker, trace_t* trace, v
 			}
 			else
 			{
-				block_points_used = WP_SaberBoltBlockCost(blocker, bolt);
+				block_points_used = WP_SaberBlockCost(blocker, bolt, bolt->r.currentOrigin);
 			}
 
 			if (blocker->client->ps.fd.blockPoints < block_points_used)
@@ -2224,7 +2222,7 @@ void wp_handle_bolt_block(gentity_t* bolt, gentity_t* blocker, trace_t* trace, v
 			}
 			else
 			{
-				block_points_used = WP_SaberBoltBlockCost(blocker, bolt);
+				block_points_used = WP_SaberBlockCost(blocker, bolt, bolt->r.currentOrigin);
 			}
 
 			if (blocker->client->ps.fd.blockPoints < block_points_used)
@@ -2299,7 +2297,7 @@ void wp_handle_bolt_block(gentity_t* bolt, gentity_t* blocker, trace_t* trace, v
 			}
 			else
 			{
-				block_points_used = WP_SaberBoltBlockCost(blocker, bolt);
+				block_points_used = WP_SaberBlockCost(blocker, bolt, bolt->r.currentOrigin);
 			}
 
 			if (blocker->client->ps.fd.blockPoints < block_points_used)

@@ -49,7 +49,7 @@ extern qboolean PM_InKnockDown(const playerState_t* ps);
 qboolean PM_RunningAnim(int anim);
 qboolean PM_WalkingAnim(int anim);
 float Distance2(const vec3_t p1, const vec3_t p2);
-extern qboolean walk_check(const gentity_t* self);
+extern qboolean WalkCheck(const gentity_t* self);
 extern qboolean PM_CrouchAnim(int anim);
 const int FROZEN_TIME = 5000;
 
@@ -5400,7 +5400,7 @@ static void G_AddBlasterAttackChainCount(const gentity_t* ent, int amount)
 		return;
 	}
 
-	if (!walk_check(ent))
+	if (!WalkCheck(ent))
 	{
 		if (amount > 0)
 		{

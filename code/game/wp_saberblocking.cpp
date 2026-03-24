@@ -62,7 +62,7 @@ extern int G_KnockawayForParry(int move);
 extern qboolean WP_SaberLose(gentity_t* self, vec3_t throw_dir);
 extern cvar_t* g_saberAutoBlocking;
 extern qboolean WP_SabersCheckLock(gentity_t* ent1, gentity_t* ent2);
-extern qboolean walk_check(const gentity_t* self);
+extern qboolean WalkCheck(const gentity_t* self);
 extern qboolean PM_SuperBreakWinAnim(int anim);
 extern void PM_AddFatigue(playerState_t* ps, int fatigue);
 extern qboolean WP_SaberBlockNonRandom(gentity_t* self, vec3_t hitloc, qboolean missileBlock);
@@ -597,7 +597,7 @@ static qboolean sab_beh_attack_blocked(gentity_t* attacker, gentity_t* blocker, 
 
 static void sab_beh_add_balance(const gentity_t* self, int amount)
 {
-	if (!walk_check(self))
+	if (!WalkCheck(self))
 	{
 		//running or moving very fast, can't balance as well
 		if (amount > 0)

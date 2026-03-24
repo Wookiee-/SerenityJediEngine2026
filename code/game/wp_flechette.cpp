@@ -30,7 +30,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //	Golan Arms Flechette
 //-----------------------
 
-extern qboolean walk_check(const gentity_t* self);
+extern qboolean WalkCheck(const gentity_t* self);
 extern qboolean PM_CrouchAnim(int anim);
 extern qboolean G_ControlledByPlayer(const gentity_t* self);
 //---------------------------------------------------------
@@ -84,7 +84,7 @@ static void WP_FlechetteMainFire(gentity_t* ent)
 						//was 0.5
 					}
 				}
-				else if (!walk_check(ent) && (ent->s.number < MAX_CLIENTS || G_ControlledByPlayer(ent)))
+				else if (!WalkCheck(ent) && (ent->s.number < MAX_CLIENTS || G_ControlledByPlayer(ent)))
 					//if running aim is shit
 				{
 					angs[PITCH] += Q_flrand(-2.0f, 2.0f) * (RUNNING_SPREAD + 1.5f);

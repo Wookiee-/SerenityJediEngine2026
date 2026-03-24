@@ -6624,56 +6624,213 @@ void ClientSpawn(gentity_t* ent)
 	// find a spawn point
 	// do it before setting health back up, so farthest
 	// ranging doesn't count this client
+	
+	// ------------------------------------------------------------
+    // 1. Spectators always use spectator spawn logic
+    // ------------------------------------------------------------
 	if (client->sess.sessionTeam == TEAM_SPECTATOR)
 	{
 		spawnPoint = SelectSpectatorSpawnPoint(spawn_origin, spawn_angles);
+		goto spawn_done;
 	}
-	else if (level.gametype == GT_CTF || level.gametype == GT_CTY)
+
+	// Determine if this entity is a bot
+	const qboolean isBot = ((ent->r.svFlags & SVF_BOT) != 0) ? qtrue : qfalse;
+
+	// ------------------------------------------------------------
+	// 2. CTF / CTY (team-based) spawn logic
+	// Bots get waypoint spawns first
+	// ------------------------------------------------------------
+	if (level.gametype == GT_CTF || level.gametype == GT_CTY)
 	{
-		// all base oriented team games use the CTF spawn points
-		spawnPoint = SelectCTFSpawnPoint(client->sess.sessionTeam, client->pers.teamState.state, spawn_origin,
-			spawn_angles, !!(ent->r.svFlags & SVF_BOT));
+		if (isBot == qtrue)
+		{
+			vec3_t wpSpawn;
+
+			if (client->sess.sessionTeam == TEAM_RED)
+			{
+				if (BOT_FindCTFWaypointSpawnPoint_red(ent, wpSpawn) == qtrue)
+				{
+					VectorCopy(wpSpawn, spawn_origin);
+					VectorClear(spawn_angles);
+					spawnPoint = NULL;
+					goto spawn_done;
+				}
+			}
+			else if (client->sess.sessionTeam == TEAM_BLUE)
+			{
+				if (BOT_FindCTFWaypointSpawnPoint_blue(ent, wpSpawn) == qtrue)
+				{
+					VectorCopy(wpSpawn, spawn_origin);
+					VectorClear(spawn_angles);
+					spawnPoint = NULL;
+					goto spawn_done;
+				}
+			}
+		}
+
+		// Fallback (humans AND bots if no waypoint spawns)
+		spawnPoint = SelectCTFSpawnPoint(
+			client->sess.sessionTeam,
+			client->pers.teamState.state,
+			spawn_origin,
+			spawn_angles,
+			isBot
+		);
+		goto spawn_done;
 	}
-	else if (level.gametype == GT_SIEGE)
+
+	// ------------------------------------------------------------
+	// 3. Siege spawn logic
+	// ------------------------------------------------------------
+	if (level.gametype == GT_SIEGE)
 	{
-		spawnPoint = SelectSiegeSpawnPoint(client->siegeClass, client->sess.sessionTeam, client->pers.teamState.state,
-			spawn_origin, spawn_angles, !!(ent->r.svFlags & SVF_BOT));
+		spawnPoint = SelectSiegeSpawnPoint(
+			client->siegeClass,
+			client->sess.sessionTeam,
+			client->pers.teamState.state,
+			spawn_origin,
+			spawn_angles,
+			isBot
+		);
+		goto spawn_done;
 	}
-	else if (level.gametype == GT_SINGLE_PLAYER)
+
+	// ------------------------------------------------------------
+	// 4. Single-player spawn logic
+	// ------------------------------------------------------------
+	if (level.gametype == GT_SINGLE_PLAYER)
 	{
 		spawnPoint = SelectSPSpawnPoint(spawn_origin, spawn_angles);
+		goto spawn_done;
 	}
-	else
+
+	// ------------------------------------------------------------
+	// 5. Duel / Powerduel spawn logic
+	// ------------------------------------------------------------
+	if (level.gametype == GT_POWERDUEL)
 	{
-		if (level.gametype == GT_POWERDUEL)
+		spawnPoint = SelectDuelSpawnPoint(
+			client->sess.duelTeam,
+			client->ps.origin,
+			spawn_origin,
+			spawn_angles,
+			isBot
+		);
+		goto spawn_done;
+	}
+
+	if (level.gametype == GT_DUEL)
+	{
+		spawnPoint = SelectDuelSpawnPoint(
+			DUELTEAM_SINGLE,
+			client->ps.origin,
+			spawn_origin,
+			spawn_angles,
+			isBot
+		);
+		goto spawn_done;
+	}
+
+	// ------------------------------------------------------------
+	// 6. Team FFA (GT_TEAM)
+	// Bots get waypoint spawns first
+	// ------------------------------------------------------------
+	if (level.gametype == GT_TEAM)
+	{
+		if (isBot == qtrue)
 		{
-			spawnPoint = SelectDuelSpawnPoint(client->sess.duelTeam, client->ps.origin, spawn_origin, spawn_angles,
-				!!(ent->r.svFlags & SVF_BOT));
+			vec3_t wpSpawn;
+
+			if (client->sess.sessionTeam == TEAM_RED)
+			{
+				if (BOT_FindCTFWaypointSpawnPoint_red(ent, wpSpawn) == qtrue)
+				{
+					VectorCopy(wpSpawn, spawn_origin);
+					VectorClear(spawn_angles);
+					spawnPoint = NULL;
+					goto spawn_done;
+				}
+			}
+			else if (client->sess.sessionTeam == TEAM_BLUE)
+			{
+				if (BOT_FindCTFWaypointSpawnPoint_blue(ent, wpSpawn) == qtrue)
+				{
+					VectorCopy(wpSpawn, spawn_origin);
+					VectorClear(spawn_angles);
+					spawnPoint = NULL;
+					goto spawn_done;
+				}
+			}
 		}
-		else if (level.gametype == GT_DUEL)
+
+		// Human fallback (and bot fallback)
+		if (client->pers.initialSpawn == qfalse && client->pers.localClient == qtrue)
 		{
-			// duel
-			spawnPoint = SelectDuelSpawnPoint(DUELTEAM_SINGLE, client->ps.origin, spawn_origin, spawn_angles,
-				!!(ent->r.svFlags & SVF_BOT));
+			client->pers.initialSpawn = qtrue;
+			spawnPoint = SelectInitialSpawnPoint(
+				spawn_origin,
+				spawn_angles,
+				client->sess.sessionTeam,
+				isBot
+			);
 		}
 		else
 		{
-			// the first spawn should be at a good looking spot
-			if (!client->pers.initialSpawn && client->pers.localClient)
-			{
-				client->pers.initialSpawn = qtrue;
-				spawnPoint = SelectInitialSpawnPoint(spawn_origin, spawn_angles, client->sess.sessionTeam,
-					!!(ent->r.svFlags & SVF_BOT));
-			}
-			else
-			{
-				// don't spawn near existing origin if possible
-				spawnPoint = SelectSpawnPoint(
-					client->ps.origin,
-					spawn_origin, spawn_angles, client->sess.sessionTeam, !!(ent->r.svFlags & SVF_BOT));
-			}
+			spawnPoint = SelectSpawnPoint(
+				client->ps.origin,
+				spawn_origin,
+				spawn_angles,
+				client->sess.sessionTeam,
+				isBot
+			);
+		}
+
+		goto spawn_done;
+	}
+
+	// ------------------------------------------------------------
+	// 7. FFA / Holocron / JediMaster / Other modes
+	// Bots get waypoint spawns first
+	// ------------------------------------------------------------
+	if (isBot == qtrue)
+	{
+		vec3_t wpSpawn;
+
+		if (BOT_FindFFAWaypointSpawnPoint(ent, wpSpawn) == qtrue)
+		{
+			VectorCopy(wpSpawn, spawn_origin);
+			VectorClear(spawn_angles);
+			spawnPoint = NULL;
+			goto spawn_done;
 		}
 	}
+
+	// Fallback (humans AND bots)
+	if (client->pers.initialSpawn == qfalse && client->pers.localClient == qtrue)
+	{
+		client->pers.initialSpawn = qtrue;
+
+		spawnPoint = SelectInitialSpawnPoint(
+			spawn_origin,
+			spawn_angles,
+			client->sess.sessionTeam,
+			isBot
+		);
+	}
+	else
+	{
+		spawnPoint = SelectSpawnPoint(
+			client->ps.origin,
+			spawn_origin,
+			spawn_angles,
+			client->sess.sessionTeam,
+			isBot
+		);
+	}
+
+spawn_done:
+
 	client->pers.teamState.state = TEAM_ACTIVE;
 
 	// toggle the teleport bit so the client knows to not lerp
