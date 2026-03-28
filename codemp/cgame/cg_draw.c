@@ -7485,7 +7485,13 @@ static void CG_DrawCrosshair(vec3_t world_point, const int ch_ent_valid)
 	}
 	else
 	{
-		if (cg.snap->ps.weapon == WP_BRYAR_PISTOL)
+		int cid = cg.crosshairclientNum;
+
+		if (cid >= 0 &&
+			cid < MAX_CLIENTS &&
+			cg_entities[cid].currentState.eType == ET_PLAYER &&
+			(cg_entities[cid].currentState.eFlags & EF3_DUAL_WEAPONS) &&
+			cg.snap->ps.weapon == WP_BRYAR_PISTOL)
 		{
 			w = h = cg_crosshairDualSize.value;
 		}
@@ -8896,7 +8902,6 @@ static void CG_DrawCrosshairNames(void)
 	}
 
 	CG_SanitizeString(name, sanitized);
-
 
 	const float w = CG_DrawStrlen(va("Civilian")) * TINYCHAR_WIDTH;
 
@@ -11328,8 +11333,7 @@ static void CG_DrawMiscStaticModels(void)
 }
 
 static void CG_DrawTourneyScoreboard()
-{
-}
+{}
 
 /*
 =====================

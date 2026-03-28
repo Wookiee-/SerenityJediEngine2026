@@ -1646,7 +1646,7 @@ static void CG_SetDeferredClientInfo(clientInfo_t* ci)
 			continue;
 		}
 
-	   // just load the real info cause it uses the same models and skins
+		// just load the real info cause it uses the same models and skins
 		CG_LoadClientInfo(ci);
 		return;
 	}
@@ -14134,7 +14134,7 @@ static void CG_G2AnimEntModelLoad(centity_t* cent)
 					*slash = 0;
 				}
 
-				cent->eventAnimIndex = BG_ParseAnimationEvtFile(original_model_name, cent->localAnimIndex,bgNumAnimEvents);
+				cent->eventAnimIndex = BG_ParseAnimationEvtFile(original_model_name, cent->localAnimIndex, bgNumAnimEvents);
 			}
 		}
 	}
@@ -17546,84 +17546,105 @@ void CG_Player(centity_t* cent)
 	// rww - Make sure weapons don't get set BEFORE cent->ghoul2 is initialized or else we'll have no
 	// weapon bolted on
 
+	// Update third-person weapon ghoul2 instances (including dual pistols)
 	if (cent->ghoul2 &&
-		(cent->currentState.eType != ET_NPC || cent->currentState.NPC_class != CLASS_VEHICLE &&
-			cent->currentState.NPC_class != CLASS_REMOTE && cent->currentState.NPC_class != CLASS_SEEKER) &&
-		(cent->ghoul2weapon != CG_G2WeaponInstance(cent, cent->currentState.weapon) ||
-			cent->ghoul2weapon2 != CG_G2WeaponInstance2(cent, cent->currentState.weapon) &&
-			cent->currentState.eFlags & EF3_DUAL_WEAPONS ||
-			cent->ghoul2weapon2 != NULL && !(cent->currentState.eFlags & EF3_DUAL_WEAPONS)) &&
-		!(cent->currentState.eFlags & EF_DEAD) && !cent->torsoBolt &&
-		cg.snap && (cent->currentState.number != cg.snap->ps.clientNum || cg.snap->ps.pm_flags & PMF_FOLLOW))
+		(cent->currentState.eType != ET_NPC ||
+			(cent->currentState.NPC_class != CLASS_VEHICLE &&
+				cent->currentState.NPC_class != CLASS_REMOTE &&
+				cent->currentState.NPC_class != CLASS_SEEKER)) &&
+		!(cent->currentState.eFlags & EF_DEAD) &&
+		!cent->torsoBolt &&
+		cg.snap &&
+		(cent->currentState.number != cg.snap->ps.clientNum ||
+			(cg.snap->ps.pm_flags & PMF_FOLLOW)))
 	{
 		if (ci->team == TEAM_SPECTATOR)
 		{
 			cent->ghoul2weapon = NULL;
+			cent->ghoul2weapon2 = NULL;
 			cent->weapon = 0;
 		}
 		else
 		{
-			CG_CopyG2WeaponInstance(cent, cent->currentState.weapon, cent->ghoul2);
+			const int weapon = cent->currentState.weapon;
+			const qboolean dual = (cent->currentState.eFlags & EF3_DUAL_WEAPONS) ? qtrue : qfalse;
 
-			if (cent->currentState.eType != ET_NPC)
+			// ---------------------------------------------------------
+			// NEW LOGIC: compute desired weapon instances FIRST
+			// ---------------------------------------------------------
+			void* desiredWeap = CG_G2WeaponInstance(cent, weapon);
+			void* desiredWeap2 = (dual == qtrue && weapon == WP_BRYAR_PISTOL)
+				? CG_G2WeaponInstance2(cent, weapon)
+				: NULL;
+
+			// ---------------------------------------------------------
+			// If anything changed, update the ghoul2 weapon models
+			// ---------------------------------------------------------
+			if (cent->ghoul2weapon != desiredWeap ||
+				cent->ghoul2weapon2 != desiredWeap2)
 			{
-				if (cent->weapon == WP_SABER
-					&& cent->weapon != cent->currentState.weapon
-					&& !cent->currentState.saberHolstered)
-				{
-					//switching away from the saber
-					if (ci->saber[0].soundOff
-						&& !cent->currentState.saberHolstered)
-					{
-						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO,
-							ci->saber[0].soundOff);
-					}
+				// Attach/copy weapon models into the player ghoul2
+				CG_CopyG2WeaponInstance(cent, weapon, cent->ghoul2);
 
-					if (ci->saber[1].soundOff &&
-						ci->saber[1].model[0] &&
+				// Saber sound logic preserved exactly as original
+				if (cent->currentState.eType != ET_NPC)
+				{
+					if (cent->weapon == WP_SABER &&
+						cent->weapon != weapon &&
 						!cent->currentState.saberHolstered)
 					{
-						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO,
-							ci->saber[1].soundOff);
+						if (ci->saber[0].soundOff)
+						{
+							trap->S_StartSound(cent->lerpOrigin,
+								cent->currentState.number,
+								CHAN_AUTO,
+								ci->saber[0].soundOff);
+						}
+
+						if (ci->saber[1].soundOff && ci->saber[1].model[0])
+						{
+							trap->S_StartSound(cent->lerpOrigin,
+								cent->currentState.number,
+								CHAN_AUTO,
+								ci->saber[1].soundOff);
+						}
+					}
+					else if (weapon == WP_SABER &&
+						cent->weapon != weapon &&
+						!cent->saberWasInFlight)
+					{
+						if (ci->saber[0].soundOn)
+						{
+							trap->S_StartSound(cent->lerpOrigin,
+								cent->currentState.number,
+								CHAN_AUTO,
+								ci->saber[0].soundOn);
+						}
+
+						if (ci->saber[1].soundOn)
+						{
+							trap->S_StartSound(cent->lerpOrigin,
+								cent->currentState.number,
+								CHAN_AUTO,
+								ci->saber[1].soundOn);
+						}
+
+						BG_SI_SetDesiredLength(&ci->saber[0], 0, -1);
+						BG_SI_SetDesiredLength(&ci->saber[1], 0, -1);
 					}
 				}
-				else if (cent->currentState.weapon == WP_SABER
-					&& cent->weapon != cent->currentState.weapon
-					&& !cent->saberWasInFlight)
-				{
-					//switching to the saber
-					if (ci->saber[0].soundOn)
-					{
-						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO,
-							ci->saber[0].soundOn);
-					}
 
-					if (ci->saber[1].soundOn)
-					{
-						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO,
-							ci->saber[1].soundOn);
-					}
-
-					BG_SI_SetDesiredLength(&ci->saber[0], 0, -1);
-					BG_SI_SetDesiredLength(&ci->saber[1], 0, -1);
-				}
-			}
-
-			cent->weapon = cent->currentState.weapon;
-			cent->ghoul2weapon = CG_G2WeaponInstance(cent, cent->currentState.weapon);
-			if (cent->currentState.eFlags & EF3_DUAL_WEAPONS && cent->currentState.weapon == WP_BRYAR_PISTOL)
-			{
-				cent->ghoul2weapon2 = CG_G2WeaponInstance2(cent, cent->currentState.weapon);
-			}
-			else
-			{
-				cent->ghoul2weapon2 = NULL;
+				// Commit the new weapon instances
+				cent->weapon = weapon;
+				cent->ghoul2weapon = desiredWeap;
+				cent->ghoul2weapon2 = desiredWeap2;
 			}
 		}
 	}
-	else if (cent->currentState.eFlags & EF_DEAD || cent->torsoBolt)
+	else if ((cent->currentState.eFlags & EF_DEAD) || cent->torsoBolt)
 	{
-		cent->ghoul2weapon = NULL; //be sure to update after respawning/getting limb regrown
+		cent->ghoul2weapon = NULL;
+		cent->ghoul2weapon2 = NULL;
 	}
 
 	CG_VisualWeaponsUpdate(cent, ci);
@@ -19768,9 +19789,28 @@ stillDoSaber:
 	//
 	if (cent->currentState.weapon != WP_EMPLACED_GUN)
 	{
-		if (cent->currentState.eFlags & EF3_DUAL_WEAPONS && cent->currentState.weapon == WP_BRYAR_PISTOL)
+		if ((cent->currentState.eFlags & EF3_DUAL_WEAPONS) &&
+			cent->currentState.weapon == WP_BRYAR_PISTOL)
 		{
-			cg_add_player_weaponduals(&legs, NULL, cent, root_angles, qtrue, qtrue);
+			// Right-hand world weapon (Ghoul2 index 1)
+			cg_add_player_weaponduals(
+				&legs,
+				NULL,
+				cent,
+				root_angles,
+				qtrue,      // third_person
+				qfalse      // right-hand
+			);
+
+			// Left-hand world weapon (Ghoul2 index 2)
+			cg_add_player_weaponduals(
+				&legs,
+				NULL,
+				cent,
+				root_angles,
+				qtrue,      // third_person
+				qtrue       // left-hand
+			);
 		}
 		else
 		{

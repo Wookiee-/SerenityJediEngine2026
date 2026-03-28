@@ -7056,6 +7056,11 @@ static void PM_CrashLand(void)
 	PM_CrashLandEffect();
 #endif
 
+	//Get rid of queued buttons
+	pm->cmd.buttons &= ~BUTTON_ATTACK;
+	pm->cmd.buttons &= ~BUTTON_BLOCK;
+	pm->cmd.buttons &= ~BUTTON_KICK;
+
 	// Ducking while falling doubles damage (before rolls, etc.)
 	if ((pm->ps->pm_flags & PMF_DUCKED) != 0)
 	{
@@ -11535,12 +11540,6 @@ void PM_BeginWeaponChange(const int weapon)
 		return;
 	}
 
-	if (pm->ps->weapon == WP_BRYAR_PISTOL)
-	{
-		//Changing weaps, remove dual weaps
-		pm->ps->eFlags &= ~EF3_DUAL_WEAPONS;
-	}
-
 	// turn of any kind of zooming when weapon switching.
 	if (pm->ps->zoomMode)
 	{
@@ -11585,7 +11584,7 @@ void PM_FinishWeaponChange(void)
 		pm->ps->eFlags |= EF3_DUAL_WEAPONS;
 	}
 #ifdef _GAME
-	else if (weapon == WP_BRYAR_PISTOL && g_entities[pm->ps->clientNum].client->skillLevel[SK_PISTOL] >= FORCE_LEVEL_3)
+	if (weapon == WP_BRYAR_PISTOL && g_entities[pm->ps->clientNum].client->skillLevel[SK_PISTOL] >= FORCE_LEVEL_3)
 	{
 		//Changed weaps, add dual weaps
 		pm->ps->eFlags |= EF3_DUAL_WEAPONS;
@@ -12007,6 +12006,19 @@ static qboolean PM_DoChargedWeapons(const qboolean vehicleRocketLock, const bgEn
 				BG_AddPredictableEventToPlayerstate(EV_WEAPON_CHARGE_ALT, pm->ps->weapon, pm->ps);
 			}
 
+			// Bryar alt-charge: export charge level to ps->generic1 for client glow
+			if (pm->ps->weapon == WP_BRYAR_PISTOL || pm->ps->weapon == WP_BRYAR_OLD)
+			{
+				int count = (pm->cmd.serverTime - pm->ps->weaponChargeTime) / 200.0f;
+
+				if (count < 1)
+					count = 1;
+				else if (count > 5)
+					count = 5;
+
+				pm->ps->generic1 = count;
+			}
+
 			if (vehicleRocketLock)
 			{
 				//check vehicle ammo
@@ -12101,6 +12113,12 @@ rest:
 		//	Com_Printf("Firing.  Charge time=%d\n", pm->cmd.serverTime - pm->ps->weaponChargeTime);
 #endif
 
+		// reset Bryar charge level on fire
+		if (pm->ps->weapon == WP_BRYAR_PISTOL || pm->ps->weapon == WP_BRYAR_OLD)
+		{
+			pm->ps->generic1 = 0;
+		}
+
 		// dumb, but since we shoot a charged weapon on button-up, we need to repress this button for now
 		pm->cmd.buttons |= BUTTON_ALT_ATTACK;
 		pm->ps->eFlags |= EF_FIRING | EF_ALT_FIRING;
@@ -12111,10 +12129,10 @@ rest:
 
 static int PM_ItemUsable(const playerState_t* ps, int forcedUse)
 {
-	vec3_t fwd, fwdorg, dest;
-	vec3_t yawonly;
-	vec3_t mins, maxs;
-	vec3_t trtest;
+	vec3_t fwd, fwdorg = { 0 }, dest;
+	vec3_t yawonly = { 0 };
+	vec3_t mins = { 0 }, maxs = { 0 };
+	vec3_t trtest = { 0 };
 	trace_t tr;
 
 	if (ps->m_iVehicleNum)
@@ -12758,6 +12776,13 @@ static void PM_Weapon(void)
 
 	const qboolean is_holding_block_button = pm->ps->ManualBlockingFlags & 1 << HOLDINGBLOCK ? qtrue : qfalse;
 	//Holding Block Button
+
+	// Prevent frozen players/bots from firing any weapon logic
+	if (pm->ps->userInt3 & (1 << FLAG_FROZEN))
+	{
+		pm->ps->weaponTime = 999999; // lock weapon completely
+		return;
+	}
 
 #if 0
 #ifdef _GAME
@@ -13669,6 +13694,44 @@ static void PM_Weapon(void)
 	{
 		PM_FinishWeaponChange();
 		return;
+	}
+
+	//
+	// Ensure dual pistol flag is correct during prediction
+	//
+	if (pm->ps->weapon == WP_BRYAR_PISTOL)
+	{
+		qboolean allowDual = qfalse;
+
+		// Boba/Mando classes always have duals
+		if (pm_entSelf->s.botclass == BCLASS_BOBAFETT ||
+			pm_entSelf->s.botclass == BCLASS_MANDOLORIAN ||
+			pm_entSelf->s.botclass == BCLASS_MANDOLORIAN1 ||
+			pm_entSelf->s.botclass == BCLASS_MANDOLORIAN2)
+		{
+			allowDual = qtrue;
+		}
+#ifdef _GAME
+		// Skill-based dual pistols
+		else if (g_entities[pm->ps->clientNum].client->skillLevel[SK_PISTOL] >= FORCE_LEVEL_3)
+		{
+			allowDual = qtrue;
+		}
+#endif
+
+		if (allowDual)
+		{
+			pm->ps->eFlags |= EF3_DUAL_WEAPONS;
+		}
+		else
+		{
+			pm->ps->eFlags &= ~EF3_DUAL_WEAPONS;
+		}
+	}
+	else
+	{
+		// Not holding pistol → no dual pistols
+		pm->ps->eFlags &= ~EF3_DUAL_WEAPONS;
 	}
 
 	if (pm->ps->weaponstate == WEAPON_RAISING)

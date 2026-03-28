@@ -1295,7 +1295,6 @@ static qboolean PM_Is_A_Dash_Anim(const int anim)
 
 static qboolean pm_check_jump()
 {
-
 #include <cstdlib>// for malloc, free, calloc, realloc
 #include <qcommon/q_color.h>
 #include <qcommon\q_color.h>
@@ -1304,7 +1303,7 @@ static qboolean pm_check_jump()
 #include <cmath>
 #include <malloc.h>
 
-		// Change to heap allocation
+	// Change to heap allocation
 	trace_t* traces = (trace_t*)malloc(sizeof(trace_t) * 256);
 
 	if (!traces)
@@ -4796,6 +4795,11 @@ static void PM_CrashLand()
 		return;
 	}
 
+	//Get rid of queued buttons
+	pm->cmd.buttons &= ~BUTTON_ATTACK;
+	pm->cmd.buttons &= ~BUTTON_BLOCK;
+	pm->cmd.buttons &= ~BUTTON_KICK;
+
 	if (pm->ps->pm_flags & PMF_TRIGGER_PUSHED)
 	{
 		delta = 21; //?
@@ -7878,7 +7882,7 @@ qboolean PM_GettingUpFromKnockDown(const float standheight, const float crouchhe
 					}
 
 					if (pm->gent &&
-						pm->gent->client && 
+						pm->gent->client &&
 						pm->gent->client->ps.forcePowerLevel[FP_LEVITATION] < FORCE_LEVEL_3)
 					{
 						//short burst
@@ -14789,7 +14793,7 @@ static void PM_SaberLockBreak(gentity_t* gent, gentity_t* genemy, const saberLoc
 
 					if (win_anim != BOTH_CCWCIRCLEBREAK)
 					{
-						const int player_low =(genemy->s.number == 0 && genemy->health <= 25);
+						const int player_low = (genemy->s.number == 0 && genemy->health <= 25);
 
 						const int npc_not_boss =
 							(genemy->s.number != 0 &&
@@ -17947,7 +17951,7 @@ void PM_WeaponLightsaber()
 	}
 
 	qboolean saber_in_air = qtrue;
-	
+
 	if (!PM_SaberInBrokenParry(pm->ps->saber_move) && pm->ps->saberBlocked != BLOCKED_PARRY_BROKEN && !PM_DodgeAnim(
 		pm->ps->torsoAnim) &&
 		pm->ps->weaponstate != WEAPON_CHARGING_ALT && pm->ps->weaponstate != WEAPON_CHARGING)

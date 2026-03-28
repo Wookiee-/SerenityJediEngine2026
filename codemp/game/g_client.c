@@ -6624,10 +6624,10 @@ void ClientSpawn(gentity_t* ent)
 	// find a spawn point
 	// do it before setting health back up, so farthest
 	// ranging doesn't count this client
-	
+
 	// ------------------------------------------------------------
-    // 1. Spectators always use spectator spawn logic
-    // ------------------------------------------------------------
+	// 1. Spectators always use spectator spawn logic
+	// ------------------------------------------------------------
 	if (client->sess.sessionTeam == TEAM_SPECTATOR)
 	{
 		spawnPoint = SelectSpectatorSpawnPoint(spawn_origin, spawn_angles);
@@ -7235,7 +7235,6 @@ spawn_done:
 					client->skillLevel[SK_ACROBATICS] = FORCE_LEVEL_3;
 					client->ps.stats[STAT_WEAPONS] |= 1 << WP_BRYAR_PISTOL;
 					client->skillLevel[SK_PISTOL] = FORCE_LEVEL_2;
-					client->ps.eFlags |= EF3_DUAL_WEAPONS;
 					ClassAmmoSetup(ent);
 					client->ps.stats[STAT_WEAPONS] |= 1 << WP_THERMAL;
 					client->ps.ammo[AMMO_THERMAL] = 4;
@@ -7552,6 +7551,7 @@ spawn_done:
 					client->skillLevel[SK_BLASTER] = FORCE_LEVEL_3;
 					client->ps.stats[STAT_WEAPONS] |= 1 << WP_BRYAR_PISTOL;
 					client->skillLevel[SK_PISTOL] = FORCE_LEVEL_3;
+					client->ps.eFlags |= EF3_DUAL_WEAPONS;
 					ClassAmmoSetup(ent);
 					client->ps.stats[STAT_WEAPONS] |= 1 << WP_REPEATER;
 					client->skillLevel[SK_REPEATER] = FORCE_LEVEL_3;

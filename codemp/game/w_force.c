@@ -40,6 +40,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "g_public.h"
 #include "anims.h"
 #include "surfaceflags.h"
+#include <qcommon\q_color.h>
+#include <qcommon\q_string.h>
 
 #define METROID_JUMP 1
 
@@ -770,7 +772,7 @@ void WP_InitForcePowers(gentity_t* ent)
 	{
 		if (ent->client->ps.fd.forcePowersKnown & 1 << i && !ent->client->ps.fd.forcePowerLevel[i])
 			ent->client->ps.fd.forcePowersKnown &= ~(1 << i);
-		else if (i != FP_LEVITATION && i != FP_SABER_OFFENSE && i != FP_SABER_DEFENSE && i != FP_SABERTHROW)
+		else if (/*i != FP_LEVITATION &&*/ i != FP_SABER_OFFENSE && i != FP_SABER_DEFENSE && i != FP_SABERTHROW)
 			last_fp_known = i;
 	}
 
@@ -8395,19 +8397,6 @@ void WP_ForcePowersUpdate(gentity_t* self, usercmd_t* ucmd)
 	if (!self->client->ps.fd.saberAnimLevel)
 	{
 		self->client->ps.fd.saberAnimLevel = FORCE_LEVEL_1;
-	}
-
-	if (level.gametype != GT_SIEGE)
-	{
-		if (!(self->client->ps.fd.forcePowersKnown & 1 << FP_LEVITATION))
-		{
-			self->client->ps.fd.forcePowersKnown |= 1 << FP_LEVITATION;
-		}
-
-		if (self->client->ps.fd.forcePowerLevel[FP_LEVITATION] < FORCE_LEVEL_1)
-		{
-			self->client->ps.fd.forcePowerLevel[FP_LEVITATION] = FORCE_LEVEL_1;
-		}
 	}
 
 	if (self->client->ps.fd.forcePowerSelected < 0 || self->client->ps.fd.forcePowerSelected >= NUM_FORCE_POWERS)

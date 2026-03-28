@@ -742,7 +742,7 @@ typedef enum {
 #define EF2_BOWCASTERSCOPE		(1<<9)      //[BowcasterScope]
 #define EF2_PLAYERHIT			(1<<10)     //[SPShield]
 #define	EF3_JETPACK_HOVER		(1<<11)
-#define	EF3_DUAL_WEAPONS			(1<<12)
+#define	EF3_DUAL_WEAPONS		(1<<12)
 #define	EF3_JETPACK_NO_MODEL	(1<<13)
 
 #define	EF_AWARD_EXCELLENT	     0x00000008		// draw an excellent sprite

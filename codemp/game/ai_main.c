@@ -8660,19 +8660,18 @@ static qboolean bot_behave_check_backstab(bot_state_t* bs)
 	return qtrue;
 }
 
+// ------------------------------------------------------------------
+// Smart kata decision: bots kata when enemy is weak or vulnerable
+// ------------------------------------------------------------------
 static qboolean bot_behave_check_use_kata(const bot_state_t* bs)
 {
-	// ------------------------------------------------------------------
-	// Check if bot is using a saber; kata only applies to saber users.
-	// ------------------------------------------------------------------
+	// Must be using a saber
 	if (bs->cur_ps.weapon != WP_SABER)
 	{
 		return qfalse;
 	}
 
-	vec3_t forward;
-	vec3_t cur_org;
-	vec3_t end_org;
+	vec3_t forward, cur_org, end_org;
 	trace_t tr;
 
 	// Bot eye position
@@ -8685,16 +8684,15 @@ static qboolean bot_behave_check_use_kata(const bot_state_t* bs)
 	// Trace 64 units forward
 	VectorMA(cur_org, 64.0f, forward, end_org);
 
-	trap->Trace(&tr,
+	trap->Trace(
+		&tr,
 		cur_org,
 		NULL,
 		NULL,
 		end_org,
 		bs->client,
 		MASK_SHOT,
-		0,
-		0,
-		0);
+		0, 0, 0);
 
 	// Validate trace hit
 	if (tr.entityNum < 0 || tr.entityNum > ENTITYNUM_MAX_NORMAL)
@@ -8702,14 +8700,12 @@ static qboolean bot_behave_check_use_kata(const bot_state_t* bs)
 		return qfalse;
 	}
 
-	const gentity_t* enemy = &g_entities[tr.entityNum];
+	gentity_t* enemy = &g_entities[tr.entityNum];
 
-	// ------------------------------------------------------------------
-	// Validate enemy entity
-	// ------------------------------------------------------------------
-	if (enemy == NULL ||
+	// Validate enemy
+	if (!enemy ||
 		(enemy->s.eType != ET_PLAYER && enemy->s.eType != ET_NPC) ||
-		enemy->client == NULL ||
+		!enemy->client ||
 		enemy->health < 1 ||
 		(enemy->client->ps.eFlags & EF_DEAD))
 	{
@@ -8717,26 +8713,41 @@ static qboolean bot_behave_check_use_kata(const bot_state_t* bs)
 	}
 
 	// Don’t attack teammates
-	if (OnSameTeam(&g_entities[bs->client], enemy) == qtrue)
+	if (OnSameTeam(&g_entities[bs->client], enemy))
 	{
 		return qfalse;
 	}
 
 	// ------------------------------------------------------------------
-	// Randomization to prevent constant kata spam
+	// SMART KATA CONDITIONS
 	// ------------------------------------------------------------------
-	if (Q_irand(0, 200) > 50)
+
+	const int enemyHealth = enemy->health;
+	const int enemyMishap = enemy->client->ps.saberFatigueChainCount;
+
+	qboolean shouldKata = qfalse;
+
+	// Enemy is weak
+	if (enemyHealth <= 30)
 	{
-		return qfalse;
+		shouldKata = qtrue;
 	}
 
-	// ------------------------------------------------------------------
-	// Execute kata attack
-	// ------------------------------------------------------------------
-	trap->EA_Attack(bs->client);
-	trap->EA_Alt_Attack(bs->client);
+	// Enemy is highly fatigued / vulnerable
+	if (enemyMishap >= MISHAPLEVEL_ELEVEN)
+	{
+		shouldKata = qtrue;
+	}
 
-	return qtrue;
+	// Add a small random chance so bots don't kata every frame
+	if (shouldKata && Q_irand(0, 4) == 0) // 20% chance
+	{
+		trap->EA_Attack(bs->client);
+		trap->EA_Alt_Attack(bs->client);
+		return qtrue;
+	}
+
+	return qfalse;
 }
 
 static qboolean bot_behave_check_use_crouch_attack(bot_state_t* bs)
@@ -8867,7 +8878,7 @@ void bot_behave_attack_basic(bot_state_t* bs, const gentity_t* target)
 		bot_weapon_detpack(bs, target);
 	}
 
-	if (!PM_SaberInKata(bs->cur_ps.saber_move) && bs->cur_ps.fd.forcePower > 80 &&
+	if (!PM_SaberInKata(bs->cur_ps.saber_move) && bs->cur_ps.fd.forcePower > 60 &&
 		bs->cur_ps.weapon == WP_SABER && dist < 128 && in_field_of_vision(bs->viewangles, 90, ang))
 	{
 		//KATA!

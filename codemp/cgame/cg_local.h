@@ -2118,8 +2118,8 @@ void TurretClientRun(centity_t* ent);
 //
 // cg_weapons.c
 //
-void CG_GetClientWeaponMuzzleBoltPoint(int cl_index, vec3_t to);
-void CG_GetClientWeaponMuzzleBoltPointduals(int cl_index, vec3_t to, qboolean leftweap);
+void CG_GetClientWeaponMuzzleBoltPoint(const int cl_index, vec3_t to);
+void CG_GetClientWeaponMuzzleBoltPointduals(const int cl_index, vec3_t to, const qboolean leftweap);
 
 void CG_NextWeapon_f(void);
 void CG_PrevWeapon_f(void);

@@ -29524,7 +29524,7 @@ void G_SaberBounce(const gentity_t* attacker, gentity_t* victim)
 		return;
 	}
 
-	if (attacker->client->ps.saberFatigueChainCount < MISHAPLEVEL_HUDFLASH)
+	if (attacker->client->ps.saberFatigueChainCount < MISHAPLEVEL_HEAVY)
 	{
 		return;
 	}

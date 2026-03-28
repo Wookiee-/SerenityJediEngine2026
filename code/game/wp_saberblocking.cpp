@@ -218,7 +218,7 @@ qboolean g_accurate_blocking(const gentity_t* blocker, const gentity_t* attacker
 	VectorNormalize(parrier_move);
 
 	// ------------------------------------------------------------
-	// Style-based threshold 
+	// Style-based threshold
 	// ------------------------------------------------------------
 	float threshold = 0.40f; // default
 
