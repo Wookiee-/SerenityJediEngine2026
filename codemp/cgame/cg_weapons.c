@@ -2005,12 +2005,12 @@ void CG_DrawWeaponSelect(void)
 		trap->R_SetColor(colorTable[CT_WHITE]);
 		if (!CG_WeaponCheck(cg.weaponSelect))
 		{
-			CG_DrawPic(x - big_icon_size / 2, y - (big_icon_size - small_icon_size) / 2 + 10 + y_offset, big_icon_size,
+			CG_DrawPic(x - big_icon_size / 2.0f, y - (big_icon_size - small_icon_size) / 2.0f + 10 + y_offset, big_icon_size,
 				big_icon_size, cgs.media.weaponIcons_NA[cg.weaponSelect]);
 		}
 		else
 		{
-			CG_DrawPic(x - big_icon_size / 2, y - (big_icon_size - small_icon_size) / 2 + 10 + y_offset, big_icon_size,
+			CG_DrawPic(x - big_icon_size / 2.0f, y - (big_icon_size - small_icon_size) / 2.0f + 10 + y_offset, big_icon_size,
 				big_icon_size, cgs.media.weaponIcons[cg.weaponSelect]);
 		}
 	}

@@ -4374,6 +4374,18 @@ command_t commands[] = {
 
 static const size_t num_commands = ARRAY_LEN(commands);
 
+static qboolean Holocron_AdminCheck(gentity_t* ent)
+{
+	if ((ent->r.svFlags & SVF_ADMIN) == 0)
+	{
+		trap->SendServerCommand(ent->s.number,
+			"print \"You must be an admin to use holocron commands.\n\"");
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
 extern qboolean inGameCinematic;
 extern void Create_Autosave(vec3_t origin, int size, qboolean teleportPlayers);
 extern void Save_Autosaves(void);
@@ -4397,6 +4409,60 @@ void ClientCommand(const int clientNum)
 	{
 		//one of the clients just finished their cutscene, start rendering server frames again.
 		inGameCinematic = qfalse;
+		return;
+	}
+
+	if (Q_stricmp(cmd, "addholocron") == 0)
+	{
+		if (Holocron_AdminCheck(ent) == qfalse)
+		{
+			return;
+		}
+
+		char typeName[MAX_QPATH] = { 0 };
+		trap->Argv(1, typeName, sizeof typeName);
+
+		if (!typeName[0])
+		{
+			// optionally Com_Printf("addholocron: missing type\n");
+			return;
+		}
+
+		Holocron_Add(ent, typeName);
+		return;
+	}
+
+	if (Q_stricmp(cmd, "spawnholocron") == 0)
+	{
+		if (Holocron_AdminCheck(ent) == qfalse)
+		{
+			return;
+		}
+
+		const int type = Q_irand(0, NUM_HOLOCRON_TYPES - 1);
+		Create_Holocron(ent, type, ent->r.currentOrigin);
+		return;
+	}
+
+	if (Q_stricmp(cmd, "saveholocrons") == 0)
+	{
+		if (Holocron_AdminCheck(ent) == qfalse)
+		{
+			return;
+		}
+
+		Holocron_Savepositions();
+		return;
+	}
+
+	if (Q_stricmp(cmd, "loadholocrons") == 0)
+	{
+		if (Holocron_AdminCheck(ent) == qfalse)
+		{
+			return;
+		}
+
+		Create_Holocrons();
 		return;
 	}
 

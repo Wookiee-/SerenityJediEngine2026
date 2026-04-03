@@ -4353,6 +4353,11 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 			centity_t* effect_on = &cg_entities[es->owner];
 
 			int doit = 1;
+			if (!effect_on->ghoul2)
+			{
+				// silently ignore invalid bolted effects
+				break;
+			}
 
 			if (cg.snap->ps.duelInProgress)
 			{ // this client is dueling
@@ -4413,9 +4418,14 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 					}
 				}
 
-				if (!haveBolt || !e_id) // we don't have this particular bone or effect so can't play it
+				if (!haveBolt || !e_id)
 				{
-					Com_Printf("EV_PLAY_EFFECT_BOLTED: invalid bolt index %d for entity %d, effect %d\n", boltIdx, es->owner, es->eventParm);
+					// Only print if the entity is a player or NPC
+					if (es->owner > 0 && es->owner < MAX_CLIENTS)
+					{
+						Com_Printf("EV_PLAY_EFFECT_BOLTED: invalid bolt index %d for entity %d, effect %d\n",
+							boltIdx, es->owner, es->eventParm);
+					}
 					break;
 				}
 

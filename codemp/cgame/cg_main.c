@@ -1488,15 +1488,20 @@ static void CG_RegisterGraphics(void)
 
 	cgs.media.itemHoloModel = trap->R_RegisterModel("models/map_objects/mp/holo.md3");
 
-	if (cgs.gametype == GT_HOLOCRON || com_buildScript.integer)
+	//
+	// Register holocron models.
+	// Reason:
+	// - GT_HOLOCRON requires them (vanilla behavior)
+	// - Admin can spawn holocrons in any gametype
+	// - Registration is cheap and renderer‑safe
+	// - Prevents missing-model bugs outside GT_HOLOCRON
+	//
+	for (i = 0; i < NUM_FORCE_POWERS; i++)
 	{
-		for (i = 0; i < NUM_FORCE_POWERS; i++)
+		if (forceHolocronModels[i] != NULL &&
+			forceHolocronModels[i][0] != '\0')
 		{
-			if (forceHolocronModels[i] &&
-				forceHolocronModels[i][0])
-			{
-				trap->R_RegisterModel(forceHolocronModels[i]);
-			}
+			trap->R_RegisterModel(forceHolocronModels[i]);
 		}
 	}
 

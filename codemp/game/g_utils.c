@@ -1709,10 +1709,24 @@ G_PlayBoltedEffect
 */
 gentity_t* G_PlayBoltedEffect(const int fxID, gentity_t* owner, const char* bolt)
 {
+	if (!owner || !owner->ghoul2)
+	{
+		// No ghoul2 model → cannot bolt anything
+		return NULL;
+	}
+
+	int boltIndex = trap->G2API_AddBolt(owner->ghoul2, 0, bolt);
+
+	if (boltIndex < 0)
+	{
+		// Bolt does not exist on this model → do not send event
+		return NULL;
+	}
+
 	gentity_t* te = G_TempEntity(owner->r.currentOrigin, EV_PLAY_EFFECT_BOLTED);
 	te->s.eventParm = fxID;
 	te->s.owner = owner->s.number;
-	te->s.generic1 = trap->G2API_AddBolt(owner->ghoul2, 0, bolt);
+	te->s.generic1 = boltIndex;
 
 	return te;
 }

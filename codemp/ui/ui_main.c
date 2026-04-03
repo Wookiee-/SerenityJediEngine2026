@@ -7764,6 +7764,31 @@ static void UI_RunMenuScript(char** args)
 				trap->Cmd_ExecuteText(EXEC_APPEND, va("Adminpunish \"%i\"\n", uiInfo.playerIndexes[uiInfo.playerIndex]));
 			}
 		}
+		else if (Q_stricmp(name, "AdminMenuSpawnHolocron") == 0)
+		{
+			char typeBuf[MAX_QPATH];
+			const char* raw = UI_Cvar_VariableString("ui_selectedHolocron");
+
+			// Defensive: no value, bail
+			if (!raw || !raw[0])
+			{
+				return;
+			}
+
+			// Make a real copy, avoid dangling cvar pointer
+			Q_strncpyz(typeBuf, raw, sizeof(typeBuf));
+
+			if (!typeBuf[0])
+			{
+				return;
+			}
+
+			// Build command safely, no va()
+			char cmd[256];
+			Com_sprintf(cmd, sizeof(cmd), "addholocron \"%s\"\n", typeBuf);
+
+			trap->Cmd_ExecuteText(EXEC_APPEND, cmd);
+		}
 		else
 		{
 			Com_Printf("unknown UI script %s\n", name);
@@ -7775,19 +7800,19 @@ static void UI_GetTeamColor(vec4_t* color)
 {
 }
 
-void UI_SetSiegeTeams(void)
+static void UI_SetSiegeTeams(void)
 {
-	char info[MAX_INFO_VALUE];
+	static char info[MAX_INFO_VALUE];
 	char* mapname = NULL;
 	char levelname[MAX_QPATH];
-	char btime[1024];
-	char teams[2048];
-	char teamInfo[MAX_SIEGE_INFO_SIZE];
-	char team1[1024];
-	char team2[1024];
+	static char btime[1024];
+	static char teams[2048];
+	static char teamInfo[MAX_SIEGE_INFO_SIZE];
+	static char team1[1024];
+	static char team2[1024];
 	fileHandle_t f;
 
-	//Get the map name from the server info
+	// Get the map name from the server info
 	if (trap->GetConfigString(CS_SERVERINFO, info, sizeof info))
 	{
 		mapname = Info_ValueForKey(info, "mapname");
@@ -7800,7 +7825,7 @@ void UI_SetSiegeTeams(void)
 
 	const int gametype = atoi(Info_ValueForKey(info, "g_gametype"));
 
-	//If the server we are connected to is not siege we cannot choose a class anyway
+	// If the server we are connected to is not siege we cannot choose a class anyway
 	if (gametype != GT_SIEGE)
 	{
 		return;
@@ -7827,12 +7852,11 @@ void UI_SetSiegeTeams(void)
 	}
 
 	trap->FS_Read(siege_info, len, f);
-	siege_info[len] = 0; //ensure null terminated
+	siege_info[len] = 0; // ensure null terminated
 
 	trap->FS_Close(f);
 
-	//Found the .siege file
-
+	// Found the .siege file
 	if (BG_SiegeGetValueGroup(siege_info, "Teams", teams))
 	{
 		char buf[1024];
@@ -7862,7 +7886,7 @@ void UI_SetSiegeTeams(void)
 		return;
 	}
 
-	//Set the team themes so we know what classes to make available for selection
+	// Set the team themes so we know what classes to make available for selection
 	if (BG_SiegeGetValueGroup(siege_info, team1, teamInfo))
 	{
 		if (BG_SiegeGetPairedValue(teamInfo, "UseTeam", btime))
@@ -7881,7 +7905,7 @@ void UI_SetSiegeTeams(void)
 	siegeTeam1 = BG_SiegeFindThemeForTeam(SIEGETEAM_TEAM1);
 	siegeTeam2 = BG_SiegeFindThemeForTeam(SIEGETEAM_TEAM2);
 
-	//set the default description for the default selection
+	// set the default description for the default selection
 	if (!siegeTeam1 || !siegeTeam1->classes[0])
 	{
 		Com_Error(ERR_DROP, "Error loading teams in UI");
@@ -8834,6 +8858,8 @@ static int UI_FeederCount(float feederID)
 			}
 		}
 		return count;
+	case FEEDER_HOLOCRON_LIST:
+		return uiInfo.holocronCount;
 	default:;
 	}
 
@@ -9305,6 +9331,14 @@ static const char* UI_FeederItemText(float feederID, int index, int column,
 	}
 	else if (feederID == FEEDER_SIEGE_CLASS_WEAPONS)
 	{
+		return "";
+	}
+	else if (feederID == FEEDER_HOLOCRON_LIST)
+	{
+		if (index >= 0 && index < uiInfo.holocronCount)
+		{
+			return uiInfo.holocronNames[index];
+		}
 		return "";
 	}
 	return "";
@@ -9935,6 +9969,11 @@ qboolean UI_FeederSelection(float feederFloat, int index, itemDef_t* item)
 				trap->Cvar_Set("ui_itemforceinvdesc", forcepowerDesc[i]);
 			}
 		}
+	}
+	else if (feederID == FEEDER_HOLOCRON_LIST)
+	{
+		uiInfo.holocronIndex = index;  // store the selection
+		trap->Cvar_Set("ui_selectedHolocron", uiInfo.holocronNames[index]);
 	}
 	return qtrue;
 }
@@ -10878,6 +10917,18 @@ static void UI_Init(qboolean inGameLoad)
 
 	trap->Cvar_Set("ui_actualNetGameType", va("%d", ui_netGametype.integer));
 	trap->Cvar_Update(&ui_actualNetGametype);
+
+	uiInfo.holocronCount = 10;
+	uiInfo.holocronNames[0] = "Push";
+	uiInfo.holocronNames[1] = "Pull";
+	uiInfo.holocronNames[2] = "Speed";
+	uiInfo.holocronNames[3] = "Grip";
+	uiInfo.holocronNames[4] = "Lightning";
+	uiInfo.holocronNames[5] = "Rage";
+	uiInfo.holocronNames[6] = "Protect";
+	uiInfo.holocronNames[7] = "Absorb";
+	uiInfo.holocronNames[8] = "Heal";
+	uiInfo.holocronNames[9] = "Sight";
 }
 
 #define	UI_FPS_FRAMES	4
@@ -10886,10 +10937,6 @@ static void UI_Refresh(int realtime)
 {
 	static int index;
 	static int previousTimes[UI_FPS_FRAMES];
-
-	//if ( !( trap->Key_GetCatcher() & KEYCATCH_UI ) ) {
-	//	return;
-	//}
 
 	trap->G2API_SetTime(realtime, 0);
 	trap->G2API_SetTime(realtime, 1);

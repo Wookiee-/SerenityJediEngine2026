@@ -1440,6 +1440,8 @@ typedef struct playerState_s {
 	int     frozenTime;
 	int     botPendingStandTime;
 	int     botPendingStyleTime;
+	int     holocronExpireTime;      // when the holocron should pop out
+	int     holocronGlobalCooldown;  // when the player can pick up another holocron
 } playerState_t;
 
 typedef struct siegePers_s
@@ -1611,6 +1613,7 @@ typedef struct siegePers_s
 
 #define DEFAULT_BLOCK_TIME_MAX_MILLISECONDS 300
 
+#define BOTZIZE_TINY    	55
 #define BOTZIZE_SMALLEST	65
 #define BOTZIZE_SMALLER		75
 #define BOTZIZE_SMALL		95

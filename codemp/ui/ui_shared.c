@@ -5360,6 +5360,10 @@ static const char* g_bindCommands[] = {
 	"+button20",
 	"weather",
 	"saberdown",
+	"addholocron",
+	"saveholocrons",
+	"spawnholocron",
+	"loadholocrons",
 	//emotes
 	"myhead",
 	"cower",

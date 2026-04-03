@@ -537,6 +537,9 @@ typedef struct bot_state_s
 	float fallbackTurnYaw;
 	float saberStyleDebounce;
 	int spacingState; // 0 = HOLD, 1 = BACKUP, 2 = CLOSE
+	bot_route_t tempRoute; // reusable route buffer
+	int blockPoints;
+	qboolean inSaberFallback;
 	int nextStyleSwitchTime;
 	int landingReleaseTime;
 	int kataDashSoundTime;

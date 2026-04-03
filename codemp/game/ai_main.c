@@ -3,11 +3,11 @@
 Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
-Copyright (C) 2013 - 2015, SerenityJediEngine2026 contributors
+Copyright (C) 2013 - 2015, MovieDuels contributors
 
-This file is part of the SerenityJediEngine2026 source code.
+This file is part of the MovieDuels source code.
 
-SerenityJediEngine2026 is free software; you can redistribute it and/or modify it
+MovieDuels is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License version 2 as
 published by the Free Software Foundation.
 
@@ -56,7 +56,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "bg_saga.h"
  //
 
-#define BOT_THINK_TIME	1000/bot_fps.integer
+#define BOT_THINK_TIME (1000.0f / (float)bot_fps.integer)
+
 //bot states
 bot_state_t* botstates[MAX_CLIENTS];
 int walktime[MAX_CLIENTS];
@@ -1488,6 +1489,7 @@ static qboolean bot_should_walk_saber(bot_state_t* bs, bot_input_t* bi)
 static qboolean bot_should_walk(bot_state_t* bs, bot_input_t* bi)
 {
 	const int client = bs->cur_ps.clientNum;
+
 	const gentity_t* self = &g_entities[client];
 	const gentity_t* enemy = bs->currentEnemy;
 
@@ -1760,11 +1762,17 @@ static int bot_ai(const int client, const float thinktime)
 	const int start = trap->Milliseconds();
 #endif
 
-	// Run AI
-	if (bs->settings.skill <= 3)
+	qboolean lowSkill = (bs->settings.skill <= 3 ? qtrue : qfalse);
+	qboolean notSaber = (bs->cur_ps.weapon != WP_SABER ? qtrue : qfalse);
+
+	if (lowSkill == qtrue || notSaber == qtrue)
+	{
 		standard_bot_ai(bs);
+	}
 	else
+	{
 		Enhanced_bot_ai(bs);
+	}
 
 #ifdef _DEBUG
 	const int end = trap->Milliseconds();
@@ -2264,8 +2272,7 @@ static void add_open_list(const bot_state_t* bs, const int wp_num, const int par
 
 	if (parent != -1 && gWPArray[wp_num]->flags & WPFLAG_JUMP)
 	{
-		if (force_jump_needed(gWPArray[parent]->origin, gWPArray[wp_num]->origin) > bs->cur_ps.fd.forcePowerLevel[
-			FP_LEVITATION])
+		if (force_jump_needed(gWPArray[parent]->origin, gWPArray[wp_num]->origin) > bs->cur_ps.fd.forcePowerLevel[FP_LEVITATION])
 		{
 			//can't make this jump with our level of Force Jump
 			return;
@@ -5045,7 +5052,7 @@ static void WPTouchRoutine(bot_state_t* bs)
 			bs->cur_ps.eFlags |= EF_JETPACK_ACTIVE;
 			bs->cur_ps.eFlags |= EF_JETPACK_FLAMING;
 			bs->cur_ps.eFlags |= EF3_JETPACK_HOVER;
-			bs->jumpHoldTime = ((bs->forceJumpChargeTime + level.time) / 2) + 50000;
+			bs->jumpHoldTime = ((float)bs->forceJumpChargeTime + (float)level.time) * 0.5f + 50000.0f;
 		}
 		bs->jumpTime = level.time + 100;
 	}
@@ -5138,7 +5145,6 @@ static void move_toward_ideal_angles(bot_state_t* bs)
 }
 
 #define BOT_STRAFE_AVOIDANCE
-
 #ifdef BOT_STRAFE_AVOIDANCE
 #define STRAFEAROUND_RIGHT			1
 #define STRAFEAROUND_LEFT			2
@@ -8300,6 +8306,23 @@ static void commander_bot_ai(bot_state_t* bs)
 		commander_bot_teamplay_ai(bs);
 	}
 }
+
+/*
+===========================
+Bot_SameGroundLevel
+
+Determines whether the bot and its enemy are effectively on the
+same ground level, using both:
+
+1. Ground trace height comparison (handles slopes, uneven floors)
+2. Vertical separation comparison (prevents mirror-jumping)
+
+This helper is used by all melee/saber combat handlers.
+
+Returns qtrue if the bot should treat the enemy as being on the
+same ground level.
+===========================
+*/
 static qboolean Bot_SameGroundLevel(bot_state_t* bs, const vec3_t enemyPos)
 {
 	if (!bs)
@@ -8449,7 +8472,6 @@ static void melee_combat_handling(bot_state_t* bs)
 			}
 		}
 	}
-
 	// -------------------------------------------------
 	// SAME GROUND CHECK (UNIFIED HELPER)
 	// -------------------------------------------------
@@ -8982,12 +9004,6 @@ void bot_behave_attack_basic(bot_state_t* bs, const gentity_t* target)
 	{
 		//not switching weapons so attack
 		trap->EA_Attack(bs->client);
-
-		if (bs->virtualWeapon == WP_SABER)
-		{
-			//only walk while attacking with the saber.
-			bs->doWalk = qtrue;
-		}
 	}
 }
 
@@ -9262,11 +9278,6 @@ static void saber_combat_handling(bot_state_t* bs)
 		enemyInFOV == qtrue)
 	{
 		trap->EA_Attack(bs->client);
-
-		if (bs->cur_ps.weapon == WP_SABER)
-		{
-			bs->doWalk = qtrue;
-		}
 	}
 }
 
@@ -9437,11 +9448,6 @@ static void Enhanced_saber_combat_handling(bot_state_t* bs)
 		enemyInFOV == qtrue)
 	{
 		trap->EA_Attack(bs->client);
-
-		if (bs->cur_ps.weapon == WP_SABER)
-		{
-			bs->doWalk = qtrue;
-		}
 	}
 }
 
@@ -9452,13 +9458,13 @@ float bot_weapon_can_lead(const bot_state_t* bs)
 	switch (bs->cur_ps.weapon)
 	{
 	case WP_BRYAR_PISTOL:
-		return 0.5f;
+		return 0.95f;
 	case WP_BLASTER:
-		return 0.5f;
+		return 0.95f;
 	case WP_BOWCASTER:
-		return 0.5f;
+		return 0.95f;
 	case WP_REPEATER:
-		return 0.45f;
+		return 0.95f;
 	case WP_THERMAL:
 		return 0.5f;
 	case WP_DEMP2:
@@ -9552,6 +9558,9 @@ static void bot_aim_offset_goal_angles(bot_state_t* bs)
 {
 	if (bs->skills.perfectaim)
 	{
+		bs->aimOffsetAmtYaw = 0.0f;
+		bs->aimOffsetAmtPitch = 0.0f;
+
 		return;
 	}
 
@@ -10159,15 +10168,22 @@ static BotTryAnotherWeapon(bot_state_t* bs)
 bot_select_ideal_weapon
 ==================
 */
+
 static qboolean bot_weapon_selectable(const bot_state_t* bs, const int weapon)
 {
+	// ------------------------------------------------------------
+	// WP_NONE is never selectable
+	// ------------------------------------------------------------
 	if (weapon == WP_NONE)
 	{
 		return qfalse;
 	}
 
+	// ------------------------------------------------------------
+	// Check if bot has the weapon and enough ammo
+	// ------------------------------------------------------------
 	if (bs->cur_ps.ammo[weaponData[weapon].ammoIndex] >= weaponData[weapon].energyPerShot &&
-		bs->cur_ps.stats[STAT_WEAPONS] & 1 << weapon)
+		(bs->cur_ps.stats[STAT_WEAPONS] & (1 << weapon)))
 	{
 		return qtrue;
 	}
@@ -10207,49 +10223,34 @@ static int bot_select_ideal_weapon(bot_state_t* bs)
 		i++;
 	}
 
-	if (bs->currentEnemy && bs->frame_Enemy_Len < 300 &&
-		(bestweapon == WP_BRYAR_PISTOL || bestweapon == WP_BLASTER || bestweapon == WP_BOWCASTER) &&
-		bs->cur_ps.stats[STAT_WEAPONS] & 1 << WP_SABER)
+	if (bs->currentEnemy && bs->frame_Enemy_Len < 300 && bs->cur_ps.stats[STAT_WEAPONS] & 1 << WP_SABER)
 	{
 		bestweapon = WP_SABER;
 		bestweight = 1;
 	}
 
-	if (bs->currentEnemy && bs->frame_Enemy_Len > 300 &&
-		bs->currentEnemy->client && bs->currentEnemy->client->ps.weapon != WP_SABER &&
+	if (bs->currentEnemy &&
+		bs->frame_Enemy_Len > 300 &&
+		bs->currentEnemy->client &&
+		bs->currentEnemy->client->ps.weapon != WP_SABER &&
 		bestweapon == WP_SABER)
 	{
-		//if the enemy is far away, and we have our saber selected, see if we have any good distance weapons instead
-		if (bot_weapon_selectable(bs, WP_DISRUPTOR))
-		{
-			bestweapon = WP_DISRUPTOR;
-			bestweight = 1;
-		}
-		else if (bot_weapon_selectable(bs, WP_ROCKET_LAUNCHER))
-		{
-			bestweapon = WP_ROCKET_LAUNCHER;
-			bestweight = 1;
-		}
-		else if (bot_weapon_selectable(bs, WP_BOWCASTER))
-		{
-			bestweapon = WP_BOWCASTER;
-			bestweight = 1;
-		}
-		else if (bot_weapon_selectable(bs, WP_BLASTER))
-		{
-			bestweapon = WP_BLASTER;
-			bestweight = 1;
-		}
-		else if (bot_weapon_selectable(bs, WP_REPEATER))
-		{
-			bestweapon = WP_REPEATER;
-			bestweight = 1;
-		}
-		else if (bot_weapon_selectable(bs, WP_DEMP2))
-		{
-			bestweapon = WP_DEMP2;
-			bestweight = 1;
-		}
+		// Enemy is far away and using a ranged weapon.
+		// We are a saber-only class. Close the distance.
+
+		// Set spacing mode to CLOSE (0 = HOLD, 1 = BACKUP, 2 = CLOSE)
+		bs->spacingState = 2;
+
+		// Force movement toward the enemy
+		bs->forceMove_Forward = 1;
+		bs->forceMove_Right = 0;
+		bs->forceMove_Up = 0;
+
+		// Set the goal position to the enemy's current location
+		VectorCopy(bs->currentEnemy->r.currentOrigin, bs->goalPosition);
+
+		// Keep saber selected
+		bestweight = 1;
 	}
 
 	if (bestweight != -1 && bs->cur_ps.weapon != bestweapon && bs->virtualWeapon != bestweapon)
@@ -10844,18 +10845,18 @@ static qboolean bot_buy_item(bot_state_t* bs, const char* msg)
 		return qfalse;
 	}
 
-	// Purchase cooldown
-	if (level.time < bs->nextPurchase)
-	{
-		return qfalse;
-	}
-
 	if (bs->cur_ps.weapon == WP_SABER)
 	{
 		return qfalse;
 	}
 
 	if (bs->cur_ps.weapon == WP_MELEE)
+	{
+		return qfalse;
+	}
+
+	// Purchase cooldown
+	if (level.time < bs->nextPurchase)
 	{
 		return qfalse;
 	}
@@ -13201,7 +13202,8 @@ void standard_bot_ai(bot_state_t* bs)
 				bs->doAltAttack = 1;
 				bs->doAttack = 0;
 			}
-			else if (bs->cur_ps.saberInFlight && bs->frame_Enemy_Len > 300 && bs->frame_Enemy_Len < BOT_SABER_THROW_RANGE)
+			else if (bs->cur_ps.saberInFlight && bs->frame_Enemy_Len > 300 && bs->frame_Enemy_Len <
+				BOT_SABER_THROW_RANGE)
 			{
 				bs->doAltAttack = 1;
 				bs->doAttack = 0;
@@ -13438,55 +13440,55 @@ void standard_bot_ai(bot_state_t* bs)
 #endif
 	}
 
-	#ifndef FORCEJUMP_INSTANTMETHOD
-		if (bs->forceJumpChargeTime > level.time)
-		{
-			bs->jumpTime = 0;
-		}
-	#endif
-	
-		if (bs->jumpPrep > level.time)
-		{
-			bs->forceJumpChargeTime = 0;
-		}
-	
-		if (bs->forceJumpChargeTime > level.time)
-		{
-			bs->jumpHoldTime = ((float)(bs->forceJumpChargeTime - level.time) * 0.5f) + level.time;
-			bs->forceJumpChargeTime = 0;
-		}
-	
+#ifndef FORCEJUMP_INSTANTMETHOD
+	if (bs->forceJumpChargeTime > level.time)
+	{
+		bs->jumpTime = 0;
+	}
+#endif
+
+	if (bs->jumpPrep > level.time)
+	{
+		bs->forceJumpChargeTime = 0;
+	}
+
+	if (bs->forceJumpChargeTime > level.time)
+	{
+		bs->jumpHoldTime = ((float)(bs->forceJumpChargeTime - level.time) * 0.5f) + level.time;
+		bs->forceJumpChargeTime = 0;
+	}
+
+	if (bs->jumpHoldTime > level.time)
+	{
+		bs->jumpTime = bs->jumpHoldTime;
+	}
+
+	if (bs->jumpTime > level.time && bs->jDelay < level.time)
+	{
 		if (bs->jumpHoldTime > level.time)
 		{
-			bs->jumpTime = bs->jumpHoldTime;
-		}
-	
-		if (bs->jumpTime > level.time && bs->jDelay < level.time)
-		{
-			if (bs->jumpHoldTime > level.time)
+			trap->EA_Jump(bs->client);
+			if (bs->wpCurrent)
 			{
-				trap->EA_Jump(bs->client);
-				if (bs->wpCurrent)
-				{
-					if (bs->wpCurrent->origin[2] - bs->origin[2] < 64)
-					{
-						trap->EA_MoveForward(bs->client);
-					}
-				}
-				else
+				if (bs->wpCurrent->origin[2] - bs->origin[2] < 64)
 				{
 					trap->EA_MoveForward(bs->client);
 				}
-				if (g_entities[bs->client].client->ps.groundEntityNum == ENTITYNUM_NONE)
-				{
-					g_entities[bs->client].client->ps.pm_flags |= PMF_JUMP_HELD;
-				}
 			}
-			else if (!(bs->cur_ps.pm_flags & PMF_JUMP_HELD))
+			else
 			{
-				trap->EA_Jump(bs->client);
+				trap->EA_MoveForward(bs->client);
+			}
+			if (g_entities[bs->client].client->ps.groundEntityNum == ENTITYNUM_NONE)
+			{
+				g_entities[bs->client].client->ps.pm_flags |= PMF_JUMP_HELD;
 			}
 		}
+		else if (!(bs->cur_ps.pm_flags & PMF_JUMP_HELD))
+		{
+			trap->EA_Jump(bs->client);
+		}
+	}
 
 	if (bs->duckTime > level.time)
 	{
@@ -13653,6 +13655,19 @@ void standard_bot_ai(bot_state_t* bs)
 		bs->doAttack = qfalse;
 		bs->doAltAttack = qfalse;
 		return;
+	}
+
+	if (use_the_force)
+	{
+		trap->EA_ForcePower(bs->client);
+	}
+	if (bs->doAttack)
+	{
+		trap->EA_Attack(bs->client);
+	}
+	else if (bs->doAltAttack)
+	{
+		trap->EA_Alt_Attack(bs->client);
 	}
 
 	if (use_the_force)
@@ -14105,8 +14120,8 @@ void Enhanced_bot_ai(bot_state_t* bs)
 		}
 		else if ((forceOnlyDark || forceOnlyLight) && bs->cur_ps.fd.forcePowersKnown & (1 << FP_PUSH) &&
 			bs->frame_Enemy_Len < FORCE_BCLASS_FORCE_NO_SABER_CLOSE &&
-			level.clients[bs->client].ps.fd.forcePower > 30 &&
-			in_field_of_vision(bs->viewangles, 50, toEnemyAngles))
+			level.clients[bs->client].ps.fd.forcePower > 50 &&
+			in_field_of_vision(bs->viewangles, 30, toEnemyAngles))
 		{
 			level.clients[bs->client].ps.fd.forcePowerSelected = FP_PUSH;
 			use_the_force = 1;
@@ -15661,12 +15676,6 @@ void Enhanced_bot_ai(bot_state_t* bs)
 		bs->jDelay < level.time &&
 		!fj_halt)
 	{
-		// Saber bots walk, not sprint (Rule #1)
-		if (bs->cur_ps.weapon == WP_SABER)
-		{
-			bs->doWalk = qtrue;
-		}
-
 		// Held jump (force jump)
 		if (bs->jumpHoldTime > level.time)
 		{
@@ -17023,14 +17032,6 @@ void bot_behave_attack_move(bot_state_t* bs)
 		// Fire weapon
 		// ------------------------------------------------------------------
 		trap->EA_Attack(bs->client);
-
-		// ------------------------------------------------------------------
-		// Saber: walk while attacking
-		// ------------------------------------------------------------------
-		if (bs->virtualWeapon == WP_SABER)
-		{
-			bs->doWalk = qtrue;
-		}
 	}
 }
 

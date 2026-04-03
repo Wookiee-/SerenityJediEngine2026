@@ -340,6 +340,11 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 
 		ent->behaviorSet[BSET_FLEE] = nullptr;
 	}
+	else if (ent->client->NPC_class == CLASS_SHADOWTROOPER)
+	{
+		ent->flags |= FL_DINDJARIN; //low-level shots bounce off, no knockback
+		ent->flags |= FL_SABERDAMAGE_RESIST; //Partially resistant to sabers
+	}
 	else if (ent->client->NPC_class == CLASS_ROCKETTROOPER)
 	{
 		//set some stuff, precache
@@ -1227,7 +1232,8 @@ NPC_SpawnEffect
 */
 
 static void NPC_SpawnEffect(gentity_t* ent)
-{}
+{
+}
 
 //--------------------------------------------------------------
 // NPC_SetFX_SpawnStates

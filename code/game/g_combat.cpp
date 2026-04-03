@@ -116,7 +116,7 @@ extern qboolean G_ControlledByPlayer(const gentity_t* self);
 extern void Jetpack_Off(const gentity_t* ent);
 extern void WP_BlockPointsRegenerate(const gentity_t* self, int override_amt);
 extern qboolean NPC_IsJetpacking(const gentity_t* self);
-void AddFatigueKillBonus(const gentity_t* attacker, const gentity_t* victim, int means_of_death);
+void AddFatigueKillBonus(const gentity_t* attacker, const gentity_t* victim, const int means_of_death);
 void NPC_SetAnim(gentity_t* ent, int setAnimParts, int anim, int setAnimFlags, int i_blend);
 extern void AI_DeleteSelfFromGroup(const gentity_t* self);
 extern void AI_GroupMemberKilled(const gentity_t* self);

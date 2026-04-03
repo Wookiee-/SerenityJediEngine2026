@@ -18555,7 +18555,7 @@ SkipTrueView:
 		{
 			vec3_t ef_org;
 			vec3_t t_ang, fx_ang;
-			matrix3_t axis;
+			matrix3_t axis = { 0 };
 
 			//VectorSet( tAng, 0, cent->pe.torso.yawAngle, 0 );
 			VectorSet(t_ang, cent->turAngles[PITCH], cent->turAngles[YAW], cent->turAngles[ROLL]);
@@ -18582,10 +18582,12 @@ SkipTrueView:
 		}
 	}
 
-	if (cgs.gametype == GT_HOLOCRON && cent->currentState.time2 &&
-		(cg.renderingThirdPerson || cg_trueguns.integer || cg.predictedPlayerState.weapon == WP_SABER || cg.
-			predictedPlayerState.weapon == WP_MELEE
-			|| cg.snap->ps.clientNum != cent->currentState.number))
+	if (cent->currentState.time2 &&
+		(cg.renderingThirdPerson ||
+			cg_trueguns.integer ||
+			cg.predictedPlayerState.weapon == WP_SABER ||
+			cg.predictedPlayerState.weapon == WP_MELEE ||
+			cg.snap->ps.clientNum != cent->currentState.number))
 	{
 		int i = 0;
 		int rendered_holos = 0;
