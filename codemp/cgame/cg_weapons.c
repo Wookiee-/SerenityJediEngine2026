@@ -251,13 +251,13 @@ static int CG_MapTorsoToWeaponFrame(const int frame, const int anim_num)
 CG_MachinegunSpinAngle
 ======================
 */
-#define		SPIN_SPEED	0.9
-#define		COAST_TIME	1000
 
-static float cg_machinegun_spin_angle(centity_t* cent)
+#define     SPIN_SPEED  0.9f
+#define     COAST_TIME  1000
+
+static float CG_MachinegunSpinAngle(centity_t* cent)
 {
 	float angle;
-
 	int delta = cg.time - cent->pe.barrelTime;
 
 	if (cent->pe.barrelSpinning)
@@ -271,17 +271,26 @@ static float cg_machinegun_spin_angle(centity_t* cent)
 			delta = COAST_TIME;
 		}
 
-		const float speed = 0.5 * (SPIN_SPEED + (float)(COAST_TIME - delta) / COAST_TIME);
+		const float speed = 0.5f * (SPIN_SPEED + (float)(COAST_TIME - delta) / COAST_TIME);
 		angle = cent->pe.barrelAngle + delta * speed;
 	}
 
-	if (cent->pe.barrelSpinning == !(cent->currentState.eFlags & EF_FIRING))
+	// --- FIXED: detect state change correctly ---
+	if (cent->pe.barrelSpinning != !!(cent->currentState.eFlags & EF_FIRING))
 	{
 		cent->pe.barrelTime = cg.time;
 		cent->pe.barrelAngle = AngleNormalize360(angle);
 		cent->pe.barrelSpinning = !!(cent->currentState.eFlags & EF_FIRING);
-		trap->S_StartSound(NULL, cent->currentState.number, CHAN_WEAPON,
-			trap->S_RegisterSound("sound/weapons/barrelSpinning/barrelSpinning.wav"));
+
+		if (cg.snap->ps.weapon == WP_REPEATER)
+		{
+			trap->S_StartSound(
+				NULL,
+				cent->currentState.number,
+				CHAN_WEAPON,
+				trap->S_RegisterSound("sound/weapons/barrelSpinning/barrelSpinning.wav")
+			);
+		}
 	}
 
 	return angle;
@@ -616,7 +625,11 @@ void cg_add_player_weaponduals(refEntity_t* parent,
 
 				if (cg_SpinningBarrels.integer && weapon_num == WP_REPEATER)
 				{
-					angles[ROLL] = cg_machinegun_spin_angle(cent);
+					angles[ROLL] = CG_MachinegunSpinAngle(cent);
+				}
+				else if (cg_SpinningBarrels.integer && weapon_num == WP_STUN_BATON)
+				{
+					angles[ROLL] = CG_MachinegunSpinAngle(cent);
 				}
 				else
 				{
@@ -1131,7 +1144,11 @@ void CG_AddPlayerWeapon(refEntity_t* parent, playerState_t* ps, centity_t* cent,
 
 				if (cg_SpinningBarrels.integer && cent->currentState.weapon == WP_REPEATER)
 				{
-					angles[ROLL] = cg_machinegun_spin_angle(cent);
+					angles[ROLL] = CG_MachinegunSpinAngle(cent);
+				}
+				else if (cg_SpinningBarrels.integer && cent->currentState.weapon == WP_STUN_BATON)
+				{
+					angles[ROLL] = CG_MachinegunSpinAngle(cent);
 				}
 				else
 				{
@@ -2112,6 +2129,39 @@ void CG_DrawWeaponSelect(void)
 	trap->R_SetColor(NULL);
 }
 
+static qboolean IsCyclingReloadableGun(const int weap)
+{
+	switch (weap)
+	{
+	case WP_BRYAR_OLD:
+	case WP_BLASTER:
+	case WP_DISRUPTOR:
+	case WP_BOWCASTER:
+	case WP_REPEATER:
+	case WP_DEMP2:
+	case WP_FLECHETTE:
+	case WP_ROCKET_LAUNCHER:
+	case WP_CONCUSSION:
+	case WP_BRYAR_PISTOL:
+		return qtrue;
+	default:;
+	}
+	return qfalse;
+}
+
+static void CG_CycleWeaponFail(void)
+{
+	// Only run for reloadable guns
+	if (!IsCyclingReloadableGun(cg.snap->ps.weapon))
+		return;
+
+	// Play a local fail sound
+	trap->S_StartLocalSound(
+		trap->S_RegisterSound("sound/weapons/reloadfail.mp3"),
+		CHAN_LOCAL
+	);
+}
+
 /*
 ===============
 CG_NextWeapon_f
@@ -2119,12 +2169,14 @@ CG_NextWeapon_f
 */
 void CG_NextWeapon_f(void)
 {
-	int i;
+	int i = 0;
+	const int original = cg.weaponSelect;
 
 	if (!cg.snap)
 	{
 		return;
 	}
+
 	if (cg.snap->ps.pm_flags & PMF_FOLLOW)
 	{
 		return;
@@ -2142,15 +2194,16 @@ void CG_NextWeapon_f(void)
 
 	if (cg.snap->ps.BlasterAttackChainCount >= BLASTERMISHAPLEVEL_TWELVE)
 	{
+		clientInfo_t* ci = &cgs.clientinfo[cg.snap->ps.clientNum];
+
+		if (ci->botSkill == -1)   // real human player
+		{
+			CG_CycleWeaponFail();
+		}
 		return;
 	}
 
 	if (cg.snap->ps.emplacedIndex)
-	{
-		return;
-	}
-
-	if (cg.snap->ps.weapon == WP_BRYAR_OLD)
 	{
 		return;
 	}
@@ -2161,11 +2214,9 @@ void CG_NextWeapon_f(void)
 	}
 
 	cg.weaponSelectTime = cg.time;
-	const int original = cg.weaponSelect;
 
 	for (i = 0; i < WP_NUM_WEAPONS; i++)
 	{
-		//*SIGH*... Hack to put concussion rifle before rocketlauncher
 		if (cg.weaponSelect == WP_FLECHETTE)
 		{
 			cg.weaponSelect = WP_CONCUSSION;
@@ -2208,13 +2259,20 @@ CG_PrevWeapon_f
 */
 void CG_PrevWeapon_f(void)
 {
-	int i;
+	int i = 0;
+	const int original = cg.weaponSelect;
 
 	if (!cg.snap)
 	{
 		return;
 	}
+
 	if (cg.snap->ps.pm_flags & PMF_FOLLOW)
+	{
+		return;
+	}
+
+	if (cg.predictedPlayerState.pm_type == PM_SPECTATOR)
 	{
 		return;
 	}
@@ -2226,20 +2284,16 @@ void CG_PrevWeapon_f(void)
 
 	if (cg.snap->ps.BlasterAttackChainCount >= BLASTERMISHAPLEVEL_TWELVE)
 	{
-		return;
-	}
+		clientInfo_t* ci = &cgs.clientinfo[cg.snap->ps.clientNum];
 
-	if (cg.predictedPlayerState.pm_type == PM_SPECTATOR)
-	{
+		if (ci->botSkill == -1)   // real human player
+		{
+			CG_CycleWeaponFail();
+		}
 		return;
 	}
 
 	if (cg.snap->ps.emplacedIndex)
-	{
-		return;
-	}
-
-	if (cg.snap->ps.weapon == WP_BRYAR_OLD)
 	{
 		return;
 	}
@@ -2250,11 +2304,9 @@ void CG_PrevWeapon_f(void)
 	}
 
 	cg.weaponSelectTime = cg.time;
-	const int original = cg.weaponSelect;
 
 	for (i = 0; i < WP_NUM_WEAPONS; i++)
 	{
-		//*SIGH*... Hack to put concussion rifle before rocketlauncher
 		if (cg.weaponSelect == WP_ROCKET_LAUNCHER)
 		{
 			cg.weaponSelect = WP_CONCUSSION;

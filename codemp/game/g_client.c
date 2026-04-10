@@ -7632,6 +7632,7 @@ spawn_done:
 					client->skillLevel[SK_CRYOBAN] = FORCE_LEVEL_3;
 					client->ps.ammo[AMMO_THERMAL] = 4;
 					break;
+				case BCLASS_REBEL_PILOT:
 				case BCLASS_REBEL:
 					client->ps.stats[STAT_WEAPONS] |= 1 << WP_MELEE;
 					client->ps.stats[STAT_WEAPONS] |= 1 << WP_BRYAR_PISTOL;
@@ -8335,6 +8336,7 @@ spawn_done:
 			client->ps.stats[STAT_ARMOR] = 100;
 			client->ps.stats[STAT_MAX_HEALTH] = 100;
 			break;
+		case BCLASS_REBEL_PILOT:
 		case BCLASS_REBEL:
 			client->ps.stats[STAT_HOLDABLE_ITEMS] |= 1 << HI_SWOOP;
 			client->ps.stats[STAT_ARMOR] = 100;
@@ -8814,6 +8816,7 @@ spawn_done:
 		case BCLASS_RANCOR:
 		case BCLASS_RAX:
 		case BCLASS_REBEL:
+		case BCLASS_REBEL_PILOT:
 		case BCLASS_REELO:
 		case BCLASS_RODIAN:
 		case BCLASS_SABOTEUR:

@@ -4589,6 +4589,18 @@ void LimbThink(gentity_t* ent)
 
 extern qboolean BG_GetRootSurfNameWithVariant(void* ghoul2, const char* rootSurfName, char* return_surf_name, int return_size);
 
+/*
+==========================
+G_Dismember
+
+Spawns a flying limb entity and hides the corresponding
+surfaces on the source ghoul2 model.
+
+- Assumes ent has a valid ghoul2 when dismembering
+- Handles team color on the spawned limb
+- Uses enemy saber motion to bias limb velocity when available
+==========================
+*/
 void G_Dismember(const gentity_t* ent, const gentity_t* enemy, vec3_t point, const int limb_type)
 {
 	vec3_t new_point, dir, vel;
@@ -4596,68 +4608,103 @@ void G_Dismember(const gentity_t* ent, const gentity_t* enemy, vec3_t point, con
 	char stub_name[MAX_QPATH];
 	char stub_cap_name[MAX_QPATH];
 
-	const int old_team = ent->client->sess.sessionTeam;
+	int old_team = TEAM_FREE;
 
-	if (limb_type == G2_MODELPART_HEAD)
+	// ------------------------------------------------------------
+	// Safety: ent and ent->ghoul2 must exist
+	// ------------------------------------------------------------
+	if (ent == NULL)
 	{
-		Q_strncpyz(limb_name, "head", sizeof limb_name);
-		Q_strncpyz(stub_cap_name, "torso_cap_head", sizeof stub_cap_name);
-	}
-	else if (limb_type == G2_MODELPART_WAIST)
-	{
-		Q_strncpyz(limb_name, "torso", sizeof limb_name);
-		Q_strncpyz(stub_cap_name, "hips_cap_torso", sizeof stub_cap_name);
-	}
-	else if (limb_type == G2_MODELPART_LARM)
-	{
-		BG_GetRootSurfNameWithVariant(ent->ghoul2, "l_arm", limb_name, sizeof limb_name);
-		BG_GetRootSurfNameWithVariant(ent->ghoul2, "torso", stub_name, sizeof stub_name);
-		Com_sprintf(stub_cap_name, sizeof stub_cap_name, "%s_cap_l_arm", stub_name);
-	}
-	else if (limb_type == G2_MODELPART_RARM)
-	{
-		BG_GetRootSurfNameWithVariant(ent->ghoul2, "r_arm", limb_name, sizeof limb_name);
-		BG_GetRootSurfNameWithVariant(ent->ghoul2, "torso", stub_name, sizeof stub_name);
-		Com_sprintf(stub_cap_name, sizeof stub_cap_name, "%s_cap_r_arm", stub_name);
-	}
-	else if (limb_type == G2_MODELPART_RHAND)
-	{
-		BG_GetRootSurfNameWithVariant(ent->ghoul2, "r_hand", limb_name, sizeof limb_name);
-		BG_GetRootSurfNameWithVariant(ent->ghoul2, "r_arm", stub_name, sizeof stub_name);
-		Com_sprintf(stub_cap_name, sizeof stub_cap_name, "%s_cap_r_hand", stub_name);
-	}
-	else if (limb_type == G2_MODELPART_LLEG)
-	{
-		BG_GetRootSurfNameWithVariant(ent->ghoul2, "l_leg", limb_name, sizeof limb_name);
-		BG_GetRootSurfNameWithVariant(ent->ghoul2, "hips", stub_name, sizeof stub_name);
-		Com_sprintf(stub_cap_name, sizeof stub_cap_name, "%s_cap_l_leg", stub_name);
-	}
-	else if (limb_type == G2_MODELPART_RLEG)
-	{
-		BG_GetRootSurfNameWithVariant(ent->ghoul2, "r_leg", limb_name, sizeof limb_name);
-		BG_GetRootSurfNameWithVariant(ent->ghoul2, "hips", stub_name, sizeof stub_name);
-		Com_sprintf(stub_cap_name, sizeof stub_cap_name, "%s_cap_r_leg", stub_name);
-	}
-	else
-	{
-		//umm... just default to the right leg, I guess (same as on client)
-		BG_GetRootSurfNameWithVariant(ent->ghoul2, "r_leg", limb_name, sizeof limb_name);
-		BG_GetRootSurfNameWithVariant(ent->ghoul2, "hips", stub_name, sizeof stub_name);
-		Com_sprintf(stub_cap_name, sizeof stub_cap_name, "%s_cap_r_leg", stub_name);
-	}
-
-	if (ent->ghoul2 && limb_name[0] && trap->G2API_GetSurfaceRenderStatus(ent->ghoul2, 0, limb_name))
-	{
-		//is it already off? If so there's no reason to be doing it again, so get out of here.
+		Com_Printf("G_Dismember: ent is NULL\n");
 		return;
 	}
 
+	if (ent->ghoul2 == NULL)
+	{
+		Com_Printf("G_Dismember: ent->ghoul2 is NULL for ent %d\n", ent->s.number);
+		return;
+	}
+
+	if (ent->client != NULL)
+	{
+		old_team = ent->client->sess.sessionTeam;
+	}
+
+	// ------------------------------------------------------------
+	// Resolve limb and stub surface names based on limb_type
+	// ------------------------------------------------------------
+	if (limb_type == G2_MODELPART_HEAD)
+	{
+		Q_strncpyz(limb_name, "head", sizeof(limb_name));
+		Q_strncpyz(stub_cap_name, "torso_cap_head", sizeof(stub_cap_name));
+	}
+	else if (limb_type == G2_MODELPART_WAIST)
+	{
+		Q_strncpyz(limb_name, "torso", sizeof(limb_name));
+		Q_strncpyz(stub_cap_name, "hips_cap_torso", sizeof(stub_cap_name));
+	}
+	else if (limb_type == G2_MODELPART_LARM)
+	{
+		BG_GetRootSurfNameWithVariant(ent->ghoul2, "l_arm", limb_name, sizeof(limb_name));
+		BG_GetRootSurfNameWithVariant(ent->ghoul2, "torso", stub_name, sizeof(stub_name));
+		Com_sprintf(stub_cap_name, sizeof(stub_cap_name), "%s_cap_l_arm", stub_name);
+	}
+	else if (limb_type == G2_MODELPART_RARM)
+	{
+		BG_GetRootSurfNameWithVariant(ent->ghoul2, "r_arm", limb_name, sizeof(limb_name));
+		BG_GetRootSurfNameWithVariant(ent->ghoul2, "torso", stub_name, sizeof(stub_name));
+		Com_sprintf(stub_cap_name, sizeof(stub_cap_name), "%s_cap_r_arm", stub_name);
+	}
+	else if (limb_type == G2_MODELPART_RHAND)
+	{
+		BG_GetRootSurfNameWithVariant(ent->ghoul2, "r_hand", limb_name, sizeof(limb_name));
+		BG_GetRootSurfNameWithVariant(ent->ghoul2, "r_arm", stub_name, sizeof(stub_name));
+		Com_sprintf(stub_cap_name, sizeof(stub_cap_name), "%s_cap_r_hand", stub_name);
+	}
+	else if (limb_type == G2_MODELPART_LLEG)
+	{
+		BG_GetRootSurfNameWithVariant(ent->ghoul2, "l_leg", limb_name, sizeof(limb_name));
+		BG_GetRootSurfNameWithVariant(ent->ghoul2, "hips", stub_name, sizeof(stub_name));
+		Com_sprintf(stub_cap_name, sizeof(stub_cap_name), "%s_cap_l_leg", stub_name);
+	}
+	else if (limb_type == G2_MODELPART_RLEG)
+	{
+		BG_GetRootSurfNameWithVariant(ent->ghoul2, "r_leg", limb_name, sizeof(limb_name));
+		BG_GetRootSurfNameWithVariant(ent->ghoul2, "hips", stub_name, sizeof(stub_name));
+		Com_sprintf(stub_cap_name, sizeof(stub_cap_name), "%s_cap_r_leg", stub_name);
+	}
+	else
+	{
+		// Default to right leg (matches client behaviour)
+		BG_GetRootSurfNameWithVariant(ent->ghoul2, "r_leg", limb_name, sizeof(limb_name));
+		BG_GetRootSurfNameWithVariant(ent->ghoul2, "hips", stub_name, sizeof(stub_name));
+		Com_sprintf(stub_cap_name, sizeof(stub_cap_name), "%s_cap_r_leg", stub_name);
+	}
+
+	// If the limb surface is already off, don't spawn another limb
+	if (limb_name[0] &&
+		trap->G2API_GetSurfaceRenderStatus(ent->ghoul2, 0, limb_name))
+	{
+		return;
+	}
+
+	// ------------------------------------------------------------
+	// Spawn the limb entity
+	// ------------------------------------------------------------
 	VectorCopy(point, new_point);
+
 	gentity_t* limb = G_Spawn();
+	if (limb == NULL)
+	{
+		Com_Printf("G_Dismember: G_Spawn failed\n");
+		return;
+	}
+
 	limb->classname = "playerlimb";
 
 	G_SetOrigin(limb, new_point);
 	VectorCopy(new_point, limb->s.pos.trBase);
+
 	limb->think = LimbThink;
 	limb->touch = LimbTouch;
 	limb->speed = level.time + Q_irand(8000, 16000);
@@ -4667,16 +4714,17 @@ void G_Dismember(const gentity_t* ent, const gentity_t* enemy, vec3_t point, con
 	limb->clipmask = MASK_SOLID;
 	limb->r.contents = CONTENTS_TRIGGER;
 	limb->physicsObject = qtrue;
+
 	VectorSet(limb->r.mins, -6.0f, -6.0f, -3.0f);
 	VectorSet(limb->r.maxs, 6.0f, 6.0f, 6.0f);
 
 	limb->s.g2radius = 200;
-
 	limb->s.eType = ET_GENERAL;
 	limb->s.weapon = G2_MODEL_PART;
 	limb->s.modelGhoul2 = limb_type;
 	limb->s.modelIndex = ent->s.number;
-	if (!ent->client)
+
+	if (ent->client == NULL)
 	{
 		limb->s.modelIndex = -1;
 		limb->s.otherentity_num2 = ent->s.number;
@@ -4684,7 +4732,7 @@ void G_Dismember(const gentity_t* ent, const gentity_t* enemy, vec3_t point, con
 
 	VectorClear(limb->s.apos.trDelta);
 
-	if (ent->client)
+	if (ent->client != NULL)
 	{
 		VectorCopy(ent->client->ps.viewangles, limb->r.currentAngles);
 		VectorCopy(ent->client->ps.viewangles, limb->s.apos.trBase);
@@ -4695,12 +4743,16 @@ void G_Dismember(const gentity_t* ent, const gentity_t* enemy, vec3_t point, con
 		VectorCopy(ent->r.currentAngles, limb->s.apos.trBase);
 	}
 
-	//Set up the ExPhys values for the entity.
+	// ------------------------------------------------------------
+	// ExPhys setup and initial velocity
+	// ------------------------------------------------------------
 	limb->epGravFactor = 0;
 	VectorClear(limb->epVelocity);
+
 	VectorSubtract(point, ent->r.currentOrigin, dir);
 	VectorNormalize(dir);
-	if (ent->client)
+
+	if (ent->client != NULL)
 	{
 		VectorCopy(ent->client->ps.velocity, vel);
 	}
@@ -4708,66 +4760,82 @@ void G_Dismember(const gentity_t* ent, const gentity_t* enemy, vec3_t point, con
 	{
 		VectorCopy(ent->s.pos.trDelta, vel);
 	}
-	VectorMA(vel, 80, dir, limb->epVelocity);
 
-	//add some vertical velocity
+	VectorMA(vel, 80.0f, dir, limb->epVelocity);
+
+	// Add some vertical velocity for head/waist
 	if (limb_type == G2_MODELPART_HEAD ||
 		limb_type == G2_MODELPART_WAIST)
 	{
-		limb->epVelocity[2] += 10;
+		limb->epVelocity[2] += 10.0f;
 	}
 
-	if (enemy && enemy->client && ent && ent != enemy && ent->s.number != enemy->s.number &&
-		enemy->client->ps.weapon == WP_SABER && enemy->client->olderIsValid &&
-		level.time - enemy->client->lastSaberStorageTime < 200)
+	// ------------------------------------------------------------
+	// Bias velocity using enemy saber motion if available
+	// ------------------------------------------------------------
+	if (enemy != NULL &&
+		enemy->client != NULL &&
+		ent != enemy &&
+		ent->s.number != enemy->s.number &&
+		enemy->client->ps.weapon == WP_SABER &&
+		enemy->client->olderIsValid &&
+		(level.time - enemy->client->lastSaberStorageTime) < 200)
 	{
-		//The enemy has valid saber positions between this and last frame. Use them to factor in direction of the limb.
 		vec3_t dif;
+		float  total_distance;
 		const float dist_scale = 1.2f;
 
-		//scale down the initial velocity first, which is based on the speed of the limb owner.
-		//ExPhys object velocity operates on a slightly different scale than Q3-based physics velocity.
+		// Scale down initial velocity (ExPhys vs Q3 units)
 		VectorScale(limb->epVelocity, 0.4f, limb->epVelocity);
 
-		VectorSubtract(enemy->client->lastSaberBase_Always, enemy->client->olderSaberBase, dif);
-		float total_distance = VectorNormalize(dif);
+		VectorSubtract(enemy->client->lastSaberBase_Always,
+			enemy->client->olderSaberBase, dif);
+		total_distance = VectorNormalize(dif);
 
 		VectorScale(dif, total_distance * dist_scale, dif);
 		VectorAdd(limb->epVelocity, dif, limb->epVelocity);
 
-		if (ent->client && (ent->client->ps.torsoTimer > 0 || !BG_InDeathAnim(ent->client->ps.torsoAnim)))
+		if (ent->client != NULL &&
+			(ent->client->ps.torsoTimer > 0 ||
+				!BG_InDeathAnim(ent->client->ps.torsoAnim)))
 		{
-			//if he's done with his death anim we don't actually want the limbs going far
 			vec3_t pre_vel;
 
 			VectorCopy(limb->epVelocity, pre_vel);
-			pre_vel[2] = 0;
+			pre_vel[2] = 0.0f;
 			total_distance = VectorNormalize(pre_vel);
 
 			if (total_distance < 40.0f)
 			{
-				const float m_amt = 40.0f; //60.0f/totalDistance;
+				const float m_amt = 40.0f;
 
 				limb->epVelocity[0] = pre_vel[0] * m_amt;
 				limb->epVelocity[1] = pre_vel[1] * m_amt;
 			}
 		}
-		else if (ent->client)
+		else if (ent->client != NULL)
 		{
 			VectorScale(limb->epVelocity, 0.3f, limb->epVelocity);
 		}
 	}
 
-	if (ent->client && ent->s.eType == ET_NPC && ent->ghoul2 && limb_name[0] && stub_cap_name[0])
+	// ------------------------------------------------------------
+	// Hide limb surfaces on NPCs server-side
+	// ------------------------------------------------------------
+	if (ent->client != NULL &&
+		ent->s.eType == ET_NPC &&
+		limb_name[0] &&
+		stub_cap_name[0])
 	{
-		//if it's an npc remove these surfs on the server too. For players we don't even care cause there's no further dismemberment after death.
 		trap->G2API_SetSurfaceOnOff(ent->ghoul2, limb_name, 0x00000100);
 		trap->G2API_SetSurfaceOnOff(ent->ghoul2, stub_cap_name, 0);
 	}
 
+	// ------------------------------------------------------------
+	// Team / FFA color on the limb
+	// ------------------------------------------------------------
 	if (level.gametype >= GT_TEAM && ent->s.eType != ET_NPC)
 	{
-		//Team game
 		switch (old_team)
 		{
 		case TEAM_BLUE:
@@ -4792,7 +4860,6 @@ void G_Dismember(const gentity_t* ent, const gentity_t* enemy, vec3_t point, con
 	}
 	else
 	{
-		//FFA
 		limb->s.customRGBA[0] = ent->s.customRGBA[0];
 		limb->s.customRGBA[1] = ent->s.customRGBA[1];
 		limb->s.customRGBA[2] = ent->s.customRGBA[2];
@@ -4801,6 +4868,7 @@ void G_Dismember(const gentity_t* ent, const gentity_t* enemy, vec3_t point, con
 
 	trap->LinkEntity((sharedEntity_t*)limb);
 }
+
 
 void DismembermentTest(gentity_t* self)
 {

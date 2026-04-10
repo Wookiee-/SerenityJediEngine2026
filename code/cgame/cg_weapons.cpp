@@ -438,6 +438,10 @@ void CG_RegisterWeapon(const int weapon_num)
 		{
 			cgi_S_RegisterSound(va("sound/weapons/saber/saberstabdown%d.mp3", i));
 		}
+		for (i = 1; i < 5; i++)
+		{
+			cgi_S_RegisterSound(va("sound/weapons/saber/saberhit_droid%d.mp3", i));
+		}
 		for (i = 1; i < 18; i++)
 		{
 			cgi_S_RegisterSound(va("sound/weapons/saber/saberstrikewall%d.mp3", i));
@@ -1164,13 +1168,12 @@ static int CG_MapTorsoToWeaponFrame(const clientInfo_t* ci, const int frame, con
 CG_MachinegunSpinAngle
 ======================
 */
-constexpr auto SPIN_SPEED = 0.9;
+constexpr auto SPIN_SPEED = 0.9f;
 constexpr auto COAST_TIME = 1000;
 
-static float cg_machinegun_spin_angle(centity_t* cent)
+static float CG_MachinegunSpinAngle(centity_t* cent)
 {
 	float angle;
-
 	int delta = cg.time - cent->pe.barrelTime;
 
 	if (cent->pe.barrelSpinning)
@@ -1184,18 +1187,27 @@ static float cg_machinegun_spin_angle(centity_t* cent)
 			delta = COAST_TIME;
 		}
 
-		const float speed = 0.5 * (SPIN_SPEED + static_cast<float>(COAST_TIME - delta) / COAST_TIME);
+		const float speed = 0.5f * (SPIN_SPEED + static_cast<float>(COAST_TIME - delta) / COAST_TIME);
 		angle = cent->pe.barrelAngle + delta * speed;
 	}
 
-	if (cent->pe.barrelSpinning == !(cent->currentState.eFlags & EF_FIRING))
+	// --- FIXED: detect state change ---
+	if (cent->pe.barrelSpinning != !!(cent->currentState.eFlags & EF_FIRING))
 	{
 		cent->pe.barrelTime = cg.time;
 		cent->pe.barrelAngle = AngleNormalize360(angle);
 		cent->pe.barrelSpinning = !!(cent->currentState.eFlags & EF_FIRING);
-		// just switching between not spinning and spinning, play the appropriate weapon sound
-		cgi_S_StartSound(nullptr, cent->currentState.number, CHAN_WEAPON,
-			cgi_S_RegisterSound("sound/weapons/barrelSpinning/barrelSpinning.wav"));
+
+		// play spin sound only on state change
+		if (cg.snap->ps.weapon == WP_REPEATER)
+		{
+			cgi_S_StartSound(
+				nullptr,
+				cent->currentState.number,
+				CHAN_WEAPON,
+				cgi_S_RegisterSound("sound/weapons/barrelSpinning/barrelSpinning.wav")
+			);
+		}
 	}
 
 	return angle;
@@ -1822,7 +1834,11 @@ void CG_AddViewWeapon(playerState_t* ps)
 
 			if (cg_SpinningBarrels.integer && ps->weapon == WP_REPEATER)
 			{
-				angles[ROLL] = cg_machinegun_spin_angle(cent);
+				angles[ROLL] = CG_MachinegunSpinAngle(cent);
+			}
+			else if (cg_SpinningBarrels.integer && ps->weapon == WP_STUN_BATON)
+			{
+				angles[ROLL] = CG_MachinegunSpinAngle(cent);
 			}
 			else
 			{
@@ -2356,7 +2372,11 @@ void CG_AddViewWeaponDuals(playerState_t* ps)
 
 			if (cg_SpinningBarrels.integer && ps->weapon == WP_REPEATER)
 			{
-				angles[ROLL] = cg_machinegun_spin_angle(cent);
+				angles[ROLL] = CG_MachinegunSpinAngle(cent);
+			}
+			else if (cg_SpinningBarrels.integer && ps->weapon == WP_STUN_BATON)
+			{
+				angles[ROLL] = CG_MachinegunSpinAngle(cent);
 			}
 			else
 			{

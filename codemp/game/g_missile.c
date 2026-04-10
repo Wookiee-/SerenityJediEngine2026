@@ -1008,6 +1008,8 @@ static void G_MissileAddAlerts(gentity_t* ent)
 G_MissileImpact
 ================
 */
+
+extern int G_PickPainAnim(const gentity_t* self, vec3_t point, int hit_loc);
 qboolean G_MissileImpact(gentity_t* ent, trace_t* trace)
 {
 	vec3_t   fwd;
@@ -1512,6 +1514,30 @@ qboolean G_MissileImpact(gentity_t* ent, trace_t* trace)
 						other->client->ps.electrifyTime =
 							level.time + Q_irand(1500, 2000);
 					}
+				}
+			}
+			//
+			// Universal directional pain animation using G_PickPainAnim
+			//
+			if (did_dmg == qtrue &&
+				other->client != NULL &&
+				beskar == qfalse &&
+				boba_fett == qfalse &&
+				is_knocked_saber == qfalse &&
+				other->s.eType != ET_NPC && // prevents vehicle anim corruption
+				!BG_InDeathAnim(other->client->ps.torsoAnim) &&
+				!WP_DoingForcedAnimationForForcePowers(other))
+			{
+				int painAnim = G_PickPainAnim(other, trace->endpos, HL_NONE);
+
+				if (painAnim != -1)
+				{
+					G_SetAnim(other,
+						NULL,
+						SETANIM_TORSO,
+						painAnim,
+						SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD,
+						0);
 				}
 			}
 		}

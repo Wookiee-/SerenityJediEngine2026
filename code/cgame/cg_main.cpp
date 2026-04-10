@@ -660,7 +660,7 @@ static cvarTable_t cvarTable[] = {
 
 	{&cg_drawwidescreenmodesp, "cg_drawwidescreenmodesp", "1", CVAR_ARCHIVE},
 
-	{&cg_SpinningBarrels, "cg_SpinningBarrels", "0", CVAR_ARCHIVE},
+	{&cg_SpinningBarrels, "cg_SpinningBarrels", "1", CVAR_ARCHIVE},
 
 	{&cg_Weather, "r_weather", "0", CVAR_ARCHIVE},
 

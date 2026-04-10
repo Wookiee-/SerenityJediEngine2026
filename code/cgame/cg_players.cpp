@@ -15775,9 +15775,9 @@ void CG_Player(centity_t* cent)
 					if (effect)
 					{
 						if (cent->gent && cent->gent->NPC ||
-							cent->gent->s.weapon == WP_BLASTER_PISTOL && cent->currentState.eFlags &
-							EF2_DUAL_WEAPONS
-							&& !G_IsRidingVehicle(cent->gent)) //PM_WeaponOkOnVehicle)
+							cent->gent->s.weapon == WP_BLASTER_PISTOL &&
+							cent->currentState.eFlags &EF2_DUAL_WEAPONS	&&
+							!G_IsRidingVehicle(cent->gent)) //PM_WeaponOkOnVehicle)
 						{
 							if (!VectorCompare(old_mp, vec3_origin) && !VectorCompare(old_md, vec3_origin))
 							{

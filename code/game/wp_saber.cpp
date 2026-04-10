@@ -1609,6 +1609,7 @@ static void wp_saber_hit_sound(const gentity_t* ent, const int saberNum, const i
 	const int index_stab = Q_irand(1, 11);
 	const int index_kill = Q_irand(1, 17);
 	const int indexspecial = Q_irand(1, 3);
+	const int indexdroidkill = Q_irand(1, 5);
 
 	if (!WP_SaberBladeUseSecondBladeStyle(&ent->client->ps.saber[saberNum], blade_num)
 		&& ent->client->ps.saber[saberNum].hit_sound[0])
@@ -1637,7 +1638,31 @@ static void wp_saber_hit_sound(const gentity_t* ent, const int saberNum, const i
 		else if (ent->enemy && ent->enemy->health <= 5 || saberInLungeRoll || saberInBackAttack || saberInLockWin
 			|| saberInKata && (ent->enemy && ent->enemy->health <= 15))
 		{
-			G_Sound(ent, G_SoundIndex(va("sound/weapons/saber/saberkill%d.mp3", index_kill)));
+			if (ent->client->NPC_class == CLASS_ATST
+				|| ent->client->NPC_class == CLASS_GONK
+				|| ent->client->NPC_class == CLASS_INTERROGATOR
+				|| ent->client->NPC_class == CLASS_MARK1
+				|| ent->client->NPC_class == CLASS_MARK2
+				|| ent->client->NPC_class == CLASS_MOUSE
+				|| ent->client->NPC_class == CLASS_PROBE
+				|| ent->client->NPC_class == CLASS_PROTOCOL
+				|| ent->client->NPC_class == CLASS_R2D2
+				|| ent->client->NPC_class == CLASS_R5D2
+				|| ent->client->NPC_class == CLASS_SEEKER
+				|| ent->client->NPC_class == CLASS_SENTRY
+				|| ent->client->NPC_class == CLASS_SBD
+				|| ent->client->NPC_class == CLASS_BATTLEDROID
+				|| ent->client->NPC_class == CLASS_DROIDEKA
+				|| ent->client->NPC_class == CLASS_OBJECT
+				|| ent->client->NPC_class == CLASS_ASSASSIN_DROID
+				|| ent->client->NPC_class == CLASS_SABER_DROID)
+			{
+				G_Sound(ent, G_SoundIndex(va("sound/weapons/saber/saberhit_droid%d.mp3", indexdroidkill)));
+			}
+			else
+			{
+				G_Sound(ent, G_SoundIndex(va("sound/weapons/saber/saberkill%d.mp3", index_kill)));
+			}
 		}
 		else
 		{

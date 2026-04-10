@@ -813,6 +813,10 @@ static void CG_RegisterSounds(void)
 	{
 		trap->S_RegisterSound(va("sound/weapons/saber/saberkill%d.mp3", i));
 	}
+	for (i = 1; i < 5; i++)
+	{
+		trap->S_RegisterSound(va("sound/weapons/saber/saberhit_droid%d.mp3", i));
+	}
 	for (i = 1; i < 12; i++)
 	{
 		trap->S_RegisterSound(va("sound/weapons/saber/saberstabdown%d.mp3", i));
