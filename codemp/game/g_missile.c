@@ -1009,6 +1009,71 @@ G_MissileImpact
 ================
 */
 
+static qboolean G_IsBeskarDeflect(const gentity_t* ent, const gentity_t* other)
+{
+	if (ent == NULL || other == NULL)
+	{
+		return qfalse;
+	}
+
+	if (!(other->flags & FL_DINDJARIN))
+	{
+		return qfalse;
+	}
+
+	if (ent->splashDamage ||
+		ent->splashRadius ||
+		ent->methodOfDeath == MOD_SABER &&
+		ent->methodOfDeath != MOD_REPEATER_ALT &&
+		ent->methodOfDeath != MOD_FLECHETTE_ALT_SPLASH &&
+		ent->methodOfDeath != MOD_ROCKET &&
+		ent->methodOfDeath != MOD_ROCKET_SPLASH &&
+		ent->methodOfDeath != MOD_CONC_ALT &&
+		ent->methodOfDeath != MOD_THERMAL &&
+		ent->methodOfDeath != MOD_THERMAL_SPLASH &&
+		ent->methodOfDeath != MOD_DEMP2 &&
+		ent->methodOfDeath != MOD_DEMP2_ALT &&
+		ent->methodOfDeath != MOD_SEEKER &&
+		ent->methodOfDeath != MOD_CONC)
+	{
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+static qboolean G_IsBobaDeflect(const gentity_t* ent, const gentity_t* other)
+{
+	if (ent == NULL || other == NULL)
+	{
+		return qfalse;
+	}
+
+	if (!(other->flags & FL_BOBAFETT))
+	{
+		return qfalse;
+	}
+
+	if (ent->splashDamage ||
+		ent->splashRadius ||
+		ent->methodOfDeath == MOD_SABER &&
+		ent->methodOfDeath != MOD_REPEATER_ALT &&
+		ent->methodOfDeath != MOD_FLECHETTE_ALT_SPLASH &&
+		ent->methodOfDeath != MOD_ROCKET &&
+		ent->methodOfDeath != MOD_ROCKET_SPLASH &&
+		ent->methodOfDeath != MOD_CONC_ALT &&
+		ent->methodOfDeath != MOD_THERMAL &&
+		ent->methodOfDeath != MOD_THERMAL_SPLASH &&
+		ent->methodOfDeath != MOD_DEMP2 &&
+		ent->methodOfDeath != MOD_DEMP2_ALT &&
+		ent->methodOfDeath != MOD_SEEKER &&
+		ent->methodOfDeath != MOD_CONC)
+	{
+		return qfalse;
+	}
+
+	return qtrue;
+}
 extern int G_PickPainAnim(const gentity_t* self, vec3_t point, int hit_loc);
 qboolean G_MissileImpact(gentity_t* ent, trace_t* trace)
 {
@@ -1115,40 +1180,8 @@ qboolean G_MissileImpact(gentity_t* ent, trace_t* trace)
 	//
 	// Beskar / Boba special bounce flags
 	//
-	qboolean beskar =
-		((other->flags & FL_DINDJARIN) &&
-			!ent->splashDamage &&
-			!ent->splashRadius &&
-			ent->methodOfDeath != MOD_SABER &&
-			ent->methodOfDeath != MOD_REPEATER_ALT &&
-			ent->methodOfDeath != MOD_FLECHETTE_ALT_SPLASH &&
-			ent->methodOfDeath != MOD_ROCKET &&
-			ent->methodOfDeath != MOD_ROCKET_SPLASH &&
-			ent->methodOfDeath != MOD_CONC_ALT &&
-			ent->methodOfDeath != MOD_THERMAL &&
-			ent->methodOfDeath != MOD_THERMAL_SPLASH &&
-			ent->methodOfDeath != MOD_DEMP2 &&
-			ent->methodOfDeath != MOD_DEMP2_ALT &&
-			ent->methodOfDeath != MOD_SEEKER &&
-			ent->methodOfDeath != MOD_CONC &&
-			!Q_irand(0, 1));
-
-	qboolean boba_fett =
-		((other->flags & FL_BOBAFETT) &&
-			!ent->splashDamage &&
-			!ent->splashRadius &&
-			ent->methodOfDeath != MOD_SABER &&
-			ent->methodOfDeath != MOD_REPEATER_ALT &&
-			ent->methodOfDeath != MOD_FLECHETTE_ALT_SPLASH &&
-			ent->methodOfDeath != MOD_ROCKET &&
-			ent->methodOfDeath != MOD_ROCKET_SPLASH &&
-			ent->methodOfDeath != MOD_CONC_ALT &&
-			ent->methodOfDeath != MOD_THERMAL &&
-			ent->methodOfDeath != MOD_THERMAL_SPLASH &&
-			ent->methodOfDeath != MOD_DEMP2 &&
-			ent->methodOfDeath != MOD_DEMP2_ALT &&
-			ent->methodOfDeath != MOD_SEEKER &&
-			ent->methodOfDeath != MOD_CONC);
+	qboolean beskar = G_IsBeskarDeflect(ent, other);
+	qboolean boba_fett = G_IsBobaDeflect(ent, other);
 
 	//
 	// Heavy‑weapon missiles: never bounce, no beskar/boba tricks
@@ -1228,8 +1261,8 @@ qboolean G_MissileImpact(gentity_t* ent, trace_t* trace)
 	}
 
 	//
-// Beskar / Boba Fett bounce handling
-//
+    // Beskar / Boba Fett bounce handling
+    //
 	if (beskar || boba_fett)
 	{
 		bounce = qfalse;
@@ -1517,28 +1550,22 @@ qboolean G_MissileImpact(gentity_t* ent, trace_t* trace)
 				}
 			}
 			//
-			// Universal directional pain animation using G_PickPainAnim
+			// Universal directional pain animation
 			//
 			if (did_dmg == qtrue &&
 				other->client != NULL &&
 				beskar == qfalse &&
 				boba_fett == qfalse &&
 				is_knocked_saber == qfalse &&
+				other->health > 0 &&
 				other->s.eType != ET_NPC && // prevents vehicle anim corruption
 				!BG_InDeathAnim(other->client->ps.torsoAnim) &&
 				!WP_DoingForcedAnimationForForcePowers(other))
 			{
-				int painAnim = G_PickPainAnim(other, trace->endpos, HL_NONE);
-
-				if (painAnim != -1)
-				{
-					G_SetAnim(other,
-						NULL,
-						SETANIM_TORSO,
-						painAnim,
-						SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD,
-						0);
-				}
+				G_SetAnim(other, NULL, SETANIM_TORSO,
+					Q_irand(BOTH_PAIN1, BOTH_PAIN3),
+					SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD,
+					0);
 			}
 		}
 

@@ -1393,8 +1393,82 @@ static void G_SpawnNoghriGasCloud(gentity_t* ent)
 }
 
 extern qboolean W_AccuracyLoggableWeapon(int weapon, qboolean alt_fire, int mod);
-extern qboolean PM_InDeathAnim();
-extern int G_PickPainAnim(const gentity_t* self, const vec3_t point, int hit_loc);
+extern qboolean BG_InDeathAnim(int anim);
+static qboolean G_IsBeskarDeflect(const gentity_t* ent, const gentity_t* other)
+{
+	if (ent == NULL || other == NULL)
+	{
+		return qfalse;
+	}
+
+	if (!(other->flags & FL_DINDJARIN))
+	{
+		return qfalse;
+	}
+
+	if (ent->splashDamage ||
+		ent->splashRadius ||
+		ent->methodOfDeath == MOD_SABER ||
+		ent->methodOfDeath == MOD_REPEATER_ALT ||
+		ent->methodOfDeath == MOD_FLECHETTE_ALT ||
+		ent->methodOfDeath == MOD_ROCKET ||
+		ent->methodOfDeath == MOD_ROCKET_ALT ||
+		ent->methodOfDeath == MOD_CONC_ALT ||
+		ent->methodOfDeath == MOD_THERMAL ||
+		ent->methodOfDeath == MOD_THERMAL_ALT ||
+		ent->methodOfDeath == MOD_DEMP2 ||
+		ent->methodOfDeath == MOD_DEMP2_ALT ||
+		ent->methodOfDeath == MOD_EXPLOSIVE ||
+		ent->methodOfDeath == MOD_DETPACK ||
+		ent->methodOfDeath == MOD_LASERTRIP ||
+		ent->methodOfDeath == MOD_LASERTRIP_ALT ||
+		ent->methodOfDeath == MOD_SEEKER ||
+		ent->methodOfDeath == MOD_CONC ||
+		ent->methodOfDeath == WP_NOGHRI_STICK)
+	{
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+static qboolean G_IsBobaDeflect(const gentity_t* ent, const gentity_t* other)
+{
+	if (ent == NULL || other == NULL)
+	{
+		return qfalse;
+	}
+
+	if (!(other->flags & FL_BOBAFETT))
+	{
+		return qfalse;
+	}
+
+	if (ent->splashDamage ||
+		ent->splashRadius ||
+		ent->methodOfDeath == MOD_SABER ||
+		ent->methodOfDeath == MOD_REPEATER_ALT ||
+		ent->methodOfDeath == MOD_FLECHETTE_ALT ||
+		ent->methodOfDeath == MOD_ROCKET ||
+		ent->methodOfDeath == MOD_ROCKET_ALT ||
+		ent->methodOfDeath == MOD_CONC_ALT ||
+		ent->methodOfDeath == MOD_THERMAL ||
+		ent->methodOfDeath == MOD_THERMAL_ALT ||
+		ent->methodOfDeath == MOD_DEMP2 ||
+		ent->methodOfDeath == MOD_DEMP2_ALT ||
+		ent->methodOfDeath == MOD_EXPLOSIVE ||
+		ent->methodOfDeath == MOD_DETPACK ||
+		ent->methodOfDeath == MOD_LASERTRIP ||
+		ent->methodOfDeath == MOD_LASERTRIP_ALT ||
+		ent->methodOfDeath == MOD_SEEKER ||
+		ent->methodOfDeath == MOD_CONC ||
+		ent->methodOfDeath == WP_NOGHRI_STICK)
+	{
+		return qfalse;
+	}
+
+	return qtrue;
+}
 
 //------------------------------------------------------------------------------
 // G_MissileImpacted
@@ -1409,185 +1483,125 @@ extern int G_PickPainAnim(const gentity_t* self, const vec3_t point, int hit_loc
 // Behaviour preserved except for added NULL-safety and a safe fallback for
 // EV_MISSILE_MISS when 'other' is NULL.
 //------------------------------------------------------------------------------
-void G_MissileImpacted(gentity_t* ent, gentity_t* other, vec3_t impact_pos, vec3_t normal, const int hit_loc /*= HL_NONE*/)
+void G_MissileImpacted(gentity_t* ent, gentity_t* other, vec3_t impact_pos, vec3_t normal, const int hit_loc)
 {
-	if (!ent)
+	const qboolean otherValid = (other != NULL) ? qtrue : qfalse;
+
+	const qboolean beskar = G_IsBeskarDeflect(ent, other);
+	const qboolean boba_fett = G_IsBobaDeflect(ent, other);
+
+	// impact damage
+	if (otherValid && other->takedamage)
 	{
-		return;
-	}
-
-
-	auto beskar = static_cast<qboolean>((other->flags & FL_DINDJARIN)
-		&& !ent->splashDamage
-		&& !ent->splashRadius
-		&& ent->methodOfDeath != MOD_SABER
-		&& ent->methodOfDeath != MOD_REPEATER_ALT
-		&& ent->methodOfDeath != MOD_FLECHETTE_ALT
-		&& ent->methodOfDeath != MOD_ROCKET
-		&& ent->methodOfDeath != MOD_ROCKET_ALT
-		&& ent->methodOfDeath != MOD_CONC_ALT
-		&& ent->methodOfDeath != MOD_THERMAL
-		&& ent->methodOfDeath != MOD_THERMAL_ALT
-		&& ent->methodOfDeath != MOD_DEMP2
-		&& ent->methodOfDeath != MOD_DEMP2_ALT
-		&& ent->methodOfDeath != MOD_EXPLOSIVE
-		&& ent->methodOfDeath != MOD_DETPACK
-		&& ent->methodOfDeath != MOD_LASERTRIP
-		&& ent->methodOfDeath != MOD_LASERTRIP_ALT
-		&& ent->methodOfDeath != MOD_SEEKER
-		&& ent->methodOfDeath != MOD_CONC
-		&& ent->methodOfDeath != WP_NOGHRI_STICK
-		&& (!Q_irand(0, 2)));
-
-	auto boba_fett = static_cast<qboolean>((other->flags & FL_BOBAFETT)
-		&& !ent->splashDamage
-		&& !ent->splashRadius
-		&& ent->methodOfDeath != MOD_SABER
-		&& ent->methodOfDeath != MOD_REPEATER_ALT
-		&& ent->methodOfDeath != MOD_FLECHETTE_ALT
-		&& ent->methodOfDeath != MOD_ROCKET
-		&& ent->methodOfDeath != MOD_ROCKET_ALT
-		&& ent->methodOfDeath != MOD_CONC_ALT
-		&& ent->methodOfDeath != MOD_THERMAL
-		&& ent->methodOfDeath != MOD_THERMAL_ALT
-		&& ent->methodOfDeath != MOD_DEMP2
-		&& ent->methodOfDeath != MOD_DEMP2_ALT
-		&& ent->methodOfDeath != MOD_EXPLOSIVE
-		&& ent->methodOfDeath != MOD_DETPACK
-		&& ent->methodOfDeath != MOD_LASERTRIP
-		&& ent->methodOfDeath != MOD_LASERTRIP_ALT
-		&& ent->methodOfDeath != MOD_SEEKER
-		&& ent->methodOfDeath != MOD_CONC
-		&& ent->methodOfDeath != WP_NOGHRI_STICK);
-
-	//------------------------------
-	// DIRECT IMPACT DAMAGE
-	//------------------------------
-	if (other && other->takedamage && ent->damage)
-	{
-		vec3_t velocity;
-		EvaluateTrajectoryDelta(&ent->s.pos, level.time, velocity);
-
-		if (VectorLength(velocity) == 0.0f)
+		if (ent->damage)
 		{
-			// Stepped on a grenade or stationary projectile
-			velocity[2] = 1.0f;
-		}
+			vec3_t velocity;
+			EvaluateTrajectoryDelta(&ent->s.pos, level.time, velocity);
 
-		const int damage = ent->damage;
-
-		// Special droid-only feedback (shocked effect)
-		if (other->client)
-		{
-			const class_t npc_class = other->client->NPC_class;
-
-			if (npc_class == CLASS_ATST || npc_class == CLASS_GONK ||
-				npc_class == CLASS_INTERROGATOR || npc_class == CLASS_MARK1 ||
-				npc_class == CLASS_MARK2 || npc_class == CLASS_MOUSE ||
-				npc_class == CLASS_PROBE || npc_class == CLASS_PROTOCOL ||
-				npc_class == CLASS_R2D2 || npc_class == CLASS_R5D2 ||
-				npc_class == CLASS_SEEKER || npc_class == CLASS_SENTRY ||
-				npc_class == CLASS_SBD || npc_class == CLASS_BATTLEDROID ||
-				npc_class == CLASS_DROIDEKA || npc_class == CLASS_OBJECT ||
-				npc_class == CLASS_ASSASSIN_DROID || npc_class == CLASS_SABER_DROID)
+			if (VectorLength(velocity) == 0.0f)
 			{
-				if (other->client->ps.powerups[PW_SHOCKED] < level.time + 100)
-				{
-					other->s.powerups |= (1 << PW_SHOCKED);
-					other->client->ps.powerups[PW_SHOCKED] = level.time + Q_irand(1500, 2000);
-				}
-			}
-		}
-
-		G_Damage(other, ent, ent->owner, velocity, impact_pos, damage, ent->dflags, ent->methodOfDeath, hit_loc);
-		//
-		// Universal directional pain animation (Singleplayer)
-		//
-		if (other->client &&
-			beskar == qfalse &&
-			boba_fett == qfalse &&
-			other->health > 0 &&
-			!PM_InDeathAnim() &&
-			!WP_DoingForcedAnimationForForcePowers(other))
-		{
-			int painAnim = G_PickPainAnim(other, impact_pos, hit_loc);
-
-			if (painAnim != -1)
-			{
-				NPC_SetAnim(other,
-					SETANIM_TORSO,
-					painAnim,
-					SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-			}
-		}
-
-		//------------------------------
-		// DEMP2 SPECIAL CASES
-		//------------------------------
-		if (ent->s.weapon == WP_DEMP2)
-		{
-			// Decloak saboteurs
-			if (other && other->client && other->client->NPC_class == CLASS_SABOTEUR)
-			{
-				Saboteur_Decloak(other, Q_irand(3000, 10000));
-
-				if (ent->methodOfDeath == MOD_DEMP2_ALT && other->NPC)
-				{
-					// Permanently disable saboteur cloak
-					other->NPC->aiFlags &= ~NPCAI_SHIELDS;
-				}
+				velocity[2] = 1.0f; // stepped on a grenade
 			}
 
-			// Vehicle ion behaviour
-			if (other && other->client && other->client->NPC_class == CLASS_VEHICLE)
+			const int damage = ent->damage;
+
+			if (other->client)
 			{
-				if (other->m_pVehicle &&
-					other->m_pVehicle->m_pVehicleInfo &&
-					(other->m_pVehicle->m_pVehicleInfo->type == VH_SPEEDER ||
-						(other->m_pVehicle->m_pVehicleInfo->type == VH_FIGHTER &&
-							ent->classname && Q_stricmp("vehicle_proj", ent->classname) == 0)) &&
-					!FighterIsLanded(other->m_pVehicle, &other->client->ps) &&
-					!(other->spawnflags & 2))
+				const class_t npc_class = other->client->NPC_class;
+
+				// droid shock effect
+				if (npc_class == CLASS_ATST || npc_class == CLASS_GONK ||
+					npc_class == CLASS_INTERROGATOR || npc_class == CLASS_MARK1 ||
+					npc_class == CLASS_MARK2 || npc_class == CLASS_MOUSE ||
+					npc_class == CLASS_PROBE || npc_class == CLASS_PROTOCOL ||
+					npc_class == CLASS_R2D2 || npc_class == CLASS_R5D2 ||
+					npc_class == CLASS_SEEKER || npc_class == CLASS_SENTRY ||
+					npc_class == CLASS_SBD || npc_class == CLASS_BATTLEDROID ||
+					npc_class == CLASS_DROIDEKA || npc_class == CLASS_OBJECT ||
+					npc_class == CLASS_ASSASSIN_DROID || npc_class == CLASS_SABER_DROID)
 				{
-					// Vehicles hit by "ion cannons" lose control
-					if (other->client->ps.electrifyTime > level.time)
+					if (other->client->ps.powerups[PW_SHOCKED] < level.time + 100)
 					{
-						other->client->ps.electrifyTime += Q_irand(1500, 2000);
-						if (other->client->ps.electrifyTime > level.time + 4000)
+						other->s.powerups |= 1 << PW_SHOCKED;
+						other->client->ps.powerups[PW_SHOCKED] = level.time + Q_irand(1500, 2000);
+					}
+				}
+			}
+
+			G_Damage(other, ent, ent->owner, velocity, impact_pos, damage, ent->dflags, ent->methodOfDeath, hit_loc);
+
+			//
+			// Universal directional pain animation (Singleplayer)
+			//
+			if (other->client &&
+				beskar == qfalse &&
+				boba_fett == qfalse &&
+				other->health > 0 &&
+				!BG_InDeathAnim(other->client->ps.torsoAnim) &&
+				!WP_DoingForcedAnimationForForcePowers(other))
+			{
+				NPC_SetAnim(other, SETANIM_TORSO, Q_irand(BOTH_PAIN1, BOTH_PAIN3), SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+			}
+
+			// DEMP2 special behaviour
+			if (ent->s.weapon == WP_DEMP2 && otherValid && other->client)
+			{
+				if (other->client->NPC_class == CLASS_SABOTEUR)
+				{
+					Saboteur_Decloak(other, Q_irand(3000, 10000));
+
+					if (ent->methodOfDeath == MOD_DEMP2_ALT && other->NPC)
+					{
+						other->NPC->aiFlags &= ~NPCAI_SHIELDS;
+					}
+				}
+
+				if (other->client->NPC_class == CLASS_VEHICLE)
+				{
+					if (other->m_pVehicle &&
+						other->m_pVehicle->m_pVehicleInfo &&
+						(other->m_pVehicle->m_pVehicleInfo->type == VH_SPEEDER ||
+							(other->m_pVehicle->m_pVehicleInfo->type == VH_FIGHTER &&
+								ent->classname &&
+								Q_stricmp("vehicle_proj", ent->classname) == 0)) &&
+						!FighterIsLanded(other->m_pVehicle, &other->client->ps) &&
+						!(other->spawnflags & 2))
+					{
+						if (other->client->ps.electrifyTime > level.time)
 						{
-							other->client->ps.electrifyTime = level.time + 4000;
+							other->client->ps.electrifyTime += Q_irand(1500, 2000);
+							if (other->client->ps.electrifyTime > level.time + 4000)
+							{
+								other->client->ps.electrifyTime = level.time + 4000;
+							}
 						}
+						else
+						{
+							other->client->ps.electrifyTime = level.time + Q_irand(1500, 2000);
+						}
+					}
+				}
+				else if (other->client->ps.powerups[PW_CLOAKED])
+				{
+					// Cloaked player/NPC hit by DEMP2
+					player_Decloak(other);
+					Jedi_Decloak(other);
+
+					if (ent->methodOfDeath == MOD_DEMP2_ALT)
+					{
+						other->client->cloakToggleTime = Q3_INFINITE;
 					}
 					else
 					{
-						other->client->ps.electrifyTime = level.time + Q_irand(1500, 2000);
+						other->client->cloakToggleTime = level.time + Q_irand(3000, 10000);
 					}
-				}
-			}
-			else if (other && other->client && other->client->ps.powerups[PW_CLOAKED])
-			{
-				// Cloaked player/NPC hit by DEMP2
-				player_Decloak(other);
-				Jedi_Decloak(other);
-
-				if (ent->methodOfDeath == MOD_DEMP2_ALT)
-				{
-					// Direct alt hit: cloak disabled forever
-					other->client->cloakToggleTime = Q3_INFINITE;
-				}
-				else
-				{
-					// Temp disable
-					other->client->cloakToggleTime = level.time + Q_irand(3000, 10000);
 				}
 			}
 		}
 	}
 
-	//------------------------------
-	// IMPACT EVENT (HIT vs MISS)
-	//------------------------------
-	if (other && other->takedamage && other->client)
+	// Impact event (safe even if 'other' is NULL)
+	if (otherValid && other->client && other->takedamage)
 	{
 		G_AddEvent(ent, EV_MISSILE_HIT, DirToByte(normal));
 		ent->s.otherentity_num = other->s.number;
@@ -1595,14 +1609,11 @@ void G_MissileImpacted(gentity_t* ent, gentity_t* other, vec3_t impact_pos, vec3
 	else
 	{
 		G_AddEvent(ent, EV_MISSILE_MISS, DirToByte(normal));
-		ent->s.otherentity_num = (other ? other->s.number : ENTITYNUM_NONE);
+		ent->s.otherentity_num = otherValid ? other->s.number : ENTITYNUM_NONE;
 	}
 
 	VectorCopy(normal, ent->pos1);
 
-	//------------------------------
-	// AI SOUND / SIGHT EVENTS
-	//------------------------------
 	if (ent->owner)
 	{
 		AddSoundEvent(ent->owner, ent->currentOrigin, 256, AEL_SUSPICIOUS, qfalse, qtrue);
@@ -1610,25 +1621,17 @@ void G_MissileImpacted(gentity_t* ent, gentity_t* other, vec3_t impact_pos, vec3
 	}
 
 	ent->freeAfterEvent = qtrue;
-
-	// Change over to a normal entity right at the point of impact
 	ent->s.eType = ET_GENERAL;
 
 	VectorCopy(impact_pos, ent->s.pos.trBase);
 	G_SetOrigin(ent, impact_pos);
 
-	//------------------------------
-	// SPLASH DAMAGE
-	//------------------------------
 	if (ent->splashDamage)
 	{
-		G_RadiusDamage(impact_pos, ent->owner, ent->splashDamage, ent->splashRadius,
-			other, ent->splashMethodOfDeath);
+		G_RadiusDamage(impact_pos, ent->owner, ent->splashDamage,
+			ent->splashRadius, other, ent->splashMethodOfDeath);
 	}
 
-	//------------------------------
-	// NOGHRI GAS SPECIAL CASE
-	//------------------------------
 	if (ent->s.weapon == WP_NOGHRI_STICK)
 	{
 		G_SpawnNoghriGasCloud(ent);
@@ -1711,48 +1714,12 @@ static void g_missile_impact(gentity_t* ent, trace_t* trace, const int hit_loc =
 		|| (trace->surfaceFlags & SURF_FORCEFIELD || other->flags & FL_SHIELDED)
 		&& !ent->splashDamage && !ent->splashRadius && ent->s.weapon != WP_NOGHRI_STICK);
 
-	auto beskar = static_cast<qboolean>((other->flags & FL_DINDJARIN)
-		&& !ent->splashDamage
-		&& !ent->splashRadius
-		&& ent->methodOfDeath != MOD_SABER
-		&& ent->methodOfDeath != MOD_REPEATER_ALT
-		&& ent->methodOfDeath != MOD_FLECHETTE_ALT
-		&& ent->methodOfDeath != MOD_ROCKET
-		&& ent->methodOfDeath != MOD_ROCKET_ALT
-		&& ent->methodOfDeath != WP_NOGHRI_STICK
-		&& ent->methodOfDeath != MOD_CONC_ALT
-		&& ent->methodOfDeath != MOD_THERMAL
-		&& ent->methodOfDeath != MOD_THERMAL_ALT
-		&& ent->methodOfDeath != MOD_DEMP2
-		&& ent->methodOfDeath != MOD_DEMP2_ALT
-		&& ent->methodOfDeath != MOD_EXPLOSIVE
-		&& ent->methodOfDeath != MOD_DETPACK
-		&& ent->methodOfDeath != MOD_LASERTRIP
-		&& ent->methodOfDeath != MOD_LASERTRIP_ALT
-		&& ent->methodOfDeath != MOD_SEEKER
-		&& ent->methodOfDeath != MOD_CONC
-		&& (!Q_irand(0, 1)));
+	//
+	// Beskar / Boba special bounce flags
+	//
+	qboolean beskar = G_IsBeskarDeflect(ent, other);
+	qboolean boba_fett = G_IsBobaDeflect(ent, other);
 
-	auto boba_fett = static_cast<qboolean>((other->flags & FL_BOBAFETT)
-		&& !ent->splashDamage
-		&& !ent->splashRadius
-		&& ent->methodOfDeath != MOD_SABER
-		&& ent->methodOfDeath != MOD_REPEATER_ALT
-		&& ent->methodOfDeath != MOD_FLECHETTE_ALT
-		&& ent->methodOfDeath != MOD_ROCKET
-		&& ent->methodOfDeath != MOD_ROCKET_ALT
-		&& ent->methodOfDeath != WP_NOGHRI_STICK
-		&& ent->methodOfDeath != MOD_CONC_ALT
-		&& ent->methodOfDeath != MOD_THERMAL
-		&& ent->methodOfDeath != MOD_THERMAL_ALT
-		&& ent->methodOfDeath != MOD_DEMP2
-		&& ent->methodOfDeath != MOD_DEMP2_ALT
-		&& ent->methodOfDeath != MOD_EXPLOSIVE
-		&& ent->methodOfDeath != MOD_DETPACK
-		&& ent->methodOfDeath != MOD_LASERTRIP
-		&& ent->methodOfDeath != MOD_LASERTRIP_ALT
-		&& ent->methodOfDeath != MOD_SEEKER
-		&& ent->methodOfDeath != MOD_CONC);
 
 	if (ent->dflags & DAMAGE_HEAVY_WEAP_CLASS)
 	{
