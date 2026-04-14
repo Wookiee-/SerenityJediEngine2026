@@ -1016,346 +1016,158 @@ static void G_SetSkin(gentity_t* ent)
 		ent->client->renderInfo.customRGBA[3] = 255;
 	}
 }
-
+// Returns qtrue if the entity uses a humanoid-compatible GLA
 qboolean g_standard_humanoid(gentity_t* self)
 {
-	if (!self || !self->ghoul2.size())
+	if (self == NULL || self->ghoul2.size() == 0)
 	{
 		return qfalse;
 	}
+
 	if (self->playerModel < 0 || self->playerModel >= self->ghoul2.size())
 	{
 		return qfalse;
 	}
+
 	const char* gla_name = gi.G2API_GetGLAName(&self->ghoul2[self->playerModel]);
-	assert(gla_name);
-	if (gla_name)
+
+	if (gla_name == NULL || gla_name[0] == '\0')
 	{
-		if (!Q_stricmpn("models/players/_humanoid", gla_name, 24))
+		Com_Printf("g_standard_humanoid: WARNING - NULL or empty GLA name\n");
+		return qfalse;
+	}
+
+	// ------------------------------------------------------------
+	// List of all humanoid-compatible GLA prefixes
+	// ------------------------------------------------------------
+	static const char* humanoidPrefixes[] =
+	{
+		"models/players/_humanoid",
+		"models/players/JK2anims",
+		"models/players/_humanoid_ani",
+		"models/players/_humanoid_bdroid",
+		"models/players/_humanoid_ben",
+		"models/players/_humanoid_cal",
+		"models/players/_humanoid_clo",
+		"models/players/_humanoid_deka",
+		"models/players/_humanoid_df2",
+		"models/players/_humanoid_dooku",
+		"models/players/_humanoid_galen",
+		"models/players/_humanoid_gon",
+		"models/players/_humanoid_grievous",
+		"models/players/_humanoid_jabba",
+		"models/players/_humanoid_jango",
+		"models/players/_humanoid_kotor",
+		"models/players/_humanoid_luke",
+		"models/players/_humanoid_mace",
+		"models/players/_humanoid_maul",
+		"models/players/_humanoid_md",
+		"models/players/_humanoid_melee",
+		"models/players/_humanoid_obi",
+		"models/players/_humanoid_obi3",
+		"models/players/_humanoid_pal",
+		"models/players/_humanoid_reb",
+		"models/players/_humanoid_ren",
+		"models/players/_humanoid_rey",
+		"models/players/_humanoid_sbd",
+		"models/players/_humanoid_vader",
+		"models/players/_humanoid_yoda",
+
+		// Full-path GLAs (non-prefix)
+		"models/players/protocol/protocol",
+		"models/players/assassin_droid/model",
+		"models/players/saber_droid/model",
+		"models/players/hazardtrooper/hazardtrooper",
+		"models/players/rockettrooper/rockettrooper",
+		"models/players/wampa/wampa",
+		"models/players/galak_mech/galak_mech",
+		"models/players/droideka/droideka",
+	};
+
+	// ------------------------------------------------------------
+	// Check against all prefixes
+	// ------------------------------------------------------------
+	for (int i = 0; i < ARRAY_LEN(humanoidPrefixes); i++)
+	{
+		const char* prefix = humanoidPrefixes[i];
+		const int prefixLen = strlen(prefix);
+
+		if (!Q_stricmpn(gla_name, prefix, prefixLen))
 		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/JK2anims/", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_ani", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_bdroid", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_ben", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_df2", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_cal", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_clo", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_dooku", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_galen", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_gon", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_grievous", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_jango", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_kotor", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_luke", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_mace", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_maul", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_md", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_obi", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_obi3", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_pal", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_ren", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_rey", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_sbd", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_deka", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_vader", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmpn("models/players/_humanoid_yoda", gla_name, 24))
-		{
-			//only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		//
-		if (!Q_stricmp("models/players/protocol/protocol", gla_name))
-		{
-			//protocol droid duplicates many of these
-			return qtrue;
-		}
-		if (!Q_stricmp("models/players/assassin_droid/model", gla_name))
-		{
-			//assassin_droid duplicates many of these
-			return qtrue;
-		}
-		if (!Q_stricmp("models/players/saber_droid/model", gla_name))
-		{
-			//saber_droid duplicates many of these
-			return qtrue;
-		}
-		if (!Q_stricmp("models/players/hazardtrooper/hazardtrooper", gla_name))
-		{
-			//hazardtrooper duplicates many of these
-			return qtrue;
-		}
-		if (!Q_stricmp("models/players/rockettrooper/rockettrooper", gla_name))
-		{
-			//rockettrooper duplicates many of these
-			return qtrue;
-		}
-		if (!Q_stricmp("models/players/wampa/wampa", gla_name))
-		{
-			//rockettrooper duplicates many of these
-			return qtrue;
-		}
-		if (!Q_stricmp("models/players/galak_mech/galak_mech", gla_name))
-		{
-			//galak duplicates many of these
-			return qtrue;
-		}
-		if (!Q_stricmp("models/players/droideka/droideka", gla_name))
-		{
-			//assassin_droid duplicates many of these
 			return qtrue;
 		}
 	}
+
 	return qfalse;
 }
 
-qboolean g_standard_humanoid(const char* gla_name)
+// Returns qtrue if the GLA name corresponds to a humanoid-compatible skeleton
+qboolean G_StandardHumanoid(const char* gla_name)
 {
-	if (gla_name)
+	if (gla_name == NULL || gla_name[0] == '\0')
 	{
-		if (!Q_stricmp("_humanoid", gla_name))
+		Com_Printf("G_StandardHumanoid: WARNING - NULL or empty GLA name\n");
+		return qfalse;
+	}
+
+	// ------------------------------------------------------------
+	// List of all humanoid-compatible GLA names (exact matches)
+	// ------------------------------------------------------------
+	static const char* humanoidExact[] =
+	{
+		"_humanoid",
+		"JK2anims",
+		"_humanoid_ani",
+		"_humanoid_bdroid",
+		"_humanoid_ben",
+		"_humanoid_cal",
+		"_humanoid_clo",
+		"_humanoid_deka",
+		"_humanoid_df2",
+		"_humanoid_dooku",
+		"_humanoid_galen",
+		"_humanoid_gon",
+		"_humanoid_grievous",
+		"_humanoid_jabba",
+		"_humanoid_jango",
+		"_humanoid_kotor",
+		"_humanoid_luke",
+		"_humanoid_mace",
+		"_humanoid_maul",
+		"_humanoid_md",
+		"_humanoid_melee",
+		"_humanoid_obi",
+		"_humanoid_obi3",
+		"_humanoid_pal",
+		"_humanoid_reb",
+		"_humanoid_ren",
+		"_humanoid_rey",
+		"_humanoid_sbd",
+		"_humanoid_vader",
+		"_humanoid_yoda",
+
+		// Non-humanoid but compatible rigs
+		"protocol",        // models/players/protocol/protocol
+		"assassin_droid",  // models/players/assassin_droid/model
+		"saber_droid",     // models/players/saber_droid/model
+		"hazardtrooper",   // models/players/hazardtrooper/hazardtrooper
+		"rockettrooper",   // models/players/rockettrooper/rockettrooper
+		"wampa",           // models/players/wampa/wampa
+		"galak_mech",      // models/players/galak_mech/galak_mech
+		"droideka",
+	};
+
+	// ------------------------------------------------------------
+	// Check exact matches
+	// ------------------------------------------------------------
+	for (int i = 0; i < ARRAY_LEN(humanoidExact); i++)
+	{
+		if (!Q_stricmp(gla_name, humanoidExact[i]))
 		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("JK2anims", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_ani", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_bdroid", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_ben", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_df2", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_cal", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_clo", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_dooku", gla_name))
-		{
-			// only _humanoid skeleton is expected eto have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_galen", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_gon", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_grievous", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_jango", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_kotor", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_luke", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_mace", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_maul", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_md", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_obi", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_obi3", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_pal", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_ren", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_rey", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_sbd", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_deka", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("droideka", gla_name))
-		{
-			//assassin_droid duplicates many of these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_vader", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
-			return qtrue;
-		}
-		if (!Q_stricmp("_humanoid_yoda", gla_name))
-		{
-			// only _humanoid skeleton is expected to have these
 			return qtrue;
 		}
 	}
+
 	return qfalse;
 }
 

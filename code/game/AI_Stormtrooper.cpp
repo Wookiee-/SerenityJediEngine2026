@@ -871,87 +871,179 @@ qboolean NPC_CheckPlayerTeamStealth()
 
 static qboolean NPC_CheckEnemiesInSpotlight()
 {
-	gentity_t* entity_list[MAX_GENTITIES];
-	gentity_t* suspect = nullptr;
-	int i;
+	if (!NPC || !NPC->client || !NPCInfo)
+	{
+		return qfalse;
+	}
+
+	// Use static storage to avoid large per-call stack usage
+	static gentity_t* entity_list[MAX_GENTITIES];
+
+	// Limit detection to a fixed radius to prevent map-wide aggro
+	constexpr float DETECTION_RADIUS = 1024.0f; // 1024 units is a reasonable sight/hearing range
+	constexpr float DETECTION_RADIUS_LEVEL_HARD = 2048.0f; // 2048 units is a reasonable sight/hearing range on hard difficulty
+
 	vec3_t mins{}, maxs{};
 
-	for (i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++)
 	{
-		mins[i] = NPC->client->renderInfo.eyePoint[i] - NPC->speed;
-		maxs[i] = NPC->client->renderInfo.eyePoint[i] + NPC->speed;
+		if (g_spskill->integer <= 2)
+		{// Normal and easy have a smaller detection radius
+			mins[i] = NPC->client->renderInfo.eyePoint[i] - DETECTION_RADIUS;
+			maxs[i] = NPC->client->renderInfo.eyePoint[i] + DETECTION_RADIUS;
+		}
+		else
+		{
+			mins[i] = NPC->client->renderInfo.eyePoint[i] - DETECTION_RADIUS_LEVEL_HARD;
+			maxs[i] = NPC->client->renderInfo.eyePoint[i] + DETECTION_RADIUS_LEVEL_HARD;
+		}
 	}
 
 	const int num_listed_entities = gi.EntitiesInBox(mins, maxs, entity_list, MAX_GENTITIES);
 
-	for (i = 0; i < num_listed_entities; i++)
-	{
-		if (!PInUse(i))
-			continue;
+	gentity_t* suspect = nullptr;
 
+	for (int i = 0; i < num_listed_entities; i++)
+	{
 		gentity_t* enemy = entity_list[i];
 
-		if (enemy && enemy->client && NPC_ValidEnemy(enemy) && enemy->client->playerTeam == NPC->client->enemyTeam)
+		if (!enemy || !enemy->inuse || !enemy->client)
 		{
-			//valid ent & client, valid enemy, on the target team
-			//check to see if they're in my FOV
-			if (InFOV(enemy->currentOrigin, NPC->client->renderInfo.eyePoint, NPC->client->renderInfo.eyeAngles,
-				NPCInfo->stats.hfov, NPCInfo->stats.vfov))
+			continue;
+		}
+
+		if (!NPC_ValidEnemy(enemy))
+		{
+			continue;
+		}
+
+		if (enemy->client->playerTeam != NPC->client->enemyTeam)
+		{
+			continue;
+		}
+
+		if (g_spskill->integer <= 2)
+		{// Normal and easy have a smaller detection radius
+			// Primary cone check with distance limit
+			const float dist_sq = DistanceSquared(NPC->client->renderInfo.eyePoint, enemy->currentOrigin);
+
+			if (dist_sq <= DETECTION_RADIUS * DETECTION_RADIUS)
 			{
-				//in my cone
-				//check to see that they're close enough
-				if (DistanceSquared(NPC->client->renderInfo.eyePoint, enemy->currentOrigin) - 256
-					/*fudge factor: 16 squared*/ <= NPC->speed * NPC->speed)
+				if (InFOV(enemy->currentOrigin,
+					NPC->client->renderInfo.eyePoint,
+					NPC->client->renderInfo.eyeAngles,
+					NPCInfo->stats.hfov,
+					NPCInfo->stats.vfov))
 				{
-					//within range
-					//check to see if we have a clear trace to them
-					if (G_ClearLOS(NPC, enemy))
+					// 16^2 fudge factor
+					if (dist_sq - 256.0f <= DETECTION_RADIUS * DETECTION_RADIUS)
 					{
-						//clear LOS
-						G_SetEnemy(NPC, enemy);
-						TIMER_Set(NPC, "attackDelay", Q_irand(500, 1500));
-						return qtrue;
+						if (G_ClearLOS(NPC, enemy)) {
+							G_SetEnemy(NPC, enemy);
+							TIMER_Set(NPC, "attackDelay", Q_irand(500, 2500));
+							return qtrue;
+						}
 					}
 				}
 			}
-			if (InFOV(enemy->currentOrigin, NPC->client->renderInfo.eyePoint, NPC->client->renderInfo.eyeAngles, 90,
-				NPCInfo->stats.vfov * 3))
+
+			// Wider "suspicion" cone with distance limit
+			if (dist_sq <= DETECTION_RADIUS * DETECTION_RADIUS)
 			{
-				//one to look at if we don't get an enemy
-				if (G_ClearLOS(NPC, enemy))
+				if (InFOV(enemy->currentOrigin,
+					NPC->client->renderInfo.eyePoint,
+					NPC->client->renderInfo.eyeAngles,
+					90.0f,
+					NPCInfo->stats.vfov * 3.0f))
 				{
-					//clear LOS
-					if (suspect == nullptr || DistanceSquared(NPC->client->renderInfo.eyePoint, enemy->currentOrigin) <
-						DistanceSquared(NPC->client->renderInfo.eyePoint, suspect->currentOrigin))
+					if (G_ClearLOS(NPC, enemy))
 					{
-						//remember him
-						suspect = enemy;
+						if (!suspect ||
+							DistanceSquared(NPC->client->renderInfo.eyePoint, enemy->currentOrigin) <
+							DistanceSquared(NPC->client->renderInfo.eyePoint, suspect->currentOrigin))
+						{
+							suspect = enemy;
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+			// Primary cone check with distance limit
+			const float dist_sq = DistanceSquared(NPC->client->renderInfo.eyePoint, enemy->currentOrigin);
+
+			if (dist_sq <= DETECTION_RADIUS_LEVEL_HARD * DETECTION_RADIUS_LEVEL_HARD)
+			{
+				if (InFOV(enemy->currentOrigin,
+					NPC->client->renderInfo.eyePoint,
+					NPC->client->renderInfo.eyeAngles,
+					NPCInfo->stats.hfov,
+					NPCInfo->stats.vfov))
+				{
+					// 16^2 fudge factor
+					if (dist_sq - 256.0f <= DETECTION_RADIUS_LEVEL_HARD * DETECTION_RADIUS_LEVEL_HARD)
+					{
+						if (G_ClearLOS(NPC, enemy)) {
+							G_SetEnemy(NPC, enemy);
+							TIMER_Set(NPC, "attackDelay", Q_irand(500, 2500));
+							return qtrue;
+						}
+					}
+				}
+			}
+
+			// Wider "suspicion" cone with distance limit
+			if (dist_sq <= DETECTION_RADIUS_LEVEL_HARD * DETECTION_RADIUS_LEVEL_HARD)
+			{
+				if (InFOV(enemy->currentOrigin,
+					NPC->client->renderInfo.eyePoint,
+					NPC->client->renderInfo.eyeAngles,
+					90.0f,
+					NPCInfo->stats.vfov * 3.0f))
+				{
+					if (G_ClearLOS(NPC, enemy))
+					{
+						if (!suspect ||
+							DistanceSquared(NPC->client->renderInfo.eyePoint, enemy->currentOrigin) <
+							DistanceSquared(NPC->client->renderInfo.eyePoint, suspect->currentOrigin))
+						{
+							suspect = enemy;
+						}
 					}
 				}
 			}
 		}
 	}
-	if (suspect && Q_flrand(0, NPCInfo->stats.visrange * NPCInfo->stats.visrange) > DistanceSquared(
-		NPC->client->renderInfo.eyePoint, suspect->currentOrigin))
+
+	if (suspect)
 	{
-		//hey!  who's that?
-		if (TIMER_Done(NPC, "enemyLastVisible"))
-		{
-			//If we haven't already, start the counter
-			const int look_time = Q_irand(4500, 8500);
-			TIMER_Set(NPC, "enemyLastVisible", look_time);
-			ST_Speech(NPC, SPEECH_SIGHT, 0);
-			NPC_FacePosition(suspect->currentOrigin, qtrue);
-		}
-		else if (TIMER_Get(NPC, "enemyLastVisible") <= level.time + 500
-			&& NPCInfo->scriptFlags & SCF_LOOK_FOR_ENEMIES) //FIXME: Is this reliable?
-		{
-			if (!Q_irand(0, 2))
+		const float dist_sq = DistanceSquared(NPC->client->renderInfo.eyePoint, suspect->currentOrigin);
+		const float vis_rng_sq = NPCInfo->stats.visrange * NPCInfo->stats.visrange;
+
+		// Must still have LOS
+		if (G_ClearLOS(NPC, suspect))
+		{// Random chance to notice based on distance, even if they have LOS
+			if (Q_flrand(0.0f, vis_rng_sq) > dist_sq)
 			{
-				const int interrogate_time = Q_irand(2000, 4000);
-				ST_Speech(NPC, SPEECH_SUSPICIOUS, 0);
-				TIMER_Set(NPC, "interrogating", interrogate_time);
-				NPC_FacePosition(suspect->currentOrigin, qtrue);
+				// First time noticing
+				if (TIMER_Done(NPC, "enemyLastVisible"))
+				{
+					TIMER_Set(NPC, "enemyLastVisible", Q_irand(4500, 8500));
+					ST_Speech(NPC, SPEECH_SIGHT, 0);
+					NPC_FacePosition(suspect->currentOrigin, qtrue);
+				}
+				// Escalate to interrogation
+				else if (TIMER_Get(NPC, "enemyLastVisible") <= level.time + 500 &&
+					(NPCInfo->scriptFlags & SCF_LOOK_FOR_ENEMIES))
+				{
+					if (!Q_irand(0, 2))
+					{
+						TIMER_Set(NPC, "interrogating", Q_irand(2000, 4000));
+						ST_Speech(NPC, SPEECH_SUSPICIOUS, 0);
+						NPC_FacePosition(suspect->currentOrigin, qtrue);
+					}
+				}
 			}
 		}
 	}

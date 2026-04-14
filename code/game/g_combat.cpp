@@ -4542,13 +4542,42 @@ static void GibEntity_Headshot(gentity_t* self)
 	self->client->noHead = qtrue;
 }
 
+qboolean G_RagDollDisallowedClass(const class_t npc_class)
+{
+	switch (npc_class)
+	{
+	case CLASS_ATST:
+	case CLASS_GONK:
+	case CLASS_INTERROGATOR:
+	case CLASS_MARK1:
+	case CLASS_MARK2:
+	case CLASS_MOUSE:
+	case CLASS_PROBE:
+	case CLASS_PROTOCOL:
+	case CLASS_R2D2:
+	case CLASS_R5D2:
+	case CLASS_SEEKER:
+	case CLASS_SENTRY:
+	case CLASS_SBD:
+	case CLASS_BATTLEDROID:
+	case CLASS_DROIDEKA:
+	case CLASS_OBJECT:
+	case CLASS_ASSASSIN_DROID:
+	case CLASS_SABER_DROID:
+		return qtrue;
+
+	default:
+		return qfalse;
+	}
+}
+
+extern qboolean G_RagDoll(gentity_t* ent, vec3_t forcedAngles);
 /*
 ==================
 player_die
 ==================
 */
-void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, const int damage, const int means_of_death,
-	const int dflags, const int hit_loc)
+void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, const int damage, const int means_of_death, const int dflags, const int hit_loc)
 {
 	int anim;
 	qboolean death_script = qfalse;
@@ -5693,26 +5722,45 @@ void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, cons
 	}
 
 	// don't allow player to respawn for a few seconds
-	self->client->respawnTime = level.time + 2000; //self->client->ps.legsAnimTimer;
+	self->client->respawnTime = level.time + 2000;
 
-	//rww - RAGDOLL_BEGIN
-	if (g_broadsword->integer && self->client->NPC_class != CLASS_SBD && self->client->NPC_class != CLASS_DROIDEKA)
+	// rww - RAGDOLL_BEGIN
+	if (g_broadsword->integer &&
+		!G_RagDollDisallowedClass(self->client->NPC_class))
 	{
-		if (self->client && (!self->NPC || !g_standard_humanoid(self)))
+		// Clear anim timers so ragdoll can take over
+		if (self->client != NULL &&
+			(self->NPC == NULL || !g_standard_humanoid(self)))
 		{
 			PM_SetLegsAnimTimer(self, &self->client->ps.legsAnimTimer, -1);
 			PM_SetTorsoAnimTimer(self, &self->client->ps.torsoAnimTimer, -1);
+		}
+
+		// ------------------------------------------------------------
+		// NEW: Attempt to start ragdoll (server‑side authoritative)
+		// ------------------------------------------------------------
+		{
+			vec3_t forcedAngles;
+			VectorCopy(self->client->ps.viewangles, forcedAngles);
+
+			if (G_RagDoll(self, forcedAngles) == qtrue)
+			{
+#ifdef _DEBUG
+				Com_Printf("Debug: Ragdoll started for %s\n", self->NPC_type);
+#endif
+			}
 		}
 	}
 	else
 	{
-		if (self->client)
+		// Not allowed to ragdoll: still clear timers so death anim plays correctly
+		if (self->client != NULL)
 		{
 			PM_SetLegsAnimTimer(self, &self->client->ps.legsAnimTimer, -1);
 			PM_SetTorsoAnimTimer(self, &self->client->ps.torsoAnimTimer, -1);
 		}
 	}
-	//rww - RAGDOLL_END
+	// rww - RAGDOLL_END
 
 	//Flying creatures should drop when killed
 	//FIXME: This may screw up certain things that expect to float even while dead <?>

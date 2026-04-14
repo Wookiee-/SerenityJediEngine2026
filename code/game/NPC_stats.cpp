@@ -54,7 +54,7 @@ extern qboolean is_outcast_map();
 
 extern cvar_t* g_allowAlignmentChange;
 
-extern qboolean g_standard_humanoid(const char* gla_name);
+extern qboolean G_StandardHumanoid(const char* gla_name);
 
 constexpr auto MAX_MODELS_PER_LEVEL = 60;
 
@@ -1223,7 +1223,7 @@ int G_ParseAnimFileSet(const char* skeletonName, const char* model_name = nullpt
 
 		// Get The Cinematic GLA Name
 		//----------------------------
-		if (g_standard_humanoid(skeletonName))
+		if (G_StandardHumanoid(skeletonName))
 		{
 			const char* map_name = strrchr(level.mapname, '/');
 			if (map_name)

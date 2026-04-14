@@ -1463,7 +1463,7 @@ static void G_CheckEndLevelTimers(gentity_t* ent)
 }
 
 //rww - RAGDOLL_BEGIN
-class c_game_rag_doll_update_params final : public CRagDollUpdateParams
+class CGameRagDollUpdateParams final : public CRagDollUpdateParams
 {
 	void EffectorCollision(const SRagDollEffectorCollision& data) override
 	{
@@ -1494,14 +1494,17 @@ class c_game_rag_doll_update_params final : public CRagDollUpdateParams
 	}
 
 	void RagDollBegin() override
-	{}
+	{
+	}
 
 	void RagDollSettled() override
-	{}
+	{
+	}
 
 	void Collision() override
 		// we had a collision, please stop animating and (sometime soon) call SetRagDoll RP_DEATH_COLLISION
-	{}
+	{
+	}
 
 #ifdef _DEBUG
 	void DebugLine(vec3_t p1, vec3_t p2, const int color, const bool bbox) override
@@ -1593,32 +1596,64 @@ static int G_RagAnimForPositioning(gentity_t* ent)
 
 static inline qboolean G_RagWantsHumanoidsOnly(CGhoul2Info* ghlInfo)
 {
-	const char* gla_name = gi.G2API_GetGLAName(ghlInfo);
-	assert(gla_name);
+	if (!ghlInfo || !ghlInfo->mModel)
+	{
+		return qfalse;
+	}
 
-	if (!Q_stricmp("models/players/_humanoid/_humanoid", gla_name))
+	const char* GLAName = gi.G2API_GetGLAName(ghlInfo);
+	if (!GLAName)
 	{
-		//only _humanoid skeleton is expected to have these
-		return qtrue;
+		return qfalse; // Non‑humanoid or missing GLA (e.g., thrown saber)
 	}
-	if (!Q_stricmp("models/players/JK2anims/JK2anims", gla_name))
+
+	// List of humanoid GLA roots used in the mod
+	static const char* humanoidRoots[] =
 	{
-		//only _humanoid skeleton is expected to have these
-		return qtrue;
-	}
-	if (!Q_stricmp("models/players/_humanoid_sbd/_humanoid", gla_name))
+		"models/players/_humanoid",
+		"models/players/JK2anims",
+		"models/players/_humanoid_ani",
+		"models/players/_humanoid_bdroid",
+		"models/players/_humanoid_ben",
+		"models/players/_humanoid_cal",
+		"models/players/_humanoid_clo",
+		"models/players/_humanoid_deka",
+		"models/players/_humanoid_df2",
+		"models/players/_humanoid_dooku",
+		"models/players/_humanoid_galen",
+		"models/players/_humanoid_gon",
+		"models/players/_humanoid_grievous",
+		"models/players/_humanoid_jabba",
+		"models/players/_humanoid_jango",
+		"models/players/_humanoid_kotor",
+		"models/players/_humanoid_luke",
+		"models/players/_humanoid_mace",
+		"models/players/_humanoid_maul",
+		"models/players/_humanoid_md",
+		"models/players/_humanoid_melee",
+		"models/players/_humanoid_obi",
+		"models/players/_humanoid_obi3",
+		"models/players/_humanoid_pal",
+		"models/players/_humanoid_reb",
+		"models/players/_humanoid_ren",
+		"models/players/_humanoid_rey",
+		"models/players/_humanoid_sbd",
+		"models/players/_humanoid_vader",
+		"models/players/_humanoid_yoda"
+	};
+
+	for (int i = 0; i < ARRAY_LEN(humanoidRoots); i++)
 	{
-		//only _humanoid skeleton is expected to have these
-		return qtrue;
-	}
-	if (!Q_stricmp("models/players/_humanoid_yoda/_humanoid_yoda", gla_name))
-	{
-		//only _humanoid skeleton is expected to have these
-		return qtrue;
+		if (!Q_strncmp(GLAName, humanoidRoots[i], strlen(humanoidRoots[i])))
+		{
+			return qtrue;
+		}
 	}
 
 	return qfalse;
 }
+
+extern qboolean G_RagDollDisallowedClass(const class_t npc_class);
 
 //rww - game interface for the ragdoll stuff.
 //Returns qtrue if the entity is now in a ragdoll state, otherwise qfalse.
@@ -1626,124 +1661,134 @@ static inline qboolean G_RagWantsHumanoidsOnly(CGhoul2Info* ghlInfo)
 
 qboolean G_RagDoll(gentity_t* ent, vec3_t forcedAngles)
 {
-	vec3_t G2Angles;
-	vec3_t usedOrg;
-	qboolean inSomething = qfalse;
+	vec3_t    G2Angles;
+	vec3_t    usedOrg;
+	qboolean  inSomething = qfalse;
 
-	if (!g_broadsword->integer || ent->client->NPC_class == CLASS_SBD || ent->client->NPC_class == CLASS_DROIDEKA)
+	// ------------------------------------------------------------
+	// Basic validation and global toggle
+	// ------------------------------------------------------------
+	if (ent == NULL || ent->inuse == qfalse || ent->client == NULL)
 	{
 		return qfalse;
 	}
 
-	if (!ent ||
-		!ent->inuse ||
-		!ent->client ||
-		ent->health > 0 ||
+	// If Broadsword is off OR this NPC class is not allowed to ragdoll
+	if (!g_broadsword->integer || G_RagDollDisallowedClass(ent->client->NPC_class))
+	{
+		return qfalse;
+	}
+
+	// ------------------------------------------------------------
+	// Eligibility checks for entering ragdoll
+	// ------------------------------------------------------------
+	if (ent->health > 0 ||
 		ent->client->noRagTime >= level.time ||
 		ent->client->noRagTime == -1 ||
-		ent->s.powerups & 1 << PW_DISRUPTION ||
-		!ent->e_DieFunc ||
+		(ent->s.powerups & (1 << PW_DISRUPTION)) != 0 ||
+		ent->e_DieFunc == NULL ||
 		ent->playerModel < 0 ||
-		!ent->ghoul2.size() ||
-		!G_RagWantsHumanoidsOnly(&ent->ghoul2[ent->playerModel])
-		)
+		ent->ghoul2.size() == 0 ||
+		!G_RagWantsHumanoidsOnly(&ent->ghoul2[ent->playerModel]))
 	{
 		return qfalse;
 	}
 
 	VectorCopy(forcedAngles, G2Angles);
 
+	// ------------------------------------------------------------
+	// If being held by another client, update drag state
+	// ------------------------------------------------------------
 	if (ent->client->ps.heldByClient <= ENTITYNUM_WORLD)
 	{
 		const gentity_t* grabbedBy = &g_entities[ent->client->ps.heldByClient];
 
-		if (grabbedBy->inuse && grabbedBy->client &&
-			grabbedBy->ghoul2.size())
+		if (grabbedBy->inuse &&
+			grabbedBy->client != NULL &&
+			grabbedBy->ghoul2.size() != 0)
 		{
 			G_BodyDragUpdate(ent, grabbedBy);
 		}
 	}
 
-	//--FIXME: do not go into ragdoll if in a spinning death anim or something, it really messes things up
-	//rww 12/17/02 - should be ok now actually with my new stuff
-
+	// ------------------------------------------------------------
+	// Decide whether to enter ragdoll
+	// ------------------------------------------------------------
 	VectorCopy(ent->client->ps.origin, usedOrg);
 
-	if (!ent->client->isRagging)
+	if (ent->client->isRagging == qfalse)
 	{
-		//If we're not in a ragdoll state, perform the checks.
+		// If held by a client, always allow rag
 		if (ent->client->ps.heldByClient <= ENTITYNUM_WORLD)
 		{
-			//want to rag no matter what then
 			inSomething = qtrue;
 		}
 		else if (ent->client->ps.groundEntityNum == ENTITYNUM_NONE)
 		{
+			// In air: check velocity magnitude
 			vec3_t cVel;
-
 			VectorCopy(ent->client->ps.velocity, cVel);
 
-			if (VectorNormalize(cVel) > 400)
+			if (VectorNormalize(cVel) > 400.0f)
 			{
-				//if he's flying through the air at a good enough speed, switch into ragdoll
 				inSomething = qtrue;
 			}
 		}
 
-		if (g_broadsword->integer > 1 && ent->client->NPC_class != CLASS_SBD && ent->client->NPC_class !=
-			CLASS_DROIDEKA)
+		// Broadsword > 1: always rag on death (except disallowed classes)
+		if (g_broadsword->integer > 1 &&
+			!G_RagDollDisallowedClass(ent->client->NPC_class))
 		{
-			//go into rag instantly upon death
 			inSomething = qtrue;
-			ent->client->ps.velocity[2] += 32;
+			ent->client->ps.velocity[2] += 32.0f;
 		}
 
-		if (!inSomething)
+		// If still undecided, do bolt‑based obstruction checks
+		if (inSomething == qfalse)
 		{
-			int i = 0;
-			int boltChecks[5]{};
-			vec3_t boltPoints[5]{};
-			vec3_t tAng;
-			//qboolean deathDone = qfalse;
-			trace_t tr;
-			mdxaBone_t boltMatrix;
+			int        i = 0;
+			int        boltChecks[5] = { 0 };
+			vec3_t     boltPoints[5] = { 0 };
+			vec3_t     tAng;
+			trace_t    tr;
+			mdxaBone_t bolt_matrix;
 
-			VectorSet(tAng, 0, ent->client->ps.viewangles[YAW], 0);
+			VectorSet(tAng, 0.0f, ent->client->ps.viewangles[YAW], 0.0f);
 
-			if (ent->client->ps.legsAnimTimer <= 0)
-			{
-				//Looks like the death anim is done playing
-				//deathDone = qtrue;
-			}
+			// Hands (if death anim done; currently always true)
+			boltChecks[0] = gi.G2API_AddBolt(&ent->ghoul2[ent->playerModel], "rhand");
+			boltChecks[1] = gi.G2API_AddBolt(&ent->ghoul2[ent->playerModel], "lhand");
 
-			//if (deathDone)
-			if (true)
-			{
-				//only trace from the hands if the death anim is already done.
-				boltChecks[0] = gi.G2API_AddBolt(&ent->ghoul2[ent->playerModel], "rhand");
-				boltChecks[1] = gi.G2API_AddBolt(&ent->ghoul2[ent->playerModel], "lhand");
-			}
+			// Head and feet
 			boltChecks[2] = gi.G2API_AddBolt(&ent->ghoul2[ent->playerModel], "cranium");
 			boltChecks[3] = gi.G2API_AddBolt(&ent->ghoul2[ent->playerModel], "rtalus");
 			boltChecks[4] = gi.G2API_AddBolt(&ent->ghoul2[ent->playerModel], "ltalus");
 
-			//Do the head first, because the hands reference it anyway.
-			gi.G2API_GetBoltMatrix(ent->ghoul2, ent->playerModel, boltChecks[2], &boltMatrix, tAng,
-				ent->client->ps.origin, cg.time ? cg.time : level.time, nullptr,
+			// Get head position first
+			gi.G2API_GetBoltMatrix(ent->ghoul2, ent->playerModel, boltChecks[2],
+				&bolt_matrix, tAng,
+				ent->client->ps.origin,
+				cg.time ? cg.time : level.time,
+				NULL,
 				ent->s.modelScale);
-			gi.G2API_GiveMeVectorFromMatrix(boltMatrix, ORIGIN, boltPoints[2]);
+			gi.G2API_GiveMeVectorFromMatrix(bolt_matrix, ORIGIN, boltPoints[2]);
 
 			while (i < 5)
 			{
-				vec3_t trEnd;
 				vec3_t trStart;
+				vec3_t trEnd;
+
 				if (i < 2)
 				{
-					//when doing hands, trace to the head instead of origin
-					gi.G2API_GetBoltMatrix(ent->ghoul2, ent->playerModel, boltChecks[i], &boltMatrix, tAng,
-						ent->client->ps.origin, cg.time ? cg.time : level.time, nullptr,
+					// Hands trace to head
+					gi.G2API_GetBoltMatrix(ent->ghoul2, ent->playerModel, boltChecks[i],
+						&bolt_matrix, tAng,
+						ent->client->ps.origin,
+						cg.time ? cg.time : level.time,
+						NULL,
 						ent->s.modelScale);
-					gi.G2API_GiveMeVectorFromMatrix(boltMatrix, ORIGIN, boltPoints[i]);
+					gi.G2API_GiveMeVectorFromMatrix(bolt_matrix, ORIGIN, boltPoints[i]);
+
 					VectorCopy(boltPoints[i], trStart);
 					VectorCopy(boltPoints[2], trEnd);
 				}
@@ -1751,40 +1796,26 @@ qboolean G_RagDoll(gentity_t* ent, vec3_t forcedAngles)
 				{
 					if (i > 2)
 					{
-						//2 is the head, which already has the bolt point.
-						gi.G2API_GetBoltMatrix(ent->ghoul2, ent->playerModel, boltChecks[i], &boltMatrix, tAng,
-							ent->client->ps.origin, cg.time ? cg.time : level.time, nullptr,
+						gi.G2API_GetBoltMatrix(ent->ghoul2, ent->playerModel, boltChecks[i],
+							&bolt_matrix, tAng,
+							ent->client->ps.origin,
+							cg.time ? cg.time : level.time,
+							NULL,
 							ent->s.modelScale);
-						gi.G2API_GiveMeVectorFromMatrix(boltMatrix, ORIGIN, boltPoints[i]);
+						gi.G2API_GiveMeVectorFromMatrix(bolt_matrix, ORIGIN, boltPoints[i]);
 					}
+
 					VectorCopy(boltPoints[i], trStart);
 					VectorCopy(ent->client->ps.origin, trEnd);
 				}
 
-				//Now that we have all that sorted out, trace between the two points we desire.
-				gi.trace(&tr, trStart, nullptr, nullptr, trEnd, ent->s.number, MASK_SOLID,
+				gi.trace(&tr, trStart, NULL, NULL, trEnd,
+					ent->s.number, MASK_SOLID,
 					static_cast<EG2_Collision>(0), 0);
 
-				if (tr.fraction != 1.0 || tr.startsolid || tr.allsolid)
+				if (tr.fraction != 1.0f || tr.startsolid || tr.allsolid)
 				{
-					//Hit something or start in solid, so flag it and break.
-					//This is a slight hack, but if we aren't done with the death anim, we don't really want to
-					//go into ragdoll unless our body has a relatively "flat" pitch.
-#if 0
-					vec3_t vSub;
-
-					//Check the pitch from the head to the right foot (should be reasonable)
-					VectorSubtract(boltPoints[2], boltPoints[3], vSub);
-					VectorNormalize(vSub);
-					vectoangles(vSub, vSub);
-
-					if (deathDone || (vSub[PITCH] < 50 && vSub[PITCH] > -50))
-					{
-						inSomething = qtrue;
-					}
-#else
 					inSomething = qtrue;
-#endif
 					break;
 				}
 
@@ -1792,69 +1823,103 @@ qboolean G_RagDoll(gentity_t* ent, vec3_t forcedAngles)
 			}
 		}
 
-		if (inSomething)
+		if (inSomething == qtrue)
 		{
 			ent->client->isRagging = qtrue;
 		}
 	}
 
+	// ------------------------------------------------------------
+	// If ragging, drive the ragdoll simulation
+	// ------------------------------------------------------------
 	if (ent->client->isRagging)
 	{
-		//We're in a ragdoll state, so make the call to keep our positions updated and whatnot.
-		CRagDollParams tParms{};
-		c_game_rag_doll_update_params tuParms;
-
-		const int ragAnim = G_RagAnimForPositioning(ent);
-
-		//these will be used as "base" frames for the ragoll settling.
-		tParms.startFrame = level.knownAnimFileSets[ent->client->clientInfo.animFileIndex].animations[ragAnim].
-			firstFrame;
-		tParms.endFrame = level.knownAnimFileSets[ent->client->clientInfo.animFileIndex].animations[ragAnim].firstFrame
-			+ level.knownAnimFileSets[ent->client->clientInfo.animFileIndex].animations[ragAnim].numFrames;
-#if 1
+		// NEW: Prevent forbidden classes from ever reaching the renderer
+		if (G_RagDollDisallowedClass(ent->client->NPC_class))
 		{
-			float currentFrame;
-			int startFrame, endFrame;
-			int flags;
+			ent->client->isRagging = qfalse;   // clear rag state
+			return qfalse;                     // skip ragdoll entirely
+		}
+		CRagDollParams          tParms;
+		CGameRagDollUpdateParams tuParms;
+		const int               ragAnim = G_RagAnimForPositioning(ent);
+
+		// Value‑initialize objects instead of memset to preserve vptrs for polymorphic types
+		// (memset on polymorphic objects can zero the vptr and cause crashes on virtual calls).
+		tParms = CRagDollParams();
+		tuParms = CGameRagDollUpdateParams();
+
+		// Base frames for ragdoll settling
+		tParms.startFrame =
+			level.knownAnimFileSets[ent->client->clientInfo.animFileIndex].animations[ragAnim].firstFrame;
+		tParms.endFrame =
+			level.knownAnimFileSets[ent->client->clientInfo.animFileIndex].animations[ragAnim].firstFrame +
+			level.knownAnimFileSets[ent->client->clientInfo.animFileIndex].animations[ragAnim].numFrames;
+
+		// Lock current anim frame on some key bones
+		{
+			float current_frame;
+			int   startFrame;
+			int   endFrame;
+			int   flags;
 			float animSpeed;
 
-			if (gi.G2API_GetBoneAnim(&ent->ghoul2[0], "model_root", cg.time ? cg.time : level.time, &currentFrame,
-				&startFrame, &endFrame, &flags, &animSpeed, nullptr))
+			if (gi.G2API_GetBoneAnim(&ent->ghoul2[0], "model_root",
+				cg.time ? cg.time : level.time,
+				&current_frame, &startFrame, &endFrame,
+				&flags, &animSpeed, NULL))
 			{
-				//lock the anim on the current frame.
-				constexpr int blendTime = 500;
+				const int blend_time = 500;
 
-				gi.G2API_SetBoneAnim(&ent->ghoul2[0], "lower_lumbar", currentFrame, currentFrame + 1, flags, animSpeed,
-					cg.time ? cg.time : level.time, currentFrame, blendTime);
-				gi.G2API_SetBoneAnim(&ent->ghoul2[0], "model_root", currentFrame, currentFrame + 1, flags, animSpeed,
-					cg.time ? cg.time : level.time, currentFrame, blendTime);
-				gi.G2API_SetBoneAnim(&ent->ghoul2[0], "Motion", currentFrame, currentFrame + 1, flags, animSpeed,
-					cg.time ? cg.time : level.time, currentFrame, blendTime);
+				gi.G2API_SetBoneAnim(&ent->ghoul2[0], "lower_lumbar",
+					current_frame, current_frame + 1,
+					flags, animSpeed,
+					cg.time ? cg.time : level.time,
+					current_frame, blend_time);
+				gi.G2API_SetBoneAnim(&ent->ghoul2[0], "model_root",
+					current_frame, current_frame + 1,
+					flags, animSpeed,
+					cg.time ? cg.time : level.time,
+					current_frame, blend_time);
+				gi.G2API_SetBoneAnim(&ent->ghoul2[0], "Motion",
+					current_frame, current_frame + 1,
+					flags, animSpeed,
+					cg.time ? cg.time : level.time,
+					current_frame, blend_time);
 			}
 		}
-#endif
 
-		gi.G2API_SetBoneAngles(&ent->ghoul2[ent->playerModel], "upper_lumbar", vec3_origin, BONE_ANGLES_POSTMULT,
-			POSITIVE_X, NEGATIVE_Y, NEGATIVE_Z, nullptr, 100, cg.time ? cg.time : level.time);
-		gi.G2API_SetBoneAngles(&ent->ghoul2[ent->playerModel], "lower_lumbar", vec3_origin, BONE_ANGLES_POSTMULT,
-			POSITIVE_X, NEGATIVE_Y, NEGATIVE_Z, nullptr, 100, cg.time ? cg.time : level.time);
-		gi.G2API_SetBoneAngles(&ent->ghoul2[ent->playerModel], "thoracic", vec3_origin, BONE_ANGLES_POSTMULT,
-			POSITIVE_X, NEGATIVE_Y, NEGATIVE_Z, nullptr, 100, cg.time ? cg.time : level.time);
-		gi.G2API_SetBoneAngles(&ent->ghoul2[ent->playerModel], "cervical", vec3_origin, BONE_ANGLES_POSTMULT,
-			POSITIVE_X, NEGATIVE_Y, NEGATIVE_Z, nullptr, 100, cg.time ? cg.time : level.time);
+		// Zero out spine angles to avoid fighting ragdoll
+		gi.G2API_SetBoneAngles(&ent->ghoul2[ent->playerModel], "upper_lumbar",
+			vec3_origin, BONE_ANGLES_POSTMULT,
+			POSITIVE_X, NEGATIVE_Y, NEGATIVE_Z,
+			NULL, 100, cg.time ? cg.time : level.time);
+		gi.G2API_SetBoneAngles(&ent->ghoul2[ent->playerModel], "lower_lumbar",
+			vec3_origin, BONE_ANGLES_POSTMULT,
+			POSITIVE_X, NEGATIVE_Y, NEGATIVE_Z,
+			NULL, 100, cg.time ? cg.time : level.time);
+		gi.G2API_SetBoneAngles(&ent->ghoul2[ent->playerModel], "thoracic",
+			vec3_origin, BONE_ANGLES_POSTMULT,
+			POSITIVE_X, NEGATIVE_Y, NEGATIVE_Z,
+			NULL, 100, cg.time ? cg.time : level.time);
+		gi.G2API_SetBoneAngles(&ent->ghoul2[ent->playerModel], "cervical",
+			vec3_origin, BONE_ANGLES_POSTMULT,
+			POSITIVE_X, NEGATIVE_Y, NEGATIVE_Z,
+			NULL, 100, cg.time ? cg.time : level.time);
 
+		// Fill ragdoll params
 		VectorCopy(G2Angles, tParms.angles);
 		VectorCopy(usedOrg, tParms.position);
 		VectorCopy(ent->s.modelScale, tParms.scale);
 		tParms.me = ent->s.number;
 		tParms.groundEnt = ent->client->ps.groundEntityNum;
-
 		tParms.collisionType = 1;
 		tParms.RagPhase = CRagDollParams::RP_DEATH_COLLISION;
-		tParms.fShotStrength = 4;
+		tParms.fShotStrength = 4.0f;
 
 		gi.G2API_SetRagDoll(ent->ghoul2, &tParms);
 
+		// Update params
 		tuParms.hasEffectorData = qfalse;
 		VectorClear(tuParms.effectorTotal);
 
@@ -1876,11 +1941,14 @@ qboolean G_RagDoll(gentity_t* ent, vec3_t forcedAngles)
 
 		gi.G2API_AnimateG2Models(ent->ghoul2, cg.time ? cg.time : level.time, &tuParms);
 
+		// --------------------------------------------------------
+		// Handle being dragged by another entity
+		// --------------------------------------------------------
 		if (ent->client->ps.heldByClient <= ENTITYNUM_WORLD)
 		{
 			const gentity_t* grabEnt = &g_entities[ent->client->ps.heldByClient];
 
-			if (grabEnt->client && grabEnt->ghoul2.size())
+			if (grabEnt->client != NULL && grabEnt->ghoul2.size() != 0)
 			{
 				vec3_t bOrg;
 				vec3_t thisHand;
@@ -1904,26 +1972,24 @@ qboolean G_RagDoll(gentity_t* ent, vec3_t forcedAngles)
 					gi.G2API_RagForceSolve(ent->ghoul2, qtrue);
 				}
 
-				//got the hand pos of him, now we want to make our hand go to it
+				// Drive our hand toward the grabber's hand
 				gi.G2API_RagEffectorGoal(ent->ghoul2, "rhand", bOrg);
 				gi.G2API_RagEffectorGoal(ent->ghoul2, "rradius", bOrg);
 				gi.G2API_RagEffectorGoal(ent->ghoul2, "rradiusX", bOrg);
 				gi.G2API_RagEffectorGoal(ent->ghoul2, "rhumerusX", bOrg);
 				gi.G2API_RagEffectorGoal(ent->ghoul2, "rhumerus", bOrg);
 
-				//Make these two solve quickly so we can update decently
 				gi.G2API_RagPCJGradientSpeed(ent->ghoul2, "rhumerus", 1.5f);
 				gi.G2API_RagPCJGradientSpeed(ent->ghoul2, "rradius", 1.5f);
 
-				//Break the constraints on them I suppose
-				VectorSet(pcjMin, -999, -999, -999);
-				VectorSet(pcjMax, 999, 999, 999);
+				VectorSet(pcjMin, -999.0f, -999.0f, -999.0f);
+				VectorSet(pcjMax, 999.0f, 999.0f, 999.0f);
 				gi.G2API_RagPCJConstraint(ent->ghoul2, "rhumerus", pcjMin, pcjMax);
 				gi.G2API_RagPCJConstraint(ent->ghoul2, "rradius", pcjMin, pcjMax);
 
 				ent->client->overridingBones = level.time + 2000;
 
-				//hit the thoracic velocity to the hand point
+				// Kick thoracic toward the hand
 				VectorSubtract(bOrg, thorPoint, hands);
 				VectorNormalize(hands);
 				VectorScale(hands, 2048.0f, hands);
@@ -1933,15 +1999,15 @@ qboolean G_RagDoll(gentity_t* ent, vec3_t forcedAngles)
 				VectorSubtract(ent->client->ragLastOrigin, ent->client->ps.origin, pDif);
 				VectorCopy(ent->client->ps.origin, ent->client->ragLastOrigin);
 
-				if (ent->client->ragLastOriginTime >= level.time && ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
+				if (ent->client->ragLastOriginTime >= level.time &&
+					ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
 				{
-					//make sure it's reasonably updated
 					float difLen = VectorLength(pDif);
+
 					if (difLen > 0.0f)
 					{
-						//if we're being dragged, then kick all the bones around a bit
 						vec3_t dVel;
-						int i = 0;
+						int    i = 0;
 
 						if (difLen < 12.0f)
 						{
@@ -1951,15 +2017,18 @@ qboolean G_RagDoll(gentity_t* ent, vec3_t forcedAngles)
 
 						while (g_effectorStringTable[i])
 						{
-							vec3_t rVel;
+							vec3_t r_vel;
+
 							VectorCopy(pDif, dVel);
-							dVel[2] = 0;
+							dVel[2] = 0.0f;
 
-							//Factor in a random velocity
-							VectorSet(rVel, Q_flrand(-0.1f, 0.1f), Q_flrand(-0.1f, 0.1f), Q_flrand(0.1f, 0.5));
-							VectorScale(rVel, 8.0f, rVel);
+							VectorSet(r_vel,
+								Q_flrand(-0.1f, 0.1f),
+								Q_flrand(-0.1f, 0.1f),
+								Q_flrand(0.1f, 0.5f));
+							VectorScale(r_vel, 8.0f, r_vel);
 
-							VectorAdd(dVel, rVel, dVel);
+							VectorAdd(dVel, r_vel, dVel);
 							VectorScale(dVel, 10.0f, dVel);
 
 							gi.G2API_RagEffectorKick(ent->ghoul2, g_effectorStringTable[i], dVel);
@@ -1968,21 +2037,23 @@ qboolean G_RagDoll(gentity_t* ent, vec3_t forcedAngles)
 						}
 					}
 				}
+
 				ent->client->ragLastOriginTime = level.time + 1000;
 			}
 		}
 		else if (ent->client->overridingBones)
 		{
-			//reset things to their normal rag state
+			// ----------------------------------------------------
+			// Reset overridden bones back to normal rag state
+			// ----------------------------------------------------
 			vec3_t pcjMin, pcjMax;
 			vec3_t dVel;
 
-			//got the hand pos of him, now we want to make our hand go to it
-			gi.G2API_RagEffectorGoal(ent->ghoul2, "rhand", nullptr);
-			gi.G2API_RagEffectorGoal(ent->ghoul2, "rradius", nullptr);
-			gi.G2API_RagEffectorGoal(ent->ghoul2, "rradiusX", nullptr);
-			gi.G2API_RagEffectorGoal(ent->ghoul2, "rhumerusX", nullptr);
-			gi.G2API_RagEffectorGoal(ent->ghoul2, "rhumerus", nullptr);
+			gi.G2API_RagEffectorGoal(ent->ghoul2, "rhand", NULL);
+			gi.G2API_RagEffectorGoal(ent->ghoul2, "rradius", NULL);
+			gi.G2API_RagEffectorGoal(ent->ghoul2, "rradiusX", NULL);
+			gi.G2API_RagEffectorGoal(ent->ghoul2, "rhumerusX", NULL);
+			gi.G2API_RagEffectorGoal(ent->ghoul2, "rhumerus", NULL);
 
 			VectorSet(dVel, 0.0f, 0.0f, -64.0f);
 			gi.G2API_RagEffectorKick(ent->ghoul2, "rhand", dVel);
@@ -2009,11 +2080,13 @@ qboolean G_RagDoll(gentity_t* ent, vec3_t forcedAngles)
 			}
 		}
 
-		if (tuParms.hasEffectorData)
+		// --------------------------------------------------------
+		// Apply accumulated effector velocity to player state
+		// --------------------------------------------------------
+		if (tuParms.hasEffectorData == qtrue)
 		{
 			VectorNormalize(tuParms.effectorTotal);
 			VectorScale(tuParms.effectorTotal, 7.0f, tuParms.effectorTotal);
-
 			VectorAdd(ent->client->ps.velocity, tuParms.effectorTotal, ent->client->ps.velocity);
 		}
 

@@ -1650,7 +1650,7 @@ void ClientRespawn(gentity_t* ent);
 void BeginIntermission(void);
 void InitBodyQue(void);
 void ClientSpawn(gentity_t* ent);
-void player_die(gentity_t* self, const gentity_t* inflictor, gentity_t* attacker, int damage, int means_of_death);
+void player_die(gentity_t* self, const gentity_t* inflictor, gentity_t* attacker, const int damage, const int means_of_death);
 void AddScore(const gentity_t* ent, int score);
 void CalculateRanks(void);
 qboolean SpotWouldTelefrag(const gentity_t* spot);

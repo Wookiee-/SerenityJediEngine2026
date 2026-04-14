@@ -14498,7 +14498,10 @@ void CG_Player(centity_t* cent)
 
 	CG_VehicleEffects(cent);
 
-	G_RagDoll(cent->gent, cent->lerpAngles);
+	if (cent->gent->client->isRagging)
+	{
+		G_RagDoll(cent->gent, cent->lerpAngles);
+	}
 
 	if (cent->currentState.weapon)
 	{
@@ -15776,7 +15779,7 @@ void CG_Player(centity_t* cent)
 					{
 						if (cent->gent && cent->gent->NPC ||
 							cent->gent->s.weapon == WP_BLASTER_PISTOL &&
-							cent->currentState.eFlags &EF2_DUAL_WEAPONS	&&
+							cent->currentState.eFlags & EF2_DUAL_WEAPONS &&
 							!G_IsRidingVehicle(cent->gent)) //PM_WeaponOkOnVehicle)
 						{
 							if (!VectorCompare(old_mp, vec3_origin) && !VectorCompare(old_md, vec3_origin))
