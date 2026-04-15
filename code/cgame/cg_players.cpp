@@ -14498,10 +14498,7 @@ void CG_Player(centity_t* cent)
 
 	CG_VehicleEffects(cent);
 
-	if (cent->gent->client->isRagging)
-	{
-		G_RagDoll(cent->gent, cent->lerpAngles);
-	}
+	G_RagDoll(cent->gent, cent->lerpAngles);
 
 	if (cent->currentState.weapon)
 	{

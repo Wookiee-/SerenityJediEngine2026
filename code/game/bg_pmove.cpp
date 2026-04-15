@@ -19083,7 +19083,7 @@ static bool PM_DoChargedWeapons()
 		}
 		else if (pm->gent && pm->gent->NPC)
 		{
-			if (pm->gent->NPC->scriptFlags & SCF_altFire)
+			if (pm->gent->NPC->scriptFlags & SCF_ALT_FIRE)
 			{
 				if (pm->gent->fly_sound_debounce_time > level.time)
 				{

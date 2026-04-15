@@ -2578,7 +2578,7 @@ int Q3_GetFloat(const int entID, int type, const char* name, float* value)
 			G_DebugPrint(WL_WARNING, "GetFloat: SET_altFire, %s not an NPC\n", ent->targetname);
 			return 0;
 		}
-		*value = ent->NPC->scriptFlags & SCF_altFire;
+		*value = ent->NPC->scriptFlags & SCF_ALT_FIRE;
 		break;
 	case SET_NO_RESPONSE:
 		//## %t="BOOL_TYPES" # NPCs will do generic responses when this is on (usescripts override generic responses as well)
@@ -6045,11 +6045,11 @@ static void Q3_SetAltFire(const int entID, const qboolean add)
 
 	if (add)
 	{
-		ent->NPC->scriptFlags |= SCF_altFire;
+		ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 	}
 	else
 	{
-		ent->NPC->scriptFlags &= ~SCF_altFire;
+		ent->NPC->scriptFlags &= ~SCF_ALT_FIRE;
 	}
 
 	ChangeWeapon(ent, ent->client->ps.weapon);

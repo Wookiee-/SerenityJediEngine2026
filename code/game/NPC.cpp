@@ -1016,7 +1016,7 @@ static void NPC_ApplyScriptFlags()
 		ucmd.upmove = 0;
 	}
 
-	if (NPCInfo->scriptFlags & SCF_altFire && ucmd.buttons & BUTTON_ATTACK)
+	if (NPCInfo->scriptFlags & SCF_ALT_FIRE && ucmd.buttons & BUTTON_ATTACK)
 	{
 		//Use altfire instead
 		ucmd.buttons |= BUTTON_ALT_ATTACK;
@@ -2060,7 +2060,7 @@ static void NPC_RunBehavior(const int team, const int b_state)
 	}
 	else if (NPC->client->ps.weapon == WP_TUSKEN_RIFLE)
 	{
-		if (NPCInfo->scriptFlags & SCF_altFire)
+		if (NPCInfo->scriptFlags & SCF_ALT_FIRE)
 		{
 			NPC_BehaviorSet_Sniper(b_state);
 			G_CheckCharmed(NPC);
@@ -2176,7 +2176,7 @@ static void NPC_RunBehavior(const int team, const int b_state)
 				NPC_BehaviorSet_Default(b_state);
 				return;
 			}
-			if (NPC->client->ps.weapon == WP_DISRUPTOR && NPCInfo->scriptFlags & SCF_altFire)
+			if (NPC->client->ps.weapon == WP_DISRUPTOR && NPCInfo->scriptFlags & SCF_ALT_FIRE)
 			{
 				//a sniper
 				NPC_BehaviorSet_Sniper(b_state);

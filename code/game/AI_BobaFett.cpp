@@ -1037,20 +1037,20 @@ void Boba_Fire()
 				if (Q_irand(0, NPC->count * 2 + 3) > 2)
 				{
 					TIMER_Set(NPC, "nextBlasterAltFireDecide", Q_irand(3000, 8000));
-					if (!(NPCInfo->scriptFlags & SCF_altFire))
+					if (!(NPCInfo->scriptFlags & SCF_ALT_FIRE))
 					{
 						Boba_Printf("ALT FIRE On");
-						NPCInfo->scriptFlags |= SCF_altFire;
+						NPCInfo->scriptFlags |= SCF_ALT_FIRE;
 						NPC_ChangeWeapon(WP_BLASTER); // Update Delay Timers
 					}
 				}
 				else
 				{
 					TIMER_Set(NPC, "nextBlasterAltFireDecide", Q_irand(2000, 5000));
-					if (NPCInfo->scriptFlags & SCF_altFire)
+					if (NPCInfo->scriptFlags & SCF_ALT_FIRE)
 					{
 						Boba_Printf("ALT FIRE Off");
-						NPCInfo->scriptFlags &= ~SCF_altFire;
+						NPCInfo->scriptFlags &= ~SCF_ALT_FIRE;
 						NPC_ChangeWeapon(WP_BLASTER); // Update Delay Timers
 					}
 				}
@@ -1058,7 +1058,7 @@ void Boba_Fire()
 
 			// Occasionally Alt Fire
 			//-----------------------
-			if (NPCInfo->scriptFlags & SCF_altFire)
+			if (NPCInfo->scriptFlags & SCF_ALT_FIRE)
 			{
 				ucmd.buttons &= ~BUTTON_ATTACK;
 				ucmd.buttons |= BUTTON_ALT_ATTACK;

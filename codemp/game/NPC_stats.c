@@ -2480,7 +2480,7 @@ qboolean NPC_ParseParms(const char* npc_name, gentity_t* npc)
 					{
 						if (n != 0)
 						{
-							npc->NPC->scriptFlags |= SCF_altFire;
+							npc->NPC->scriptFlags |= SCF_ALT_FIRE;
 						}
 					}
 					continue;

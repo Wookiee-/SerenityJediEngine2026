@@ -386,7 +386,7 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 		ent->client->ps.stats[STAT_ARMOR] = 250; // start with full armor
 		if (ent->s.weapon == WP_BLASTER)
 		{
-			ent->NPC->scriptFlags |= SCF_altFire;
+			ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 		}
 		ent->flags |= FL_NO_KNOCKBACK;
 	}
@@ -394,7 +394,7 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 	{
 		if (ent->s.weapon == WP_DROIDEKA && droideka_npc(ent))
 		{
-			ent->NPC->scriptFlags |= SCF_altFire;
+			ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 		}
 		ent->client->ps.stats[STAT_ARMOR] = 250; // start with full armor
 		ent->flags |= FL_NO_KNOCKBACK;//low-level shots bounce off, no knockback
@@ -468,7 +468,7 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 	}
 	if (!Q_stricmp("Captain_Phasma", ent->NPC_type))
 	{
-		ent->NPC->scriptFlags |= SCF_altFire;
+		ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 		ent->flags |= FL_SHIELDED;
 	}
 	if (!Q_stricmp("ShadowTrooper", ent->NPC_type) ||
@@ -642,7 +642,7 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 				if (ent->NPC->rank >= RANK_LT || ent->client->ps.weapon == WP_THERMAL)
 				{
 					//officers, grenade-throwers use alt-fire
-					ent->NPC->scriptFlags |= SCF_altFire;
+					ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 				}
 				NPCInfo->scriptFlags |= SCF_PILOT;
 				break;
@@ -792,25 +792,25 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 				NPCInfo->scriptFlags |= SCF_PILOT;
 				/*if (!Q_stricmp("saboteursniper", ent->NPC_type))
 				{
-					ent->NPC->scriptFlags |= SCF_altFire;
+					ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 				}*/
 				break;
 			case WP_BOWCASTER:
 				NPCInfo->scriptFlags |= SCF_PILOT;
 				/*if (!Q_stricmp("human_merc_bow", ent->NPC_type))
 				{
-					ent->NPC->scriptFlags |= SCF_altFire;
+					ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 				}*/
 				break;
 			case WP_REPEATER:
 				NPCInfo->scriptFlags |= SCF_PILOT;
 				/*if (!Q_stricmp("human_merc_rep", ent->NPC_type))
 				{
-					ent->NPC->scriptFlags |= SCF_altFire;
+					ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 				}*/
 				if (!Q_stricmp("StormTrooper_red", ent->NPC_type))
 				{
-					ent->NPC->scriptFlags |= SCF_altFire;
+					ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 				}
 				break;
 			case WP_DEMP2:
@@ -820,15 +820,15 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 				NPCInfo->scriptFlags |= SCF_PILOT;
 				/*if (!Q_stricmp("stofficeralt", ent->NPC_type))
 				{
-					ent->NPC->scriptFlags |= SCF_altFire;
+					ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 				}
 				if (!Q_stricmp("human_merc_flc", ent->NPC_type))
 				{
-					ent->NPC->scriptFlags |= SCF_altFire;
+					ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 				}*/
 				if (!Q_stricmp("StormTrooper_blue", ent->NPC_type))
 				{
-					ent->NPC->scriptFlags |= SCF_altFire;
+					ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 				}
 				break;
 			case WP_ROCKET_LAUNCHER:
@@ -837,7 +837,7 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 				NPCInfo->scriptFlags |= SCF_PILOT;
 				/*if (!Q_stricmp("human_merc_cnc", ent->NPC_type))
 				{
-					ent->NPC->scriptFlags |= SCF_altFire;
+					ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 				}*/
 				break;
 			case WP_THERMAL:
@@ -855,23 +855,23 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 				//if (ent->NPC->rank >= RANK_COMMANDER)
 				//{
 				//	//commanders use alt-fire
-				//	ent->NPC->scriptFlags |= SCF_altFire;
+				//	ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 				//}
 				//if (ent->client->NPC_class == CLASS_IMPERIAL)
 				//{
-				//	ent->NPC->scriptFlags |= SCF_altFire;
+				//	ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 				//}
 				//if (ent->client->NPC_class == CLASS_RODIAN)
 				//{
-				//	ent->NPC->scriptFlags |= SCF_altFire;
+				//	ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 				//}
 				//if (!Q_stricmp("human_merc", ent->NPC_type))
 				//{
-				//	ent->NPC->scriptFlags |= SCF_altFire;
+				//	ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 				//}
 				//if (!Q_stricmp("rodian2", ent->NPC_type))
 				//{
-				//	ent->NPC->scriptFlags |= SCF_altFire;
+				//	ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 				//}
 				break;
 			}

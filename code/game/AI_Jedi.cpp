@@ -6741,7 +6741,7 @@ static void Jedi_FaceEnemy(const qboolean doPitch)
 		&& TIMER_Done(NPC, "flameTime")
 		&& NPC->s.weapon != WP_NONE
 		&& NPC->s.weapon != WP_DISRUPTOR
-		&& (NPC->s.weapon != WP_ROCKET_LAUNCHER || !(NPCInfo->scriptFlags & SCF_altFire))
+		&& (NPC->s.weapon != WP_ROCKET_LAUNCHER || !(NPCInfo->scriptFlags & SCF_ALT_FIRE))
 		&& NPC->s.weapon != WP_THERMAL
 		&& NPC->s.weapon != WP_TRIP_MINE
 		&& NPC->s.weapon != WP_DET_PACK
@@ -6754,7 +6754,7 @@ static void Jedi_FaceEnemy(const qboolean doPitch)
 			//lead
 			const float missile_speed = WP_SpeedOfMissileForWeapon(NPC->s.weapon,
 				static_cast<qboolean>(NPCInfo->scriptFlags &
-					SCF_altFire));
+					SCF_ALT_FIRE));
 			if (missile_speed)
 			{
 				float e_dist = Distance(eyes, enemy_eyes);
@@ -11846,7 +11846,7 @@ void NPC_BSJedi_Default()
 			if (NPC->enemy->enemy != NPC && NPC->health == NPC->client->pers.maxHealth && DistanceSquared(
 				NPC->currentOrigin, NPC->enemy->currentOrigin) > 800 * 800)
 			{
-				NPCInfo->scriptFlags |= SCF_altFire;
+				NPCInfo->scriptFlags |= SCF_ALT_FIRE;
 				Boba_ChangeWeapon(WP_DISRUPTOR);
 				NPC_BSSniper_Default();
 				return;

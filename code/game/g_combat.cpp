@@ -4559,7 +4559,6 @@ qboolean G_RagDollDisallowedClass(const class_t npc_class)
 	case CLASS_SEEKER:
 	case CLASS_SENTRY:
 	case CLASS_SBD:
-	case CLASS_BATTLEDROID:
 	case CLASS_DROIDEKA:
 	case CLASS_OBJECT:
 	case CLASS_ASSASSIN_DROID:
@@ -4582,7 +4581,9 @@ void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, cons
 	int anim;
 	qboolean death_script = qfalse;
 	qboolean last_in_group = qfalse;
+	qboolean special_anim = qfalse;
 	qboolean holding_saber = qfalse;
+	int cliff_fall = 0;
 
 	if (self->client->hook)
 	{
@@ -4656,7 +4657,9 @@ void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, cons
 				&& p_veh->m_pPilot != self)
 			{
 				//whaaa?  I'm not on this bike?  er....
-				assert(!!"How did we get to this point?");
+#ifdef _DEBUG
+				Com_Printf("How did we get to this point?");
+#endif
 			}
 			else
 			{
@@ -4729,10 +4732,9 @@ void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, cons
 				}
 			}
 		}
-		else
-		{
-			assert(!!"How did we get to this point?");
-		}
+#ifdef _DEBUG
+		Com_Printf("Debug: player_die - vehicle index %d has no Vehicle_t\n", self->s.m_iVehicleNum);
+#endif
 	}
 	if ((d_saberCombat->integer || g_DebugSaberCombat->integer) && attacker && attacker->client)
 	{
@@ -4741,7 +4743,7 @@ void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, cons
 	}
 
 	// Remove The Bubble Shield From The DROIDEKA
-	if (self->client->ps.powerups[PW_GALAK_SHIELD] || self->flags & FL_SHIELDED)
+	if (self->client && (self->client->ps.powerups[PW_GALAK_SHIELD] || self->flags & FL_SHIELDED))
 	{
 		TurnBarrierOff(self);
 	}
@@ -4762,7 +4764,7 @@ void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, cons
 		G_CheckCharmed(self);
 
 		// Remove The Bubble Shield From The Assassin Droid
-		if (self->client && self->client->NPC_class == CLASS_ASSASSIN_DROID && self->flags & FL_SHIELDED)
+		if (self->client && (self->client->NPC_class == CLASS_ASSASSIN_DROID && self->flags & FL_SHIELDED))
 		{
 			self->flags &= ~FL_SHIELDED;
 			self->client->ps.stats[STAT_ARMOR] = 0;
@@ -4771,7 +4773,7 @@ void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, cons
 		}
 
 		// Remove The Bubble Shield From The DROIDEKA
-		if (self->client && self->client->NPC_class == CLASS_DROIDEKA && self->flags & FL_SHIELDED)
+		if (self->client && (self->client->NPC_class == CLASS_DROIDEKA && self->flags & FL_SHIELDED))
 		{
 			self->flags &= ~FL_SHIELDED;
 			self->client->ps.stats[STAT_ARMOR] = 0;
@@ -4779,7 +4781,7 @@ void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, cons
 			gi.G2API_SetSurfaceOnOff(&self->ghoul2[self->playerModel], "force_shield", TURN_OFF);
 		}
 
-		if (self->client && self->client->NPC_class == CLASS_HOWLER)
+		if (self->client && (self->client->NPC_class == CLASS_HOWLER))
 		{
 			G_StopEffect(G_EffectIndex("howler/sonic"), self->playerModel, self->genericBolt1, self->s.number);
 		}
@@ -5385,7 +5387,6 @@ void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, cons
 	}
 	else
 	{
-		int cliff_fall = 0;
 		// normal death
 		anim = G_CheckSpecialDeathAnim(self);
 		if (anim == -1)
@@ -5549,6 +5550,7 @@ void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, cons
 		}
 		else
 		{
+			special_anim = qtrue;
 		}
 
 		if (anim == -1)
@@ -5706,6 +5708,21 @@ void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, cons
 		}
 	}
 
+	//do any dismemberment if there's any to do...
+	if (dflags & DAMAGE_DISMEMBER
+		&& G_DoDismemberment(self, self->pos1, means_of_death, hit_loc)
+		&& !special_anim)
+	{
+		//we did dismemberment and our death anim is okay to override
+		if (hit_loc == HL_HAND_RT && self->locationDamage[hit_loc] >= Q3_INFINITE && cliff_fall != 2 && self->client->ps
+			.
+			groundEntityNum != ENTITYNUM_NONE)
+		{
+			//just lost our right hand and we're on the ground, use the special anim
+			NPC_SetAnim(self, SETANIM_BOTH, BOTH_RIGHTHANDCHOPPEDOFF, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+		}
+	}
+
 	if (means_of_death == MOD_BODYSHOT && !NPC_IsNotDismemberable(self))
 	{
 		GibEntity(self);
@@ -5725,8 +5742,7 @@ void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, cons
 	self->client->respawnTime = level.time + 2000;
 
 	// rww - RAGDOLL_BEGIN
-	if (g_broadsword->integer &&
-		!G_RagDollDisallowedClass(self->client->NPC_class))
+	if (g_broadsword->integer && !G_RagDollDisallowedClass(self->client->NPC_class))
 	{
 		// Clear anim timers so ragdoll can take over
 		if (self->client != NULL &&
