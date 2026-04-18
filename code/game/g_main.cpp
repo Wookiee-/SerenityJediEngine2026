@@ -255,6 +255,7 @@ cvar_t* g_IconBackgroundSlow;
 cvar_t* g_AllowLedgeGrab;
 cvar_t* g_attackskill;
 cvar_t* g_saberLockCinematicCamera;
+cvar_t* g_npcSpecialAttackFreq; // Modifier for special/kata attack frequency
 
 cvar_t* g_remove_unused_weapons;
 
@@ -264,6 +265,7 @@ cvar_t* r_AdvancedsurfaceSprites;
 cvar_t* g_AllowWeather;
 cvar_t* g_debugItems;
 cvar_t* g_fixJOItems;
+cvar_t* g_npc_is_smart_range;
 
 qboolean stop_icarus = qfalse;
 
@@ -880,6 +882,9 @@ static void G_InitCvars()
 
 	g_saberLockCinematicCamera = gi.cvar("g_saberLockCinematicCamera", "1", CVAR_ARCHIVE);
 
+	// Modifier for special/kata attack frequency (1.0 = default, lower = less frequent, higher = more frequent)
+	g_npcSpecialAttackFreq = gi.cvar("g_npcSpecialAttackFreq", "1.0", CVAR_ARCHIVE);
+
 	com_rend2 = gi.cvar("com_rend2", "0", CVAR_ARCHIVE | CVAR_SAVEGAME);
 
 	r_AdvancedsurfaceSprites = gi.cvar("r_advancedlod", "1", CVAR_ARCHIVE | CVAR_SAVEGAME);
@@ -888,6 +893,7 @@ static void G_InitCvars()
 
 	g_debugItems = gi.cvar("g_debugItems", "0", CVAR_CHEAT);
 	g_fixJOItems = gi.cvar("g_fixJOItems", "1", CVAR_ARCHIVE);
+	g_npc_is_smart_range = gi.cvar("g_npc_is_smart_range", "3500", CVAR_ARCHIVE);
 }
 
 /*

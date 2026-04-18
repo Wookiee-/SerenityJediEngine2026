@@ -7642,6 +7642,7 @@ static QINLINE qboolean WP_CheckThrownSaberDamaged(gentity_t* saberent,
 				// Try to block
 				if (WP_SaberCanBlockThrownSaber(ent, tr.endpos, qtrue))
 				{
+					wp_saber_block_non_random_missile(ent, tr.endpos, qfalse);
 					// Blocked
 					te = G_TempEntity(tr.endpos, EV_SABER_BLOCK);
 					VectorCopy(tr.endpos, te->s.origin);

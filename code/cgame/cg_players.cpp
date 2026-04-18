@@ -654,7 +654,17 @@ void CG_NewClientinfo(const int clientNum)
 	// sounds
 	v = Info_ValueForKey(configstring, "snd");
 
-	ci->customBasicSoundDir = G_NewString(v);
+	// Always refresh the player sound set here.
+	// After save/load, the clientInfo can survive while the underlying sound
+	// handles are no longer valid, which causes out-of-range S_StartSound errors.
+	if (ci->customBasicSoundDir && ci->customBasicSoundDir[0])
+	{
+		memset(ci->sounds, 0, sizeof ci->sounds);
+	}
+	else
+	{
+		ci->customBasicSoundDir = G_NewString(v);
+	}
 
 	//player uses only the basic custom and combat sound sets, not the extra or jedi
 	CG_RegisterCustomSounds(ci,

@@ -887,7 +887,7 @@ static qboolean NPC_CheckEnemiesInSpotlight()
 
 	for (int i = 0; i < 3; i++)
 	{
-		if (g_spskill->integer <= 2)
+		if (g_spskill->integer <= 2 || in_camera)
 		{// Normal and easy have a smaller detection radius
 			mins[i] = NPC->client->renderInfo.eyePoint[i] - DETECTION_RADIUS;
 			maxs[i] = NPC->client->renderInfo.eyePoint[i] + DETECTION_RADIUS;
@@ -922,7 +922,7 @@ static qboolean NPC_CheckEnemiesInSpotlight()
 			continue;
 		}
 
-		if (g_spskill->integer <= 2)
+		if (g_spskill->integer <= 2 || in_camera)
 		{// Normal and easy have a smaller detection radius
 			// Primary cone check with distance limit
 			const float dist_sq = DistanceSquared(NPC->client->renderInfo.eyePoint, enemy->currentOrigin);

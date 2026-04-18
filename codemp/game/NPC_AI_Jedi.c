@@ -4267,7 +4267,7 @@ static void Jedi_CombatDistance(const int enemy_dist)
 	}
 }
 
-static qboolean jedi_strafe(const int strafe_time_min, const int strafe_time_max, const int next_strafe_time_min,
+static qboolean Jedi_Strafe(const int strafe_time_min, const int strafe_time_max, const int next_strafe_time_min,
 	const int next_strafe_time_max,
 	const qboolean walking)
 {
@@ -6584,7 +6584,7 @@ static void Jedi_EvasionSaber(vec3_t enemy_movedir, const float enemy_dist, vec3
 				break;
 			default:
 				//Evade!
-				if (!Q_irand(0, 5) || !jedi_strafe(300, 1000, 0, 1000, qfalse))
+				if (!Q_irand(0, 5) || !Jedi_Strafe(300, 1000, 0, 1000, qfalse))
 				{
 					if (Jedi_DecideKick()
 						&& G_CanKickEntity(NPCS.NPC, NPCS.NPC->enemy)
@@ -7321,7 +7321,7 @@ static void Jedi_CombatTimersUpdate(const int enemy_dist)
 		if (!Q_irand(0, 4))
 		{
 			//start a strafe
-			if (jedi_strafe(1000, 3000, 0, 4000, qtrue))
+			if (Jedi_Strafe(1000, 3000, 0, 4000, qtrue))
 			{
 				if (d_JediAI.integer || g_DebugSaberCombat.integer)
 				{

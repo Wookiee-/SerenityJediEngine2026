@@ -6043,7 +6043,7 @@ void PM_SaberStartTransAnim(const int clientNum, const int saberAnimLevel, const
 		{
 			if (anim != (BOTH_FORCEWALLRELEASE_FORWARD | BOTH_FORCEWALLRUNFLIP_START | BOTH_FORCEWALLRUNFLIP_END | BOTH_JUMPFLIPSTABDOWN | BOTH_JUMPFLIPSLASHDOWN1 | BOTH_LUNGE2_B__T_))
 			{
-				const float fatiguedanimscale = 0.75f;
+				const float fatiguedanimscale = 0.85f;
 				*animSpeed *= fatiguedanimscale;
 			}
 		}
