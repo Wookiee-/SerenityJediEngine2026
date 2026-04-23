@@ -1345,8 +1345,8 @@ void CL_Init()
 
 	Com_Printf("-----------------------------------------------------------------\n");
 	Com_Printf("---------- Genuine SerenityJediEngine-(Solaris Edition)----------\n");
-	Com_Printf("---------------------Build date 15/04/2026-----------------------\n"); // build date
-	Com_Printf("---------------------------Build 06------------------------------\n");
+	Com_Printf("---------------------Build date 23/04/2026-----------------------\n"); // build date
+	Com_Printf("---------------------------Build 07------------------------------\n");
 	Com_Printf("-----------------------------------------------------------------\n");
 	Com_Printf("------------------------LightSaber-------------------------------\n");
 	Com_Printf("-----------An elegant weapon for a more civilized age------------\n");
@@ -1387,7 +1387,7 @@ void CL_Init()
 	//
 	// register our variables
 	//
-	cl_noprint = Cvar_Get("cl_noprint", "1", 0);
+	cl_noprint = Cvar_Get("cl_noprint", "0", 0);
 
 	cl_timeout = Cvar_Get("cl_timeout", "125", 0);
 

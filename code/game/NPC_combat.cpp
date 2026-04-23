@@ -1335,89 +1335,115 @@ extern qboolean droideka_npc(const gentity_t* ent);
 
 void WeaponThink()
 {
-	ucmd.buttons &= ~BUTTON_ATTACK;
-
-	if (client->ps.weaponstate == WEAPON_RAISING ||
-		client->ps.weaponstate == WEAPON_DROPPING ||
-		client->ps.weaponstate == WEAPON_RELOADING)
-	{
-		ucmd.weapon = client->ps.weapon;
-		return;
-	}
-
-	// can't shoot while shield is up
-	if (NPC->flags & FL_SHIELDED && NPC->client->NPC_class == CLASS_ASSASSIN_DROID)
+	if (!NPC || !NPC->client || !NPCInfo)
 	{
 		return;
 	}
 
-	// Can't Fire While Cloaked
-	if (NPC->client &&
-		(NPC->client->ps.powerups[PW_CLOAKED]
-			|| level.time < NPC->client->ps.powerups[PW_UNCLOAKING]
-			|| NPC->client->ps.powerups[PW_STUNNED]
-			|| NPC->client->ps.powerups[PW_SHOCKED]))
+	playerState_t* ps = &NPC->client->ps;
+	// ------------------------------------------------------------
+	// FIX: Only clear BUTTON_ATTACK for non-saber weapons.
+	// Saber NPCs rely on BUTTON_ATTACK being preserved.
+	// ------------------------------------------------------------
+	if (client->ps.weapon != WP_SABER)
+	{
+		ucmd.buttons &= ~BUTTON_ATTACK;
+	}
+
+	// Weapon state checks
+	if (ps->weaponstate == WEAPON_RAISING ||
+		ps->weaponstate == WEAPON_DROPPING ||
+		ps->weaponstate == WEAPON_RELOADING)
+	{
+		ucmd.weapon = ps->weapon;
+		return;
+	}
+
+	// Assassin droid shield prevents firing
+	if ((NPC->flags & FL_SHIELDED) &&
+		NPC->client->NPC_class == CLASS_ASSASSIN_DROID)
 	{
 		return;
 	}
 
-	if (client->ps.weapon == WP_NONE)
+	// Cloak / stun / shock prevents firing
+	if (ps->powerups[PW_CLOAKED] ||
+		level.time < ps->powerups[PW_UNCLOAKING] ||
+		ps->powerups[PW_STUNNED] ||
+		ps->powerups[PW_SHOCKED])
 	{
 		return;
 	}
 
-	if (client->ps.weaponstate != WEAPON_READY && client->ps.weaponstate != WEAPON_FIRING && client->ps.weaponstate !=
-		WEAPON_IDLE)
+	// No weapon equipped
+	if (ps->weapon == WP_NONE)
 	{
 		return;
 	}
 
+	// Only fire when ready
+	if (ps->weaponstate != WEAPON_READY &&
+		ps->weaponstate != WEAPON_FIRING &&
+		ps->weaponstate != WEAPON_IDLE)
+	{
+		return;
+	}
+
+	// Fire rate limiter
 	if (level.time < NPCInfo->shotTime)
 	{
 		return;
 	}
 
-	// DROIDEKA
-
+	// DROIDEKA SHIELD HANDLING
 	if (droideka_npc(NPC))
 	{
-		if (in_camera)
+		// Turn shield on if needed
+		if (in_camera ||
+			!(NPC->flags & FL_SHIELDED) ||
+			!ps->powerups[PW_GALAK_SHIELD])
 		{
 			BubbleShield_TurnOn();
 		}
-		if (~NPC->flags & FL_SHIELDED)
+
+		if (NPC->client->ps.powerups[PW_GALAK_SHIELD] == 0)
 		{
 			BubbleShield_TurnOn();
 		}
-		if (!NPC->client->ps.powerups[PW_GALAK_SHIELD])
-		{
-			BubbleShield_TurnOn();
-		}
-		if (NPC->client->ps.powerups[PW_STUNNED])
+
+		if (NPC->client->ps.powerups[PW_STUNNED] != 0)
 		{
 			return;
 		}
 	}
 
-	if (NPC->client->ps.ammo[weaponData[client->ps.weapon].ammoIndex] < weaponData[client->ps.weapon].energyPerShot)
+	// Ammo checks
+	const int ammoIndex = weaponData[ps->weapon].ammoIndex;
+	const int primaryCost = weaponData[ps->weapon].energyPerShot;
+	const int altCost = weaponData[ps->weapon].altEnergyPerShot;
+
+	if (ps->ammo[ammoIndex] < primaryCost)
 	{
-		Add_Ammo(NPC, client->ps.weapon, weaponData[client->ps.weapon].energyPerShot * 10);
-		NPC_SetAnim(NPC, SETANIM_TORSO, BOTH_RELOAD, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-
-		NPC->client->ps.weaponstate = WEAPON_RELOADING;
+		Add_Ammo(NPC, ps->weapon, primaryCost * 10);
+		NPC_SetAnim(NPC, SETANIM_TORSO, BOTH_RELOAD,
+			SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+		ps->weaponstate = WEAPON_RELOADING;
+		return;
 	}
-	else if (NPC->client->ps.ammo[weaponData[client->ps.weapon].ammoIndex] < weaponData[client->ps.weapon].
-		altEnergyPerShot)
+	else if (ps->ammo[ammoIndex] < altCost)
 	{
-		Add_Ammo(NPC, client->ps.weapon, weaponData[client->ps.weapon].altEnergyPerShot * 5);
-		NPC_SetAnim(NPC, SETANIM_TORSO, BOTH_RELOAD, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-
-		NPC->client->ps.weaponstate = WEAPON_RELOADING;
+		Add_Ammo(NPC, ps->weapon, altCost * 5);
+		NPC_SetAnim(NPC, SETANIM_TORSO, BOTH_RELOAD,
+			SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+		ps->weaponstate = WEAPON_RELOADING;
+		return;
 	}
 
-	ucmd.weapon = client->ps.weapon;
+	// Ready to fire
+	ucmd.weapon = ps->weapon;
 	ShootThink();
 }
+
 
 /*
 HaveWeapon

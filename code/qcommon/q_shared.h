@@ -3572,6 +3572,7 @@ using ManualBlockingFlag_e = enum
 	MBF_BLOCKWALKING,
 	MBF_ACCURATEMISSILEBLOCKING,
 	MBF_MISSILESTASIS,
+	MBF_NPCBLOCKSTANCE,
 };
 
 using communicatingflags_e = enum

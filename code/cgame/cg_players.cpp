@@ -7156,7 +7156,7 @@ void CG_SaberDoWeaponHitMarks(
 	const gclient_t* client,
 	const gentity_t* saber_ent,
 	gentity_t* hit_ent,
-	const int saber_num,
+	const int saberNum,
 	const int blade_num,
 	vec3_t hit_pos,
 	vec3_t hit_dir,
@@ -7205,24 +7205,24 @@ void CG_SaberDoWeaponHitMarks(
 	int mark_shader = cgs.media.bdecal_saberglowmark;
 
 	const qboolean usingSecondStyle =
-		static_cast<qboolean>(WP_SaberBladeUseSecondBladeStyle(&client->ps.saber[saber_num], blade_num));
+		static_cast<qboolean>(WP_SaberBladeUseSecondBladeStyle(&client->ps.saber[saberNum], blade_num));
 
 	// ----------------------------------------------------------------------
 	// 1. Choose the correct G2 mark shader
 	// ----------------------------------------------------------------------
 	if (usingSecondStyle)
 	{
-		if (client->ps.saber[saber_num].g2MarksShader2[0])
+		if (client->ps.saber[saberNum].g2MarksShader2[0])
 		{
-			mark_shader = cgi_R_RegisterShader(client->ps.saber[saber_num].g2MarksShader2);
+			mark_shader = cgi_R_RegisterShader(client->ps.saber[saberNum].g2MarksShader2);
 			life_time = Q_irand(20000, 30000);
 		}
 	}
 	else
 	{
-		if (client->ps.saber[saber_num].g2MarksShader[0])
+		if (client->ps.saber[saberNum].g2MarksShader[0])
 		{
-			mark_shader = cgi_R_RegisterShader(client->ps.saber[saber_num].g2MarksShader);
+			mark_shader = cgi_R_RegisterShader(client->ps.saber[saberNum].g2MarksShader);
 			life_time = Q_irand(20000, 30000);
 		}
 	}
@@ -7255,19 +7255,19 @@ void CG_SaberDoWeaponHitMarks(
 	// ----------------------------------------------------------------------
 	if (usingSecondStyle)
 	{
-		if (client->ps.saber[saber_num].g2WeaponMarkShader2[0])
+		if (client->ps.saber[saberNum].g2WeaponMarkShader2[0])
 		{
 			weapon_mark_shader =
-				cgi_R_RegisterShader(client->ps.saber[saber_num].g2WeaponMarkShader2);
+				cgi_R_RegisterShader(client->ps.saber[saberNum].g2WeaponMarkShader2);
 			life_time = Q_irand(7000, 12000);
 		}
 	}
 	else
 	{
-		if (client->ps.saber[saber_num].g2WeaponMarkShader[0])
+		if (client->ps.saber[saberNum].g2WeaponMarkShader[0])
 		{
 			weapon_mark_shader =
-				cgi_R_RegisterShader(client->ps.saber[saber_num].g2WeaponMarkShader);
+				cgi_R_RegisterShader(client->ps.saber[saberNum].g2WeaponMarkShader);
 			life_time = Q_irand(7000, 12000);
 		}
 	}
@@ -7316,7 +7316,7 @@ void CG_SaberDoWeaponHitMarks(
 	life_time = static_cast<int>(ceilf(static_cast<float>(life_time) * size_time_scale));
 	size = Q_flrand(1.0f, 3.0f) * size_time_scale;
 
-	if (splatter_on_cent->gent->ghoul2.size() > saber_num + 1)
+	if (splatter_on_cent->gent->ghoul2.size() > saberNum + 1)
 	{
 		CG_AddGhoul2Mark(
 			weapon_mark_shader,
@@ -7329,7 +7329,7 @@ void CG_SaberDoWeaponHitMarks(
 			splatter_on_cent->gent->ghoul2,
 			splatter_on_cent->currentState.modelScale,
 			life_time,
-			saber_num + 1,
+			saberNum + 1,
 			use_uaxis ? uaxis : nullptr);
 	}
 }
@@ -12296,7 +12296,7 @@ and sets SEF_INWATER accordingly. Behaviour preserved exactly.
 */
 void CG_CheckSaberInWater(const centity_t* cent,
 	const centity_t* scent,
-	const int saber_num,
+	const int saberNum,
 	const int modelIndex,
 	vec3_t origin,
 	vec3_t angles)
@@ -12322,7 +12322,7 @@ void CG_CheckSaberInWater(const centity_t* cent,
 	}
 
 	// Saber flagged as "can stay on underwater"
-	if ((cent->gent->client->ps.saber[saber_num].saberFlags & SFL_ON_IN_WATER) != 0)
+	if ((cent->gent->client->ps.saber[saberNum].saberFlags & SFL_ON_IN_WATER) != 0)
 	{
 		return;
 	}

@@ -402,7 +402,7 @@ void CParticle::UpdateSize(void)
 	mRefEnt.radius = mSizeStart * perc1 + mSizeEnd * (1.0f - perc1);
 }
 
-void ClampRGB(const vec3_t in, byte* out)
+static void ClampRGB(const vec3_t in, byte* out)
 {
 	for (int i = 0; i < 3; i++)
 	{
@@ -2172,7 +2172,7 @@ bool CFlash::Update(void)
 	return true;
 }
 
-bool FX_WorldToScreen(vec3_t worldCoord, float* x, float* y)
+static bool FX_WorldToScreen(vec3_t worldCoord, float* x, float* y)
 {
 	vec3_t local, transformed{};
 	vec3_t vfwd, vright, vup;

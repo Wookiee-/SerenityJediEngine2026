@@ -96,7 +96,7 @@ extern cvar_t* g_DebugSaberCombat;
 extern qboolean PM_InSaberLock(int anim);
 extern void g_do_m_block_response(const gentity_t* speaker_npc_self);
 extern qboolean Rosh_BeingHealed(const gentity_t* self);
-extern qboolean g_in_cinematic_saber_anim(const gentity_t* self);
+extern qboolean G_InCinematicSaberAnim(const gentity_t* self);
 extern qboolean PM_SuperBreakLoseAnim(int anim);
 ///////////Defines////////////////
 
@@ -119,7 +119,7 @@ static void sab_beh_saber_should_be_disarmed_attacker(gentity_t* attacker, const
 	}
 }
 
-void sab_beh_saber_should_be_disarmed_blocker(gentity_t* blocker, const int saberNum)
+void SabBeh_SaberShouldBeDisarmedBlocker(gentity_t* blocker, const int saberNum)
 {
 	if (saberNum == 0)
 	{
@@ -399,31 +399,37 @@ static void sab_beh_add_mishap_blocker(gentity_t* blocker, const int saberNum)
 		case 1:
 			if (blocker->NPC && !G_ControlledByPlayer(blocker)) //NPC only
 			{
-				if (!Q_irand(0, 4))
+				// 75% chance to disarm, 25% chance to stagger
+				const int roll = Q_irand(0, 3);  // values: 0,1,2,3
+
+				if (roll == 0)
 				{
-					//20% chance
+					// 25% chance
 					G_Stagger(blocker);
+
 					if (d_blockinfo->integer || g_DebugSaberCombat->integer)
 					{
-						gi.Printf(S_COLOR_RED"NPC blocker staggering\n");
+						gi.Printf(S_COLOR_YELLOW "NPC blocker staggering\n");
 					}
 				}
 				else
 				{
-					sab_beh_saber_should_be_disarmed_blocker(blocker, saberNum);
+					// 75% chance
+					SabBeh_SaberShouldBeDisarmedBlocker(blocker, saberNum);
 					WP_BlockPointsRegenerate_over_ride(blocker, BLOCKPOINTS_FATIGUE);
+
 					if (d_blockinfo->integer || g_DebugSaberCombat->integer)
 					{
-						gi.Printf(S_COLOR_RED"NPC blocker lost his saber\n");
+						gi.Printf(S_COLOR_RED "NPC blocker lost his saber\n");
 					}
 				}
 			}
 			else
 			{
-				sab_beh_saber_should_be_disarmed_blocker(blocker, saberNum);
+				SabBeh_SaberShouldBeDisarmedBlocker(blocker, saberNum);
 				if (d_blockinfo->integer || g_DebugSaberCombat->integer)
 				{
-					gi.Printf(S_COLOR_RED"blocker lost his saber\n");
+					gi.Printf(S_COLOR_RED"Player blocker lost his saber\n");
 				}
 			}
 			break;
@@ -686,7 +692,7 @@ static qboolean sab_beh_attack_vs_attack(gentity_t* attacker, gentity_t* blocker
 		if (blocker->client->ps.blockPoints < BLOCKPOINTS_TEN)
 		{
 			//Low points = bad blocks
-			sab_beh_saber_should_be_disarmed_blocker(blocker, saberNum);
+			SabBeh_SaberShouldBeDisarmedBlocker(blocker, saberNum);
 			WP_BlockPointsRegenerate_over_ride(blocker, BLOCKPOINTS_FATIGUE);
 		}
 		else
@@ -933,7 +939,7 @@ qboolean sab_beh_block_vs_attack(gentity_t* blocker, gentity_t* attacker, const 
 		return qfalse;
 	}
 
-	if (g_in_cinematic_saber_anim(blocker)) {
+	if (G_InCinematicSaberAnim(blocker)) {
 		return qfalse;
 	}
 
@@ -941,318 +947,371 @@ qboolean sab_beh_block_vs_attack(gentity_t* blocker, gentity_t* attacker, const 
 		PM_SuperBreakWinAnim(blocker->client->ps.torsoAnim)) {
 		return qfalse;
 	}
-
-	// Precompute flags (Raven-style qboolean)
-	const qboolean accurate_parry =
-		(g_accurate_blocking(blocker, attacker, hit_loc)) ? qtrue : qfalse;
-
-	const qboolean blocking =
-		(blocker->client->ps.ManualBlockingFlags & (1 << HOLDINGBLOCK)) ? qtrue : qfalse;
-
-	const qboolean m_blocking =
-		(blocker->client->ps.ManualBlockingFlags & (1 << PERFECTBLOCKING)) ? qtrue : qfalse;
-
-	const qboolean active_block =
-		(blocker->client->ps.ManualBlockingFlags & (1 << HOLDINGBLOCKANDATTACK)) ? qtrue : qfalse;
-
-	const qboolean npc_blocking =
-		(blocker->client->ps.ManualBlockingFlags & (1 << MBF_NPCBLOCKING)) ? qtrue : qfalse;
-
-	const qboolean unblockable =
-		(pm_saber_innonblockable_attack(attacker->client->ps.torsoAnim)) ? qtrue : qfalse;
-
-	int bp = blocker->client->ps.blockPoints;
+	//-(Im the blocker)
+	const qboolean accurate_parry = g_accurate_blocking(blocker, attacker, hit_loc); // Perfect Normal Blocking
+	const qboolean blocking = blocker->client->ps.ManualBlockingFlags & 1 << HOLDINGBLOCK ? qtrue : qfalse;	//Normal Blocking
+	const qboolean m_blocking = blocker->client->ps.ManualBlockingFlags & 1 << PERFECTBLOCKING ? qtrue : qfalse;	//perfect Blocking
+	const qboolean active_blocking = blocker->client->ps.ManualBlockingFlags & 1 << HOLDINGBLOCKANDATTACK ? qtrue : qfalse;	//Active Blocking
+	const qboolean npc_blocking = blocker->client->ps.ManualBlockingFlags & 1 << MBF_NPCBLOCKING ? qtrue : qfalse;	//Active NPC Blocking
 
 	// ============================================================
 	// UNBLOCKABLE ATTACK BRANCH
 	// ============================================================
-	if (unblockable) {
-		if (m_blocking) {
-			// Perfect block vs unblockable
-			if (blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker)) {
-				if (d_slowmoaction->integer) {
-					G_StartStasisEffect(blocker, MEF_NO_SPIN, 200, 0.3f, 0);
+	if (!pm_saber_innonblockable_attack(attacker->client->ps.torsoAnim))
+	{ //if the attack is blockable, then check for accurate parry
+		if (blocker->client->ps.blockPoints <= BLOCKPOINTS_FATIGUE) // blocker has less than 20BP
+		{//Low points = bad blocks
+			if (blocker->client->ps.blockPoints <= BLOCKPOINTS_TEN) // blocker has less than 10BP
+			{//Low points = bad blocks
+				//Low points = bad blocks
+				if (blocker->NPC && !G_ControlledByPlayer(blocker)) //NPC only
+				{
+					sab_beh_add_mishap_blocker(blocker, saberNum);
 				}
-				CGCam_BlockShakeSP(0.45f, 100);
+				else
+				{
+					SabBeh_SaberShouldBeDisarmedBlocker(blocker, saberNum);
+				}
+
+				if (attacker->NPC && !G_ControlledByPlayer(attacker)) //NPC only
+				{
+					WP_BlockPointsRegenerate(attacker, BLOCKPOINTS_FATIGUE);
+				}
+				else
+				{
+					if (!blocker->client->ps.saberInFlight)
+					{
+						WP_BlockPointsRegenerate(blocker, BLOCKPOINTS_FATIGUE);
+					}
+				}
+
+				if ((d_blockinfo->integer || g_DebugSaberCombat->integer) && blocker->s.number < MAX_CLIENTS ||
+					G_ControlledByPlayer(blocker))
+				{
+					gi.Printf(S_COLOR_CYAN"Blocker was disarmed with very low bp, recharge bp 20bp\n");
+				}
+
+				//just so blocker knows that he has parried the attacker
+				blocker->client->ps.saberEventFlags |= SEF_PARRIED;
+				//just so attacker knows that he was blocked
+				attacker->client->ps.saberEventFlags |= SEF_BLOCKED;
+				wp_saber_clear_damage_for_ent_num(attacker, blocker->s.number, saberNum, blade_num);
 			}
+			else
+			{
+				//Low points = bad blocks
+				g_fatigue_bp_knockaway(blocker);
 
-			blocker->client->ps.userInt3 |= (1 << FLAG_PERFECTBLOCK);
+				PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_DANGER);
 
-			G_Sound(blocker, G_SoundIndex(va("sound/weapons/saber/saber_perfectblock%d.mp3",
-				Q_irand(1, 3))));
+				if ((d_blockinfo->integer || g_DebugSaberCombat->integer) && (blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker)))
+				{
+					gi.Printf(S_COLOR_CYAN"Blocker stagger drain 4 bp\n");
+				}
 
-			if ((d_blockinfo->integer || g_DebugSaberCombat->integer) &&
-				(blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker))) {
-				gi.Printf(S_COLOR_MAGENTA"Blocker Perfect blocked an Unblockable attack reward 20\n");
+				//just so blocker knows that he has parried the attacker
+				blocker->client->ps.saberEventFlags |= SEF_PARRIED;
+				//just so attacker knows that he was blocked
+				attacker->client->ps.saberEventFlags |= SEF_BLOCKED;
+				//since it was parried, take away any damage done
+				wp_saber_clear_damage_for_ent_num(attacker, blocker->s.number, saberNum, blade_num);
 			}
-
-			blocker->client->ps.saberEventFlags |= SEF_PARRIED;
-
-			WP_BlockPointsRegenerate_over_ride(blocker, BLOCKPOINTS_FATIGUE);
-			blocker->client->ps.saberFatigueChainCount = MISHAPLEVEL_NONE;
-
-			return qtrue;
 		}
+		else
+		{
+			//just block it //jacesolaris
+			if (active_blocking) //Holding Block Button + attack button
+			{//Active Blocking
+				//perfect Blocking
+				if (m_blocking) // A perfectly timed block
+				{//Parry the attack
+					WP_SaberMBlock(blocker, attacker, saberNum, blade_num);
 
-		// Failed vs unblockable
-		if (bp < BLOCKPOINTS_TEN) {
-			sab_beh_saber_should_be_disarmed_blocker(blocker, saberNum);
-			WP_BlockPointsRegenerate_over_ride(blocker, BLOCKPOINTS_FATIGUE);
-		}
-		else {
-			g_fatigue_bp_knockaway(blocker);
-			PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_TEN);
-		}
+					if (attacker->client->ps.saberFatigueChainCount >= MISHAPLEVEL_THIRTEEN)
+					{
+						sab_beh_add_mishap_attacker(attacker, blocker, saberNum);
+					}
+					else
+					{
+						sab_beh_animate_heavy_slow_bounce_attacker(attacker);
+						attacker->client->ps.userInt3 |= 1 << FLAG_MBLOCKBOUNCE;
+					}
 
-		if (d_blockinfo->integer || g_DebugSaberCombat->integer) {
-			gi.Printf(S_COLOR_MAGENTA"Blocker can not block Unblockable\n");
-		}
+					blocker->client->ps.userInt3 |= 1 << FLAG_PERFECTBLOCK;
 
-		blocker->client->ps.saberEventFlags &= ~SEF_PARRIED;
-		return qtrue;
-	}
+					if (blocker->NPC && !G_ControlledByPlayer(blocker)) //NPC only
+					{
+						g_do_m_block_response(blocker);
+					}
 
-	// ============================================================
-	// VERY LOW BP BRANCH (≤ FATIGUE)
-	// ============================================================
-	if (bp <= BLOCKPOINTS_FATIGUE) {
-		if (bp <= BLOCKPOINTS_TEN) {
-			// Disarm / mishap
-			if (blocker->NPC && !G_ControlledByPlayer(blocker)) {
+					if (blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker))
+					{
+						if (d_slowmoaction->integer)
+						{
+							G_StartStasisEffect(blocker, MEF_NO_SPIN, 200, 0.3f, 0);
+						}
+						CGCam_BlockShakeSP(0.45f, 100);
+					}
+
+					G_Sound(blocker, G_SoundIndex(va("sound/weapons/saber/saber_perfectblock%d.mp3", Q_irand(1, 3))));
+
+					if ((d_blockinfo->integer || g_DebugSaberCombat->integer) && blocker->s.number < MAX_CLIENTS
+						|| G_ControlledByPlayer(blocker))
+					{
+						gi.Printf(S_COLOR_CYAN"Blocker Perfect blocked reward 15\n");
+					}
+
+					//just so blocker knows that he has parried the attacker
+					blocker->client->ps.saberEventFlags |= SEF_PARRIED;
+					//just so attacker knows that he was blocked
+					attacker->client->ps.saberEventFlags |= SEF_BLOCKED;
+					//since it was parried, take away any damage done
+					wp_saber_clear_damage_for_ent_num(attacker, blocker->s.number, saberNum, blade_num);
+
+					WP_BlockPointsRegenerate_over_ride(blocker, BLOCKPOINTS_FIFTEEN);//SAC Reward blocker
+					sab_beh_add_balance(blocker, -MPCOST_MBLOCKED); //SAC Reward blocker
+
+					if (attacker->NPC && !G_ControlledByPlayer(attacker)) //NPC only
+					{
+						PM_AddBlockFatigue(&attacker->client->ps, BLOCKPOINTS_FATIGUE); //BP Punish Attacker
+						sab_beh_add_balance(attacker, BLOCKPOINTS_TEN); //SAC Punish attacker
+					}
+					else
+					{
+						PM_AddBlockFatigue(&attacker->client->ps, BLOCKPOINTS_TEN); //BP Punish Attacker
+						sab_beh_add_balance(attacker, MPCOST_MBLOCKED); //SAC Punish attacker
+					}
+				}
+				else
+				{
+					//Spamming block + attack buttons
+					if (blocker->client->ps.blockPoints <= BLOCKPOINTS_HALF)
+					{
+						WP_SaberFatiguedParry(blocker, attacker, saberNum, blade_num);
+					}
+					else if (attacker->client->ps.saberAnimLevel == SS_DESANN || attacker->client->ps.saberAnimLevel == SS_STRONG)
+					{
+						WP_SaberFatiguedParry(blocker, attacker, saberNum, blade_num);
+					}
+					else
+					{
+						WP_SaberParry(blocker, attacker, saberNum, blade_num);
+					}
+
+					if (attacker->NPC && !G_ControlledByPlayer(attacker)) //NPC only
+					{
+						sab_beh_add_balance(attacker, MPCOST_MBLOCKED); //SAC Punish attacker
+					}
+
+					PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_FIVE);
+
+					if (blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker))
+					{
+						CGCam_BlockShakeSP(0.45f, 100);
+					}
+
+					if ((d_blockinfo->integer || g_DebugSaberCombat->integer) && blocker->s.number < MAX_CLIENTS
+						|| G_ControlledByPlayer(blocker))
+					{
+						gi.Printf(S_COLOR_CYAN"Blocker Spamming block + attack cost 5\n");
+					}
+
+					//just so blocker knows that he has parried the attacker
+					blocker->client->ps.saberEventFlags |= SEF_PARRIED;
+					//just so attacker knows that he was blocked
+					attacker->client->ps.saberEventFlags |= SEF_BLOCKED;
+					//since it was parried, take away any damage done
+					wp_saber_clear_damage_for_ent_num(attacker, blocker->s.number, saberNum, blade_num);
+				}
+			}
+			else if (blocking && !active_blocking) //Holding block button only (spamming block)
+			{
+				if (blocker->client->ps.blockPoints <= BLOCKPOINTS_HALF)
+				{
+					WP_SaberFatiguedParry(blocker, attacker, saberNum, blade_num);
+				}
+				else if (attacker->client->ps.saberAnimLevel == SS_DESANN ||
+					attacker->client->ps.saberAnimLevel == SS_STRONG)
+				{
+					WP_SaberFatiguedParry(blocker, attacker, saberNum, blade_num);
+				}
+				else
+				{
+					WP_SaberBlockedBounceBlock(blocker, attacker, saberNum, blade_num);
+				}
+
+				if (blocker->NPC && !G_ControlledByPlayer(blocker)) //NPC only
+				{
+					//
+				}
+				else
+				{
+					PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_FIVE);
+				}
+
+				if (attacker->NPC && !G_ControlledByPlayer(attacker)) //NPC only
+				{
+					if (attacker->client->ps.blockPoints <= BLOCKPOINTS_FATIGUE)
+					{
+						WP_BlockPointsRegenerate(attacker, BLOCKPOINTS_FATIGUE);
+					}
+					else
+					{
+						WP_BlockPointsRegenerate(attacker, BLOCKPOINTS_TEN);
+					}
+				}
+
+				if (blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker))
+				{
+					CGCam_BlockShakeSP(0.45f, 100);
+				}
+				if ((d_blockinfo->integer || g_DebugSaberCombat->integer) && blocker->s.number < MAX_CLIENTS ||
+					G_ControlledByPlayer(blocker))
+				{
+					gi.Printf(S_COLOR_CYAN"Blocker Holding block button only (spamming block) cost 5\n");
+				}
+
+				//just so blocker knows that he has parried the attacker
+				blocker->client->ps.saberEventFlags |= SEF_PARRIED;
+				//just so attacker knows that he was blocked
+				attacker->client->ps.saberEventFlags |= SEF_BLOCKED;
+				//since it was parried, take away any damage done
+				wp_saber_clear_damage_for_ent_num(attacker, blocker->s.number, saberNum, blade_num);
+			}
+			else if ((accurate_parry || npc_blocking)) //Other types and npc,s
+			{
+				if (attacker->client->ps.saberAnimLevel == SS_DESANN || attacker->client->ps.saberAnimLevel == SS_STRONG)
+				{
+					WP_SaberFatiguedParry(blocker, attacker, saberNum, blade_num);
+				}
+				else if (blocker->client->ps.blockPoints <= BLOCKPOINTS_MISSILE)
+				{
+					if (blocker->client->ps.blockPoints <= BLOCKPOINTS_FOURTY)
+					{
+						WP_SaberFatiguedParry(blocker, attacker, saberNum, blade_num);
+
+						if ((d_blockinfo->integer || g_DebugSaberCombat->integer) && (blocker->NPC && !
+							G_ControlledByPlayer(blocker)))
+						{
+							gi.Printf(S_COLOR_CYAN"NPC Fatigued Parry\n");
+						}
+
+						PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_FAIL);
+					}
+					else
+					{
+						WP_SaberParry(blocker, attacker, saberNum, blade_num);
+
+						if ((d_blockinfo->integer || g_DebugSaberCombat->integer) && (blocker->NPC && !
+							G_ControlledByPlayer(blocker)))
+						{
+							gi.Printf(S_COLOR_CYAN"NPC normal Parry\n");
+						}
+
+						PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_THREE);
+					}
+				}
+				else
+				{ //good parry
+					WP_SaberMBlock(blocker, attacker, saberNum, blade_num);
+
+					if (blocker->NPC && !G_ControlledByPlayer(blocker)) //NPC only
+					{
+						g_do_m_block_response(blocker);
+						PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_TEN);
+					}
+					else
+					{
+						PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_THREE);
+					}
+
+					if ((d_blockinfo->integer || g_DebugSaberCombat->integer) && (blocker->NPC && !
+						G_ControlledByPlayer(blocker)))
+					{
+						gi.Printf(S_COLOR_CYAN"NPC good Parry\n");
+					}
+				}
+
+				G_Sound(blocker, G_SoundIndex(va("sound/weapons/saber/saber_goodparry%d.mp3", Q_irand(1, 3))));
+
+				//just so blocker knows that he has parried the attacker
+				blocker->client->ps.saberEventFlags |= SEF_PARRIED;
+				//just so attacker knows that he was blocked
+				attacker->client->ps.saberEventFlags |= SEF_BLOCKED;
+				//since it was parried, take away any damage done
+				wp_saber_clear_damage_for_ent_num(attacker, blocker->s.number, saberNum, blade_num);
+			}
+			else
+			{
 				sab_beh_add_mishap_blocker(blocker, saberNum);
-			}
-			else {
-				sab_beh_saber_should_be_disarmed_blocker(blocker, saberNum);
-			}
 
-			// Regenerate BP
-			if (attacker->NPC && !G_ControlledByPlayer(attacker)) {
-				WP_BlockPointsRegenerate(attacker, BLOCKPOINTS_FATIGUE);
+				if (blocker->NPC && !G_ControlledByPlayer(blocker)) //NPC only
+				{
+					//
+				}
+				else
+				{
+					PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_TEN);
+				}
+				if ((d_blockinfo->integer || g_DebugSaberCombat->integer) && blocker->s.number < MAX_CLIENTS ||
+					G_ControlledByPlayer(blocker))
+				{
+					gi.Printf(S_COLOR_CYAN"Blocker Not holding block drain 10\n");
+				}
 			}
-			else if (!blocker->client->ps.saberInFlight) {
-				WP_BlockPointsRegenerate(blocker, BLOCKPOINTS_FATIGUE);
-			}
-
-			if ((d_blockinfo->integer || g_DebugSaberCombat->integer) &&
-				(blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker))) {
-				gi.Printf(S_COLOR_CYAN"Blocker was disarmed with very low bp, recharge bp 20bp\n");
-			}
-
-			// Parry success
-			blocker->client->ps.saberEventFlags |= SEF_PARRIED;
-			attacker->client->ps.saberEventFlags |= SEF_BLOCKED;
-			wp_saber_clear_damage_for_ent_num(attacker, blocker->s.number, saberNum, blade_num);
 		}
-		else {
-			// Stagger / knockaway
-			g_fatigue_bp_knockaway(blocker);
-			PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_DANGER);
-
-			if ((d_blockinfo->integer || g_DebugSaberCombat->integer) &&
-				(blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker))) {
-				gi.Printf(S_COLOR_CYAN"Blocker stagger drain 4 bp\n");
-			}
-
-			// Parry success
-			blocker->client->ps.saberEventFlags |= SEF_PARRIED;
-			attacker->client->ps.saberEventFlags |= SEF_BLOCKED;
-			wp_saber_clear_damage_for_ent_num(attacker, blocker->s.number, saberNum, blade_num);
-		}
-
-		return qtrue;
 	}
-
-	// ============================================================
-	// ACTIVE BLOCKING (block + attack)
-	// ============================================================
-	if (active_block) {
-		if (m_blocking) {
-			// Perfect block
-			WP_SaberMBlock(blocker, attacker, saberNum, blade_num);
-
-			if (attacker->client->ps.saberFatigueChainCount >= MISHAPLEVEL_THIRTEEN) {
-				sab_beh_add_mishap_attacker(attacker, blocker, saberNum);
-			}
-			else {
-				sab_beh_animate_heavy_slow_bounce_attacker(attacker);
-				attacker->client->ps.userInt3 |= (1 << FLAG_MBLOCKBOUNCE);
-			}
-
-			blocker->client->ps.userInt3 |= (1 << FLAG_PERFECTBLOCK);
-
-			if (attacker->NPC && !G_ControlledByPlayer(attacker)) {
-				g_do_m_block_response(attacker);
-			}
-
-			if (blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker)) {
-				if (d_slowmoaction->integer) {
+	else
+	{//if the attack is unblockable, then only perfect block can save the day
+		//perfect Blocking
+		if (m_blocking) // A perfectly timed block
+		{
+			if (blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker))
+			{
+				if (d_slowmoaction->integer)
+				{
 					G_StartStasisEffect(blocker, MEF_NO_SPIN, 200, 0.3f, 0);
 				}
 				CGCam_BlockShakeSP(0.45f, 100);
 			}
 
-			G_Sound(blocker, G_SoundIndex(va("sound/weapons/saber/saber_perfectblock%d.mp3",
-				Q_irand(1, 3))));
+			G_Sound(blocker, G_SoundIndex(va("sound/weapons/saber/saber_perfectblock%d.mp3", Q_irand(1, 3))));
 
-			if ((d_blockinfo->integer || g_DebugSaberCombat->integer) &&
-				(blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker))) {
-				gi.Printf(S_COLOR_CYAN"Blocker Perfect blocked reward 20\n");
+			if (d_blockinfo->integer && blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker))
+			{
+				gi.Printf(S_COLOR_CYAN"Blocker Perfect blocked an Unblockable attack reward 15\n");
 			}
 
-			// Parry success
 			blocker->client->ps.saberEventFlags |= SEF_PARRIED;
 			attacker->client->ps.saberEventFlags |= SEF_BLOCKED;
 			wp_saber_clear_damage_for_ent_num(attacker, blocker->s.number, saberNum, blade_num);
 
-			WP_BlockPointsRegenerate_over_ride(blocker, BLOCKPOINTS_FATIGUE);
-			blocker->client->ps.saberFatigueChainCount = MISHAPLEVEL_NONE;
-			PM_AddBlockFatigue(&attacker->client->ps, BLOCKPOINTS_TEN);
-
-			return qtrue;
+			WP_BlockPointsRegenerate_over_ride(blocker, BLOCKPOINTS_FIFTEEN);
+			PM_AddBlockFatigue(&attacker->client->ps, BLOCKPOINTS_TEN); //BP Punish Attacker
+			sab_beh_add_balance(blocker, -MPCOST_MBLOCKED); //SAC Reward blocker
+			sab_beh_add_balance(attacker, MPCOST_MBLOCKED); //SAC Punish attacker
 		}
-
-		// Spam block + attack
-		if (bp <= BLOCKPOINTS_HALF ||
-			attacker->client->ps.saberAnimLevel == SS_DESANN ||
-			attacker->client->ps.saberAnimLevel == SS_STRONG) {
-			WP_SaberFatiguedParry(blocker, attacker, saberNum, blade_num);
-		}
-		else {
-			WP_SaberParry(blocker, attacker, saberNum, blade_num);
-		}
-
-		if (attacker->NPC && !G_ControlledByPlayer(attacker)) {
-			PM_AddBlockFatigue(&attacker->client->ps, BLOCKPOINTS_THREE);
-		}
-
-		PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_FIVE);
-
-		if (blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker)) {
-			CGCam_BlockShakeSP(0.45f, 100);
-		}
-
-		if ((d_blockinfo->integer || g_DebugSaberCombat->integer) &&
-			(blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker))) {
-			gi.Printf(S_COLOR_CYAN"Blocker Spamming block + attack cost 5\n");
-		}
-
-		// Parry success
-		blocker->client->ps.saberEventFlags |= SEF_PARRIED;
-		attacker->client->ps.saberEventFlags |= SEF_BLOCKED;
-		wp_saber_clear_damage_for_ent_num(attacker, blocker->s.number, saberNum, blade_num);
-
-		return qtrue;
-	}
-
-	// ============================================================
-	// BLOCK ONLY (holding block, not attacking)
-	// ============================================================
-	if (blocking) {
-		if (bp <= BLOCKPOINTS_HALF ||
-			attacker->client->ps.saberAnimLevel == SS_DESANN ||
-			attacker->client->ps.saberAnimLevel == SS_STRONG) {
-			WP_SaberFatiguedParry(blocker, attacker, saberNum, blade_num);
-		}
-		else {
-			WP_SaberBlockedBounceBlock(blocker, attacker, saberNum, blade_num);
-		}
-
-		if (blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker)) {
-			CGCam_BlockShakeSP(0.45f, 100);
-		}
-
-		if (!(blocker->NPC && !G_ControlledByPlayer(blocker))) {
-			PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_TEN);
-		}
-
-		if ((d_blockinfo->integer || g_DebugSaberCombat->integer) &&
-			(blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker))) {
-			gi.Printf(S_COLOR_CYAN"Blocker Holding block button only (spamming block) cost 10\n");
-		}
-
-		// Parry success
-		blocker->client->ps.saberEventFlags |= SEF_PARRIED;
-		attacker->client->ps.saberEventFlags |= SEF_BLOCKED;
-		wp_saber_clear_damage_for_ent_num(attacker, blocker->s.number, saberNum, blade_num);
-
-		return qtrue;
-	}
-
-	// ============================================================
-	// ACCURATE PARRY OR NPC AUTO-BLOCK
-	// ============================================================
-	if (accurate_parry || npc_blocking) {
-		if (attacker->client->ps.saberAnimLevel == SS_DESANN ||
-			attacker->client->ps.saberAnimLevel == SS_STRONG) {
-			WP_SaberFatiguedParry(blocker, attacker, saberNum, blade_num);
-		}
-		else if (bp <= BLOCKPOINTS_MISSILE) {
-			if (bp <= BLOCKPOINTS_FOURTY) {
-				WP_SaberFatiguedParry(blocker, attacker, saberNum, blade_num);
-
-				if ((d_blockinfo->integer || g_DebugSaberCombat->integer) &&
-					(blocker->NPC && !G_ControlledByPlayer(blocker))) {
-					gi.Printf(S_COLOR_CYAN"NPC Fatigued Parry\n");
-				}
-
-				PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_FAIL);
+		else
+		{
+			//This must be Unblockable
+			if (blocker->client->ps.blockPoints < BLOCKPOINTS_TEN)
+			{
+				//Low points = bad blocks
+				SabBeh_SaberShouldBeDisarmedBlocker(blocker, saberNum);
+				WP_BlockPointsRegenerate_over_ride(blocker, BLOCKPOINTS_FATIGUE);
 			}
-			else {
-				WP_SaberParry(blocker, attacker, saberNum, blade_num);
-
-				if ((d_blockinfo->integer || g_DebugSaberCombat->integer) &&
-					(blocker->NPC && !G_ControlledByPlayer(blocker))) {
-					gi.Printf(S_COLOR_CYAN"NPC normal Parry\n");
-				}
-
-				PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_THREE);
+			else
+			{
+				g_fatigue_bp_knockaway(blocker);
+				PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_TEN);
 			}
-		}
-		else {
-			WP_SaberMBlock(blocker, attacker, saberNum, blade_num);
-
-			if (blocker->NPC && !G_ControlledByPlayer(blocker)) {
-				g_do_m_block_response(blocker);
+			if (d_blockinfo->integer || g_DebugSaberCombat->integer)
+			{
+				gi.Printf(S_COLOR_MAGENTA"Blocker can not block Unblockable\n");
 			}
-
-			if ((d_blockinfo->integer || g_DebugSaberCombat->integer) &&
-				(blocker->NPC && !G_ControlledByPlayer(blocker))) {
-				gi.Printf(S_COLOR_CYAN"NPC good Parry\n");
-			}
-
-			PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_THREE);
+			blocker->client->ps.saberEventFlags &= ~SEF_PARRIED;
 		}
-
-		G_Sound(blocker, G_SoundIndex(va("sound/weapons/saber/saber_goodparry%d.mp3",
-			Q_irand(1, 3))));
-
-		if ((d_blockinfo->integer || g_DebugSaberCombat->integer) &&
-			(blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker))) {
-			gi.Printf(S_COLOR_CYAN"Blocker Other types of block and npc,s\n");
-		}
-
-		// Parry success
-		blocker->client->ps.saberEventFlags |= SEF_PARRIED;
-		attacker->client->ps.saberEventFlags |= SEF_BLOCKED;
-		wp_saber_clear_damage_for_ent_num(attacker, blocker->s.number, saberNum, blade_num);
-
-		return qtrue;
 	}
-
-	// ============================================================
-	// NOT BLOCKING AT ALL
-	// ============================================================
-	sab_beh_add_mishap_blocker(blocker, saberNum);
-
-	if (!(blocker->NPC && !G_ControlledByPlayer(blocker))) {
-		PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_TEN);
-	}
-
-	if ((d_blockinfo->integer || g_DebugSaberCombat->integer) &&
-		(blocker->s.number < MAX_CLIENTS || G_ControlledByPlayer(blocker))) {
-		gi.Printf(S_COLOR_CYAN"Blocker Not holding block drain 10\n");
-	}
-
 	return qtrue;
 }
 

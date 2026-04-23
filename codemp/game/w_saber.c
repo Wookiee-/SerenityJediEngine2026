@@ -8208,9 +8208,32 @@ void saberReactivate(gentity_t* saberent, gentity_t* saber_owner)
 	saberent->s.saberInFlight = qtrue;
 
 	saberent->s.apos.trType = TR_LINEAR;
-	saberent->s.apos.trDelta[0] = 600;
-	saberent->s.apos.trDelta[1] = 0;
-	saberent->s.apos.trDelta[2] = 0;
+
+	if (saber_owner->client->ps.fd.saberAnimLevel == SS_STAFF)
+	{
+		saberent->s.apos.trType = TR_LINEAR;
+		saberent->s.apos.trDelta[0] = 0;
+		saberent->s.apos.trDelta[1] = 800;
+		saberent->s.apos.trDelta[2] = 0;
+	}
+	else
+	{
+		switch (saber_owner->client->ps.fd.forcePowerLevel[FP_SABERTHROW])
+		{
+		default:
+		case FORCE_LEVEL_1:
+			saberent->s.apos.trDelta[0] = 600;
+			break;
+		case FORCE_LEVEL_2:
+			saberent->s.apos.trDelta[0] = 800;
+			break;
+		case FORCE_LEVEL_3:
+			saberent->s.apos.trDelta[0] = 1000;
+			break;
+		}
+		saberent->s.apos.trDelta[1] = 0;
+		saberent->s.apos.trDelta[2] = 0;
+	}
 
 	saberent->s.pos.trType = TR_LINEAR;
 	saberent->s.eType = ET_GENERAL;
@@ -11804,17 +11827,29 @@ nextStep:
 
 				saberent->s.saberInFlight = qtrue;
 
+				saberent->s.apos.trType = TR_LINEAR;
+
 				if (self->client->ps.fd.saberAnimLevel == SS_STAFF)
 				{
-					saberent->s.apos.trType = TR_LINEAR;
 					saberent->s.apos.trDelta[0] = 0;
 					saberent->s.apos.trDelta[1] = 800;
 					saberent->s.apos.trDelta[2] = 0;
 				}
 				else
 				{
-					saberent->s.apos.trType = TR_LINEAR;;
-					saberent->s.apos.trDelta[0] = 600;
+					switch (self->client->ps.fd.forcePowerLevel[FP_SABERTHROW])
+					{
+					default:
+					case FORCE_LEVEL_1:
+						saberent->s.apos.trDelta[0] = 600;
+						break;
+					case FORCE_LEVEL_2:
+						saberent->s.apos.trDelta[0] = 800;
+						break;
+					case FORCE_LEVEL_3:
+						saberent->s.apos.trDelta[0] = 1000;
+						break;
+					}
 					saberent->s.apos.trDelta[1] = 0;
 					saberent->s.apos.trDelta[2] = 0;
 				}
@@ -14894,44 +14929,33 @@ void thrownSaberBallistics(gentity_t* saberEnt, const gentity_t* saber_own, cons
 		//otherwise, just move by normal ballistic physics
 		//spin just like we were in our saber throw.
 
-		if (saber1 && saber1->type == SABER_VADER)
+		// Ballistic movement (gravity + spin)
+		saberEnt->s.apos.trType = TR_LINEAR;
+
+		if (saber_own->client->ps.fd.saberAnimLevel == SS_STAFF)
 		{
 			saberEnt->s.apos.trType = TR_LINEAR;
 			saberEnt->s.apos.trDelta[0] = 0;
-			saberEnt->s.apos.trDelta[1] = 600;
+			saberEnt->s.apos.trDelta[1] = 800;
 			saberEnt->s.apos.trDelta[2] = 0;
 		}
 		else
 		{
-			if (saber_own->client->ps.fd.saberAnimLevel == SS_DESANN || saber_own->client->ps.fd.saberAnimLevel ==
-				SS_TAVION)
+			switch (saber_own->client->ps.fd.forcePowerLevel[FP_SABERTHROW])
 			{
-				saberEnt->s.apos.trType = TR_LINEAR;
-				saberEnt->s.apos.trDelta[0] = 0;
-				saberEnt->s.apos.trDelta[1] = 600;
-				saberEnt->s.apos.trDelta[2] = 0;
-			}
-			else if (saber_own->client->ps.fd.saberAnimLevel == SS_STAFF)
-			{
-				saberEnt->s.apos.trType = TR_LINEAR;
-				saberEnt->s.apos.trDelta[0] = 0;
-				saberEnt->s.apos.trDelta[1] = 1200;
-				saberEnt->s.apos.trDelta[2] = 0;
-			}
-			else if (saber_own->client->ps.fd.saberAnimLevel == SS_FAST)
-			{
-				saberEnt->s.apos.trType = TR_LINEAR;
-				saberEnt->s.apos.trDelta[0] = 1200;
-				saberEnt->s.apos.trDelta[1] = 0;
-				saberEnt->s.apos.trDelta[2] = 0;
-			}
-			else
-			{
-				saberEnt->s.apos.trType = TR_LINEAR;
+			default:
+			case FORCE_LEVEL_1:
 				saberEnt->s.apos.trDelta[0] = 600;
-				saberEnt->s.apos.trDelta[1] = 0;
-				saberEnt->s.apos.trDelta[2] = 0;
+				break;
+			case FORCE_LEVEL_2:
+				saberEnt->s.apos.trDelta[0] = 800;
+				break;
+			case FORCE_LEVEL_3:
+				saberEnt->s.apos.trDelta[0] = 1000;
+				break;
 			}
+			saberEnt->s.apos.trDelta[1] = 0;
+			saberEnt->s.apos.trDelta[2] = 0;
 		}
 
 		//but now gravity has an effect.

@@ -89,6 +89,10 @@ extern void G_KnockOver(gentity_t* self, const gentity_t* attacker, const vec3_t
 	qboolean breakSaberLock);
 extern float manual_running_and_saberblocking(const gentity_t* defender);
 extern qboolean WP_SaberFatiguedParryDirection(gentity_t* self, vec3_t hitloc, qboolean missileBlock);
+extern qboolean PM_CrouchAnim(const int anim);
+extern void G_Knockdown(gentity_t* self, gentity_t* attacker, const vec3_t push_dir, float strength, const qboolean breakSaberLock);
+extern qboolean PM_PainAnim(int anim);
+extern qboolean PM_InKnockDown(const playerState_t* ps);
 
 static float vector_bolt_distance(vec3_t v1, vec3_t v2)
 {
@@ -1263,7 +1267,12 @@ qboolean G_MissileImpact(gentity_t* ent, trace_t* trace)
 	//
     // Beskar / Boba Fett bounce handling
     //
-	if (beskar || boba_fett)
+	if ((beskar || boba_fett) &&
+		other->health > 0 &&
+		!PM_PainAnim(other->client->ps.torsoAnim) &&
+		!BG_InDeathAnim(other->client->ps.torsoAnim) &&
+		!PM_InKnockDown(&other->client->ps) &&
+		!WP_DoingForcedAnimationForForcePowers(other))
 	{
 		bounce = qfalse;
 
@@ -1280,10 +1289,22 @@ qboolean G_MissileImpact(gentity_t* ent, trace_t* trace)
 
 		if (other->client)
 		{
-			G_SetAnim(other, NULL, SETANIM_TORSO,
-				Q_irand(BOTH_PAIN1, BOTH_PAIN3),
-				SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD,
-				0);
+			if (Q_irand(0, 3))
+			{// 75% chance to play pain anim
+				if (PM_CrouchAnim(other->client->ps.legsAnim))
+				{
+					vec3_t dir;
+					VectorSubtract(ent->r.currentOrigin, other->r.currentOrigin, dir);
+					VectorNormalize(dir);
+
+					G_Knockdown(other, ent, dir, 50, qtrue);
+				}
+				else
+				{
+					G_SetAnim(other, NULL, SETANIM_TORSO, Q_irand(BOTH_PAIN2, BOTH_PAIN3), SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
+					other->client->ps.torsoTimer = 400;
+				}
+			}
 		}
 
 		if (ent->owner)
@@ -1556,16 +1577,30 @@ qboolean G_MissileImpact(gentity_t* ent, trace_t* trace)
 				other->client != NULL &&
 				beskar == qfalse &&
 				boba_fett == qfalse &&
-				is_knocked_saber == qfalse &&
 				other->health > 0 &&
+				is_knocked_saber == qfalse &&
 				other->s.eType != ET_NPC && // prevents vehicle anim corruption
 				!BG_InDeathAnim(other->client->ps.torsoAnim) &&
+				!PM_PainAnim(other->client->ps.torsoAnim) &&
+				!PM_InKnockDown(&other->client->ps) &&
 				!WP_DoingForcedAnimationForForcePowers(other))
 			{
-				G_SetAnim(other, NULL, SETANIM_TORSO,
-					Q_irand(BOTH_PAIN1, BOTH_PAIN3),
-					SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD,
-					0);
+				if (Q_irand(0, 3))
+				{// 75% chance to play pain anim
+					if (PM_CrouchAnim(other->client->ps.legsAnim))
+					{
+						vec3_t dir;
+						VectorSubtract(ent->r.currentOrigin, other->r.currentOrigin, dir);
+						VectorNormalize(dir);
+
+						G_Knockdown(other, ent, dir, 50, qtrue);
+					}
+					else
+					{
+						G_SetAnim(other, NULL, SETANIM_TORSO, Q_irand(BOTH_PAIN2, BOTH_PAIN3), SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
+						other->client->ps.torsoTimer = 400;
+					}
+				}
 			}
 		}
 

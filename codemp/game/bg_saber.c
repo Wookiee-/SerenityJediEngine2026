@@ -6669,6 +6669,32 @@ static int Fatigue_SaberAttack()
 //Add Fatigue for all the saber moves.
 extern qboolean PM_KnockAwayStaffAndDuels(int move);
 
+static void PM_SaberFatigue(playerState_t* ps, const int new_move)
+{
+	if (ps->saber_move != new_move)
+	{//wasn't playing that attack before
+		if (PM_SaberInAttackPure(new_move))
+		{//simple saber attack
+			PM_AddBlockFatigue(ps, Fatigue_SaberAttack());
+		}
+		else if (PM_SaberInTransition(new_move) && pm->ps->userInt3 & 1 << FLAG_ATTACKFAKE)
+		{//attack fakes cost FP as well
+			if (ps->saberAnimLevel == SS_DUAL)
+			{//dual sabers don't have transition/FP costs.
+			}
+			else
+			{//single sabers
+				if (pm->ps->saberFatigueChainCount < MISHAPLEVEL_MAX)
+				{
+					pm->ps->saberFatigueChainCount++;
+				}
+			}
+		}
+	}
+
+	return;
+}
+
 static void PM_NPCFatigue(playerState_t* ps, const int new_move)
 {
 	if (ps->saber_move != new_move)
@@ -6677,7 +6703,7 @@ static void PM_NPCFatigue(playerState_t* ps, const int new_move)
 		if (PM_KnockAwayStaffAndDuels(new_move))
 		{
 			//simple saber attack
-			PM_AddBlockFatigue(ps, Fatigue_SaberAttack());
+			PM_AddBlockFatigue(ps, FATIGUE_AUTOSABERDEFENSE);
 		}
 		else if (PM_KnockawayForParry(new_move))
 		{
@@ -6704,7 +6730,10 @@ static void PM_NPCFatigue(playerState_t* ps, const int new_move)
 			else
 			{
 				//single sabers
-				PM_AddBlockFatigue(ps, Fatigue_SaberAttack());
+				if (pm->ps->saberFatigueChainCount < MISHAPLEVEL_MAX)
+				{
+					pm->ps->saberFatigueChainCount++;
+				}
 			}
 		}
 	}
@@ -7274,16 +7303,14 @@ void PM_SetSaberMove(saber_moveName_t new_move)
 		if (pm->ps->weapon == WP_SABER && !BG_SabersOff(pm->ps))
 		{
 #ifdef _GAME
-			const qboolean is_holding_block_button_and_attack = pm->ps->ManualBlockingFlags & 1 << HOLDINGBLOCKANDATTACK ? qtrue : qfalse;
-			//Active Blocking
-
-			if (!(g_entities[pm->ps->clientNum].r.svFlags & SVF_BOT))
+			if (g_entities[pm->ps->clientNum].r.svFlags & SVF_BOT)
 			{
+				PM_NPCFatigue(pm->ps, new_move); //drainblockpoints low cost
 			}
 			else
 #endif
 			{
-				PM_NPCFatigue(pm->ps, new_move); //drainblockpoints low cost
+				PM_SaberFatigue(pm->ps, new_move); //drain blockpoints low cost
 			}
 
 			//update the flag

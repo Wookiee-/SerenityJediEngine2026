@@ -26,7 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 extern displayContextDef_t cgDC;
 
-int CG_GetSelectedPlayer()
+static int CG_GetSelectedPlayer()
 {
 	if (cg_currentSelectedPlayer.integer < 0 || cg_currentSelectedPlayer.integer >= numSortedTeamPlayers)
 	{
@@ -361,7 +361,7 @@ static void CG_Text_Paint_Limit(float* max_x, const float x, const float y, cons
 #define PIC_WIDTH 12
 
 extern const char* CG_GetLocationString(const char* loc); //cg_main.c
-void CG_DrawNewTeamInfo(const rectDef_t* rect, const float text_y, const float scale, vec4_t color)
+static void CG_DrawNewTeamInfo(const rectDef_t* rect, const float text_y, const float scale, vec4_t color)
 {
 	int i, len;
 	const char* p;
@@ -476,7 +476,7 @@ void CG_DrawNewTeamInfo(const rectDef_t* rect, const float text_y, const float s
 	}
 }
 
-void CG_DrawTeamSpectators(const rectDef_t* rect, const float scale, vec4_t color)
+static void CG_DrawTeamSpectators(const rectDef_t* rect, const float scale, vec4_t color)
 {
 	if (cg.spectatorLen)
 	{
@@ -554,7 +554,7 @@ void CG_DrawTeamSpectators(const rectDef_t* rect, const float scale, vec4_t colo
 	}
 }
 
-void CG_DrawMedal(const int owner_draw, const rectDef_t* rect, const float scale, vec4_t color, const qhandle_t shader)
+static void CG_DrawMedal(const int owner_draw, const rectDef_t* rect, const float scale, vec4_t color, const qhandle_t shader)
 {
 	const score_t* score = &cg.scores[cg.selectedScore];
 	float value = 0;
@@ -859,7 +859,7 @@ CG_HideTeamMenus
 ==================
 
 */
-void CG_HideTeamMenu()
+static void CG_HideTeamMenu()
 {
 	Menus_CloseByName("teamMenu");
 	Menus_CloseByName("getMenu");
@@ -871,7 +871,7 @@ CG_ShowTeamMenus
 ==================
 
 */
-void CG_ShowTeamMenu()
+static void CG_ShowTeamMenu()
 {
 	Menus_OpenByName("teamMenu");
 }
@@ -932,7 +932,7 @@ void CG_KeyEvent(const int key, const qboolean down)
 	}
 }
 
-int CG_clientNumFromName(const char* p)
+static int CG_clientNumFromName(const char* p)
 {
 	for (int i = 0; i < cgs.maxclients; i++)
 	{

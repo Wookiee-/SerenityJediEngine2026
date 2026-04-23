@@ -2838,7 +2838,7 @@ void CL_Init(void)
 	//
 	// register our variables
 	//
-	cl_noprint = Cvar_Get("cl_noprint", "1", 0);
+	cl_noprint = Cvar_Get("cl_noprint", "0", 0);
 	cl_motd = Cvar_Get("cl_motd", "1", CVAR_ARCHIVE_ND,
 		"Display welcome message from master server on the bottom of connection screen");
 	cl_motdServer[0] = Cvar_Get("cl_motdServer1", UPDATE_SERVER_NAME, 0);
@@ -3621,7 +3621,7 @@ void CL_GetPing(const int n, char* buf, const int buflen, int* pingtime)
 		}
 	}
 
-	CL_SetServerInfoByAddress(cl_pinglist[n].adr, nullptr, 0);
+	CL_SetServerInfoByAddress(cl_pinglist[n].adr, cl_pinglist[n].info, cl_pinglist[n].time);
 
 	*pingtime = time;
 }

@@ -426,4 +426,5 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICECHAT_DEATHINSULT		"death_insult"			// you just killed me
 #define VOICECHAT_KILLGAUNTLET		"kill_gauntlet"			// I just killed you with the gauntlet
 #define VOICECHAT_PRAISE			"praise"				// you did something good
+
 #endif // MENUDEF_H

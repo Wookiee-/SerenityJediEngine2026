@@ -57,7 +57,7 @@ extern void CG_AddSaberBlade(const centity_t* cent, centity_t* scent, int render
 	vec3_t origin, vec3_t angles);
 extern void CG_CheckSaberInWater(const centity_t* cent,
 	const centity_t* scent,
-	const int saber_num,
+	const int saberNum,
 	const int modelIndex,
 	vec3_t origin,
 	vec3_t angles);

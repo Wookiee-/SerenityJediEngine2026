@@ -1332,8 +1332,17 @@ static void ClientTimerActions(gentity_t* ent, const int msec)
 			ent->client->ps.saberBlockingTime < level.time &&
 			ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
 		{
-			if (!(ent->client->ps.ManualBlockingFlags & (1 << HOLDINGBLOCK)))
-				WP_SaberFatigueRegenerate(1);
+			if (!(client->ps.ManualBlockingFlags & 1 << HOLDINGBLOCK))
+			{
+				if (client->ps.saberFatigueChainCount > MISHAPLEVEL_HUDFLASH)
+				{
+					WP_SaberFatigueRegenerate(2);
+				}
+				else
+				{
+					WP_SaberFatigueRegenerate(1);
+				}
+			}
 		}
 		/* ---------------------------------------------------------
 		   SABER FATIGUE REGEN (bots)
@@ -1350,7 +1359,12 @@ static void ClientTimerActions(gentity_t* ent, const int msec)
 			ent->client->ps.saberBlockingTime < level.time &&
 			ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
 		{
-			WP_SaberFatigueRegenerate(1);
+			// Half-speed regeneration:
+			// Regenerate 1 point every 2 frames instead of every frame.
+			if ((level.time & 1) == 0)  // even frame ? regen
+			{
+				WP_SaberFatigueRegenerate(1);
+			}
 		}
 
 		/* ---------------------------------------------------------
@@ -1359,7 +1373,12 @@ static void ClientTimerActions(gentity_t* ent, const int msec)
 		if ((ent->r.svFlags & SVF_BOT) &&
 			ent->client->ps.fd.blockPoints < BLOCK_POINTS_MAX)
 		{
-			ent->client->ps.fd.blockPoints++;
+			// Half-speed regeneration:
+			// Regenerate 1 point every 2 frames instead of every frame.
+			if ((level.time & 1) == 0)  // even frame ? regen
+			{
+				client->ps.fd.blockPoints++;
+			}
 		}
 
 		/* ---------------------------------------------------------

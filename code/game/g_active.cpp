@@ -177,6 +177,8 @@ extern qboolean PM_InAmputateMove(int anim);
 void ClientEndPowerUps(const gentity_t* ent);
 extern qboolean PM_Dyinganim(const playerState_t* ps);
 extern int IsPressingKickButton(const gentity_t* self);
+extern qboolean NPC_Should_Block(const gentity_t* npc);
+extern qboolean Manual_NPCSaberblocking(const gentity_t* defender);
 
 static int G_FindLookItem(gentity_t* self)
 {
@@ -1971,8 +1973,17 @@ static void ClientTimerActions(gentity_t* ent, const int msec)
 			client->ps.saberBlockingTime < level.time &&
 			client->ps.groundEntityNum != ENTITYNUM_NONE)
 		{
-			if (!(client->ps.ManualBlockingFlags & (1 << HOLDINGBLOCK)))
-				WP_SaberFatigueRegenerate(1);
+			if (!(client->ps.ManualBlockingFlags & 1 << HOLDINGBLOCK))
+			{
+				if (client->ps.saberFatigueChainCount > MISHAPLEVEL_HUDFLASH)
+				{
+					WP_SaberFatigueRegenerate(2);
+				}
+				else
+				{
+					WP_SaberFatigueRegenerate(1);
+				}
+			}
 		}
 		/* ---------------------------------------------------------
 		   SABER FATIGUE REGEN (NPCs)
@@ -1990,7 +2001,12 @@ static void ClientTimerActions(gentity_t* ent, const int msec)
 			client->ps.saberBlockingTime < level.time &&
 			client->ps.groundEntityNum != ENTITYNUM_NONE)
 		{
-			WP_SaberFatigueRegenerate(1);
+			// Half-speed regeneration:
+			// Regenerate 1 point every 2 frames instead of every frame.
+			if ((level.time & 1) == 0)  // even frame → regen
+			{
+				WP_SaberFatigueRegenerate(1);
+			}
 		}
 
 		/* ---------------------------------------------------------
@@ -2006,7 +2022,12 @@ static void ClientTimerActions(gentity_t* ent, const int msec)
 				!PM_SaberInBrokenParry(client->ps.saber_move) &&
 				client->ps.saberBlockingTime < level.time)
 			{
-				client->ps.blockPoints++;
+				// Half-speed regeneration:
+				// Regenerate 1 point every 2 frames instead of every frame.
+				if ((level.time & 1) == 0)  // even frame → regen
+				{
+					client->ps.blockPoints++;
+				}
 			}
 		}
 
@@ -8232,6 +8253,56 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 	else
 	{
 		client->ps.ManualBlockingFlags &= ~(1 << MBF_MELEEDODGE);
+	}
+
+	// NPC-only logic (no players, no player-controlled entities)
+	if (ent->s.clientNum >= MAX_CLIENTS && G_ControlledByPlayer(ent) == qfalse)
+	{
+		// Safety: must have a client
+		if (client == NULL)
+		{
+			return;
+		}
+
+		// Unified block stance logic
+		if (NPC_Should_Block(ent) == qtrue)
+		{
+			// Activate stance flag if not already active
+			if ((client->ps.ManualBlockingFlags & (1 << MBF_NPCBLOCKSTANCE)) == 0)
+			{
+				client->ps.ManualBlockingFlags |= (1 << MBF_NPCBLOCKSTANCE);
+
+				if (d_combatinfo->integer != 0)
+				{
+					Com_Printf(S_COLOR_ORANGE "NPC MANUAL BLOCK activated (NPC_Should_Block)\n");
+				}
+			}
+		}
+		else
+		{
+			// Ensure stance flag is OFF
+			client->ps.ManualBlockingFlags &= ~(1 << MBF_NPCBLOCKSTANCE);
+		}
+
+		// Saber blocking flag (unchanged logic, cleaned)
+		if (Manual_NPCSaberblocking(ent) == qtrue)
+		{
+			if ((client->ps.ManualBlockingFlags & (1 << MBF_NPCBLOCKING)) == 0)
+			{
+				client->ps.ManualBlockingFlags |= (1 << MBF_NPCBLOCKING);
+				client->ps.userInt3 |= (1 << FLAG_NPCBLOCKING);
+
+				if (d_combatinfo->integer != 0)
+				{
+					Com_Printf(S_COLOR_ORANGE "NPC MANUAL BLOCK activated (Manual_NPCSaberblocking)\n");
+				}
+			}
+		}
+		else
+		{
+			client->ps.ManualBlockingFlags &= ~(1 << MBF_NPCBLOCKING);
+			client->ps.userInt3 &= ~(1 << FLAG_NPCBLOCKING);
+		}
 	}
 
 	if ((ent->NPC || ent->s.clientNum >= MAX_CLIENTS && !G_ControlledByPlayer(ent)) &&

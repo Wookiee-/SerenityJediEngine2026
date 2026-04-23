@@ -12985,6 +12985,32 @@ static int Fatigue_SaberAttack()
 //Add Fatigue for all the sabermoves.
 extern qboolean PM_KnockAwayStaffAndDuels(int move);
 
+static void PM_SaberFatigue(playerState_t* ps, const int new_move)
+{
+	if (ps->saber_move != new_move)
+	{//wasn't playing that attack before
+		if (PM_SaberInAttackPure(new_move))
+		{//simple saber attack
+			PM_AddBlockFatigue(ps, Fatigue_SaberAttack());
+		}
+		else if (PM_SaberInTransition(new_move) && pm->ps->userInt3 & 1 << FLAG_ATTACKFAKE)
+		{//attack fakes cost FP as well
+			if (ps->saberAnimLevel == SS_DUAL)
+			{//dual sabers don't have transition/FP costs.
+			}
+			else
+			{//single sabers
+				if (pm->ps->saberFatigueChainCount < MISHAPLEVEL_MAX)
+				{
+					pm->ps->saberFatigueChainCount++;
+				}
+			}
+		}
+	}
+
+	return;
+}
+
 static void PM_NPCFatigue(playerState_t* ps, const int new_move)
 {
 	if (ps->saber_move != new_move)
@@ -12993,7 +13019,7 @@ static void PM_NPCFatigue(playerState_t* ps, const int new_move)
 		if (PM_KnockAwayStaffAndDuels(new_move))
 		{
 			//simple saber attack
-			PM_AddBlockFatigue(ps, Fatigue_SaberAttack());
+			PM_AddBlockFatigue(ps, FATIGUE_AUTOSABERDEFENSE);
 		}
 		else if (PM_KnockawayForParry(new_move))
 		{
@@ -13015,7 +13041,10 @@ static void PM_NPCFatigue(playerState_t* ps, const int new_move)
 			else
 			{
 				//single sabers
-				PM_AddBlockFatigue(ps, Fatigue_SaberAttack());
+				if (pm->ps->saberFatigueChainCount < MISHAPLEVEL_MAX)
+				{
+					pm->ps->saberFatigueChainCount++;
+				}
 			}
 		}
 	}
@@ -13726,6 +13755,7 @@ void PM_SetSaberMove(saber_moveName_t new_move)
 		{
 			if (pm->gent && (pm->gent->s.number < MAX_CLIENTS || G_ControlledByPlayer(pm->gent)))
 			{
+				PM_SaberFatigue(pm->ps, new_move); //drain blockpoints low cost
 			}
 			else
 			{

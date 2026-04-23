@@ -132,7 +132,6 @@ static qboolean enemy_in_striking_range = qfalse;
 static int jediSpeechDebounceTime[TEAM_NUM_TEAMS];
 extern void Boba_ChangeWeapon(int wp);
 static qboolean Jedi_SaberBlock();
-static qboolean Jedi_AttackDecide(int enemy_dist);
 extern void add_npc_block_point_bonus(const gentity_t* self);
 extern qboolean NPC_IsAlive(const gentity_t* self, const gentity_t* npc);
 extern void WP_DeactivateLightSaber(const gentity_t* self);
@@ -3533,7 +3532,7 @@ static void jedi_combat_distance(const int enemy_dist)
 	}
 }
 
-static qboolean Jedi_Strafe(const int strafe_time_min, const int strafe_time_max, const int next_strafe_time_min,
+static qboolean jedi_strafe(const int strafe_time_min, const int strafe_time_max, const int next_strafe_time_min,
 	const int next_strafe_time_max, const qboolean walking)
 {
 	if (Jedi_CultistDestroyer(NPC))
@@ -6363,7 +6362,7 @@ static void Jedi_EvasionSaber(vec3_t enemy_movedir, const float enemy_dist, vec3
 				break;
 			default:
 				//Evade!
-				if (!Q_irand(0, 5) || !Jedi_Strafe(300, 1000, 0, 1000, qfalse))
+				if (!Q_irand(0, 5) || !jedi_strafe(300, 1000, 0, 1000, qfalse))
 				{
 					if (Jedi_DecideKick()
 						&& G_CanKickEntity(NPC, NPC->enemy)
@@ -6567,33 +6566,7 @@ gentity_t* jedi_find_enemy_in_cone(const gentity_t* self, gentity_t* fallback, c
 		// --- PVS check ---
 		if (gi.inPVS(check->currentOrigin, self->currentOrigin) == qfalse)
 		{
-			if (g_spskill->integer >= 1)
-			{
-				const float range = (g_npc_is_smart_range != NULL)
-					? static_cast<float>(g_npc_is_smart_range->integer)
-					: 3500.0f;
-
-				const float dist_sq = static_cast<float>(DistanceSquared(self->currentOrigin, check->currentOrigin));
-
-				if (dist_sq <= range * range)
-				{
-					// Generate a suspicious sight event so NPCs can react even without PVS/LOS
-					vec3_t sightPos;
-					VectorCopy(self->currentOrigin, sightPos);
-
-					AddSightEvent(check, sightPos, range, AEL_SUSPICIOUS, 0.0f);
-
-					// Fall through and allow further processing
-				}
-				else
-				{
-					continue;
-				}
-			}
-			else
-			{
-				continue;
-			}
+			continue;
 		}
 
 		// --- Direction + distance ---
@@ -6732,7 +6705,7 @@ void NPC_EvasionSaber()
 	}
 }
 
-extern float WP_SpeedOfMissileForWeapon(int wp, qboolean alt_fire);
+extern float WP_SpeedOfMissileForWeapon(const int wp, const qboolean alt_fire);
 
 static void Jedi_FaceEnemy(const qboolean doPitch)
 {
@@ -7195,7 +7168,7 @@ static void Jedi_CombatTimersUpdate(const int enemy_dist)
 			{
 				if (!Q_irand(0, 4))
 				{//start a strafe
-					if (Jedi_Strafe(1000, 3000, 0, 4000, qtrue))
+					if (jedi_strafe(1000, 3000, 0, 4000, qtrue))
 					{
 						if (d_JediAI->integer)
 						{
@@ -8863,42 +8836,10 @@ static qboolean Jedi_CheckAmbushPlayer()
 	if (NPC->client->ps.powerups[PW_CLOAKED] || g_crosshairEntNum != NPC->s.number)
 	{
 		//if I'm not cloaked and the player's crosshair is on me, I will wake up, otherwise do this stuff down here...
-		if (gi.inPVS(player->currentOrigin, NPC->currentOrigin) == qfalse)
+		if (!gi.inPVS(player->currentOrigin, NPC->currentOrigin))
 		{
-			// Allow "suspicious" fallback if configured
-			if (g_spskill->integer >= 1)
-			{
-				const float range = (g_npc_is_smart_range != NULL)
-					? (float)g_npc_is_smart_range->integer
-					: 3500.0f;
-
-				const float dist_sq = (float)DistanceSquared(player->currentOrigin, NPC->currentOrigin);
-
-				if (dist_sq <= range * range)
-				{
-					// Generate a suspicious sight event
-					vec3_t sightPos;
-					VectorCopy(NPC->currentOrigin, sightPos);
-
-					AddSightEvent(
-						player,        // entity being suspiciously observed
-						sightPos,      // MUST be non-const float[3]
-						range,
-						AEL_SUSPICIOUS,
-						0.0f
-					);
-
-					// Continue ambush evaluation
-				}
-				else
-				{
-					return qfalse;
-				}
-			}
-			else
-			{
-				return qfalse;
-			}
+			//must be in same room
+			return qfalse;
 		}
 		if (!NPC->client->ps.powerups[PW_CLOAKED])
 		{
@@ -8981,213 +8922,174 @@ Jedi_Patrol
 -------------------------
 */
 
-static void Jedi_Patrol(void)
+static void Jedi_Patrol()
 {
 	NPC->client->ps.saberBlocked = BLOCKED_NONE;
 
-	// AMBUSH WAITING STATE
-	if (Jedi_WaitingAmbush(NPC) == qtrue)
+	if (Jedi_WaitingAmbush(NPC))
 	{
-		NPC_SetAnim(NPC, SETANIM_BOTH, BOTH_CEILING_CLING,
-			SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-
-		if ((NPCInfo->scriptFlags & SCF_LOOK_FOR_ENEMIES) != 0)
+		//hiding on the ceiling
+		NPC_SetAnim(NPC, SETANIM_BOTH, BOTH_CEILING_CLING, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+		if (NPCInfo->scriptFlags & SCF_LOOK_FOR_ENEMIES)
 		{
-			if (Jedi_CheckAmbushPlayer() == qtrue ||
-				Jedi_CheckDanger() == qtrue)
+			//look for enemies
+			if (Jedi_CheckAmbushPlayer() || Jedi_CheckDanger())
 			{
+				//found him!
 				Jedi_Ambush(NPC);
 				NPC_UpdateAngles(qtrue, qtrue);
 				return;
 			}
 		}
 	}
-	else if ((NPCInfo->scriptFlags & SCF_LOOK_FOR_ENEMIES) != 0)
+	else if (NPCInfo->scriptFlags & SCF_LOOK_FOR_ENEMIES)
 	{
-		// NORMAL PATROL ENEMY SCAN
-		gentity_t* best_enemy = NULL;
+		//look for enemies
+		gentity_t* best_enemy = nullptr;
 		float best_enemy_dist = Q3_INFINITE;
-
 		for (int i = 0; i < ENTITYNUM_WORLD; i++)
 		{
 			gentity_t* enemy = &g_entities[i];
-
-			if (enemy == NULL || enemy->client == NULL)
+			if (enemy && enemy->client && NPC_ValidEnemy(enemy))
 			{
-				continue;
-			}
-			if (NPC_ValidEnemy(enemy) == qfalse)
-			{
-				continue;
-			}
-
-			//
-			// PVS CHECK WITH OPTIONAL INVESTIGATION FALLBACK
-			//
-			if (gi.inPVS(NPC->currentOrigin, enemy->currentOrigin) == qfalse)
-			{
-				if (g_spskill->integer >= 1)
+				if (gi.inPVS(NPC->currentOrigin, enemy->currentOrigin))
 				{
-					const float range = (g_npc_is_smart_range != NULL)
-						? (float)g_npc_is_smart_range->integer
-						: 3500.0f;
-
-					const float dist_sq = (float)DistanceSquared(NPC->currentOrigin, enemy->currentOrigin);
-
-					if (dist_sq <= range * range)
+					//we could potentially see him
+					const float enemy_dist = DistanceSquared(NPC->currentOrigin, enemy->currentOrigin);
+					if (enemy->s.number == 0 || enemy_dist < best_enemy_dist)
 					{
-						vec3_t sightPos;
-						VectorCopy(NPC->currentOrigin, sightPos);
-
-						AddSightEvent(
-							enemy,
-							sightPos,
-							range,
-							AEL_SUSPICIOUS,
-							0.0f
-						);
-
-						// Continue evaluating this enemy
-					}
-					else
-					{
-						continue;
+						if (enemy_dist < 220 * 220 || NPCInfo->investigateCount >= 3 && NPC->client->ps.
+							SaberActive())
+						{
+							G_SetEnemy(NPC, enemy);
+							NPCInfo->stats.aggression = 3;
+							break;
+						}
+						if (enemy->client->ps.saberInFlight && enemy->client->ps.SaberActive())
+						{
+							vec3_t saber_dir2_me;
+							vec3_t saber_move_dir;
+							const gentity_t* saber = &g_entities[enemy->client->ps.saberEntityNum];
+							VectorSubtract(NPC->currentOrigin, saber->currentOrigin, saber_dir2_me);
+							const float saber_dist = VectorNormalize(saber_dir2_me);
+							VectorCopy(saber->s.pos.trDelta, saber_move_dir);
+							VectorNormalize(saber_move_dir);
+							if (DotProduct(saber_move_dir, saber_dir2_me) > 0.5)
+							{
+								//it's heading towards me
+								if (saber_dist < 200)
+								{
+									//incoming!
+									G_SetEnemy(NPC, enemy);
+									NPCInfo->stats.aggression = 3;
+									break;
+								}
+							}
+						}
+						best_enemy_dist = enemy_dist;
+						best_enemy = enemy;
 					}
 				}
-				else
-				{
-					continue;
-				}
-			}
-
-			// Enemy is potentially visible
-			const float enemy_dist = DistanceSquared(NPC->currentOrigin, enemy->currentOrigin);
-
-			if (enemy->s.number == 0 || enemy_dist < best_enemy_dist)
-			{
-				// Close enough or sufficiently investigated
-				if (enemy_dist < (220.0f * 220.0f) ||
-					(NPCInfo->investigateCount >= 3 &&
-						NPC->client->ps.SaberActive() == qtrue))
-				{
-					G_SetEnemy(NPC, enemy);
-					NPCInfo->stats.aggression = 3;
-					break;
-				}
-
-				// Saber throw threat detection
-				if (enemy->client->ps.saberInFlight == qtrue &&
-					enemy->client->ps.SaberActive() == qtrue)
-				{
-					vec3_t saber_dir2_me;
-					vec3_t saber_move_dir;
-
-					const gentity_t* saber = &g_entities[enemy->client->ps.saberEntityNum];
-
-					VectorSubtract(NPC->currentOrigin, saber->currentOrigin, saber_dir2_me);
-					const float saber_dist = VectorNormalize(saber_dir2_me);
-
-					VectorCopy(saber->s.pos.trDelta, saber_move_dir);
-					VectorNormalize(saber_move_dir);
-
-					if (DotProduct(saber_move_dir, saber_dir2_me) > 0.5f &&
-						saber_dist < 200.0f)
-					{
-						G_SetEnemy(NPC, enemy);
-						NPCInfo->stats.aggression = 3;
-						break;
-					}
-				}
-
-				best_enemy_dist = enemy_dist;
-				best_enemy = enemy;
 			}
 		}
-
-		// If no enemy set yet
-		if (NPC->enemy == NULL)
+		if (!NPC->enemy)
 		{
-			if (best_enemy == NULL)
+			//still not mad
+			if (!best_enemy)
 			{
+				//Com_Printf( "(%d) drop agg - no enemy (patrol)\n", level.time );
 				Jedi_AggressionErosion(-1);
+				TIMER_Set(NPC, "DeactivateTime", Q_irand(3000, 6000));
+				//FIXME: what about alerts?  But not if ignore alerts
 			}
 			else
 			{
-				if (NPC_ClearLOS(best_enemy) == qtrue)
+				//have one to consider
+				if (NPC_ClearLOS(best_enemy))
 				{
-					if ((NPCInfo->aiFlags & NPCAI_NO_JEDI_DELAY) != 0)
+					//we have a clear (of architecture) LOS to him
+					if (NPCInfo->aiFlags & NPCAI_NO_JEDI_DELAY)
 					{
-						if (DistanceHorizontalSquared(NPC->currentOrigin, best_enemy->currentOrigin) <
-							(1024.0f * 1024.0f))
+						//just get mad right away
+						if (DistanceHorizontalSquared(NPC->currentOrigin, best_enemy->currentOrigin) < 1024 * 1024)
 						{
 							G_SetEnemy(NPC, best_enemy);
 							NPCInfo->stats.aggression = 20;
 						}
 					}
-					else if (best_enemy->s.number != 0)
+					else if (best_enemy->s.number)
 					{
+						//just attack
 						G_SetEnemy(NPC, best_enemy);
 						NPCInfo->stats.aggression = 3;
 					}
-					else if (NPC->client->NPC_class != CLASS_BOBAFETT &&
-						NPC->client->NPC_class != CLASS_MANDO)
+					else if (NPC->client->NPC_class != CLASS_BOBAFETT && NPC->client->NPC_class != CLASS_MANDO)
 					{
-						// Player detection stages
-						if (TIMER_Done(NPC, "watchTime") == qtrue)
+						//the player, toy with him
+						//get progressively more interested over time
+						if (TIMER_Done(NPC, "watchTime"))
 						{
+							//we want to pick him up in stages
 							if (TIMER_Get(NPC, "watchTime") == -1)
 							{
+								//this is the first time, we'll ignore him for a couple seconds
 								TIMER_Set(NPC, "watchTime", Q_irand(3000, 5000));
 								goto finish;
 							}
-
-							if (NPCInfo->investigateCount == 0)
+							//okay, we've ignored him, now start to notice him
+							if (!NPCInfo->investigateCount)
 							{
-								G_AddVoiceEvent(NPC, Q_irand(EV_JDETECTED1, EV_JDETECTED3), 3000);
+								if (!npc_is_dark_jedi(NPC))
+								{
+									G_AddVoiceEvent(NPC, Q_irand(EV_SUSPICIOUS1, EV_SUSPICIOUS5), 2000);
+								}
+								else
+								{
+									G_AddVoiceEvent(NPC, Q_irand(EV_JDETECTED1, EV_JDETECTED3), 10000);
+								}
 							}
-
 							NPCInfo->investigateCount++;
 							TIMER_Set(NPC, "watchTime", Q_irand(4000, 10000));
 						}
-
-						if (best_enemy_dist < (440.0f * 440.0f) ||
-							NPCInfo->investigateCount >= 2)
+						//while we're waiting, do what we need to do
+						if (best_enemy_dist < 440 * 440 || NPCInfo->investigateCount >= 2)
 						{
+							//stage three: keep facing him
 							NPC_FaceEntity(best_enemy, qtrue);
-
-							if (best_enemy_dist < (330.0f * 330.0f))
+							if (best_enemy_dist < 330 * 330)
 							{
-								if (NPC->client->ps.saberInFlight == qfalse)
+								//stage four: turn on the saber
+								if (!NPC->client->ps.saberInFlight)
 								{
 									NPC->client->ps.SaberActivate();
 								}
 							}
 						}
-						else if (best_enemy_dist < (550.0f * 550.0f) ||
-							NPCInfo->investigateCount == 1)
+						else if (best_enemy_dist < 550 * 550 || NPCInfo->investigateCount == 1)
 						{
-							if (TIMER_Done(NPC, "watchTime") == qtrue)
+							//stage two: stop and face him every now and then
+							if (TIMER_Done(NPC, "watchTime"))
 							{
 								NPC_FaceEntity(best_enemy, qtrue);
 							}
 						}
 						else
 						{
+							//stage one: look at him.
 							NPC_SetLookTarget(NPC, best_enemy->s.number, 0);
 						}
 					}
 				}
-				else if (TIMER_Done(NPC, "watchTime") == qtrue)
+				else if (TIMER_Done(NPC, "watchTime"))
 				{
+					//haven't seen him in a bit, clear the lookTarget
 					NPC_ClearLookTarget(NPC);
 				}
 			}
 		}
 	}
-
 finish:
-
-	// Move toward patrol goal
+	//If we have somewhere to go, then do that
 	if (UpdateGoal())
 	{
 		ucmd.buttons |= BUTTON_WALKING;
@@ -9196,10 +9098,10 @@ finish:
 
 	NPC_UpdateAngles(qtrue, qtrue);
 
-	if (NPC->enemy != NULL)
+	if (NPC->enemy)
 	{
-		NPCInfo->enemyCheckDebounceTime =
-			level.time + Q_irand(3000, 10000);
+		//just picked one up
+		NPCInfo->enemyCheckDebounceTime = level.time + Q_irand(3000, 10000);
 	}
 }
 
@@ -9815,6 +9717,25 @@ static void JediSetAttackCooldown(gentity_t* self, int ms)
 // =====================
 // Kata Helpers
 // =====================
+
+static qboolean MoveIsKata(saber_moveName_t move)
+{
+	switch (move)
+	{
+	case LS_SPINATTACK:
+	case LS_SPINATTACK_DUAL:
+	case LS_SPINATTACK_ALORA:
+	case LS_STAFF_SOULCAL:
+	case LS_A_JUMP_T__B_:
+	case LS_A_BACKFLIP_ATK:
+	case LS_A_FLIP_SLASH:
+	case LS_A_LUNGE:
+		return qtrue;
+
+	default:
+		return qfalse;
+	}
+}
 
 static qboolean Jedi_CanUseKata(gentity_t* self)
 {

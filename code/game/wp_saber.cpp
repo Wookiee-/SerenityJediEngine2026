@@ -257,7 +257,7 @@ extern void CGCam_BlockShakeSP(float intensity, int duration);
 static qhandle_t repulseLoopSound = 0;
 extern void Boba_FlyStop(gentity_t* self);
 extern void Jetpack_Off(const gentity_t* ent);
-extern void sab_beh_saber_should_be_disarmed_blocker(gentity_t* blocker, int saberNum);
+extern void SabBeh_SaberShouldBeDisarmedBlocker(gentity_t* blocker, int saberNum);
 extern void G_StasisMissile(gentity_t* ent, gentity_t* missile);
 void G_Beskar_Attack_Bounce(const gentity_t* self, gentity_t* other);
 extern void jet_fly_stop(gentity_t* self);
@@ -4047,7 +4047,7 @@ static void wp_saber_knockaway(const gentity_t* attacker, trace_t* tr)
 	}
 }
 
-qboolean g_in_cinematic_saber_anim(const gentity_t* self)
+qboolean G_InCinematicSaberAnim(const gentity_t* self)
 {
 	if (self->NPC
 		&& self->NPC->behaviorState == BS_CINEMATIC
@@ -4330,7 +4330,7 @@ static qboolean wp_saber_damage_for_trace(const int ignore, vec3_t start, vec3_t
 					collision_dist = SABER_COLLISION_DIST + 6 + g_spskill->integer * 4;
 				}
 			}
-			if (g_in_cinematic_saber_anim(owner) && g_in_cinematic_saber_anim(attacker))
+			if (G_InCinematicSaberAnim(owner) && G_InCinematicSaberAnim(attacker))
 			{
 				sabers_intersect = qtrue;
 			}
@@ -5499,7 +5499,7 @@ qboolean WP_SaberMBlock(gentity_t* blocker, gentity_t* attacker, const int saber
 	{
 		return qfalse;
 	}
-	if (g_in_cinematic_saber_anim(blocker))
+	if (G_InCinematicSaberAnim(blocker))
 	{
 		return qfalse;
 	}
@@ -5568,7 +5568,7 @@ qboolean WP_SaberParry(gentity_t* blocker, gentity_t* attacker, const int saberN
 	{
 		return qfalse;
 	}
-	if (g_in_cinematic_saber_anim(blocker))
+	if (G_InCinematicSaberAnim(blocker))
 	{
 		return qfalse;
 	}
@@ -5637,7 +5637,7 @@ qboolean WP_SaberBlockedBounceBlock(gentity_t* blocker, gentity_t* attacker, con
 	{
 		return qfalse;
 	}
-	if (g_in_cinematic_saber_anim(blocker))
+	if (G_InCinematicSaberAnim(blocker))
 	{
 		return qfalse;
 	}
@@ -5707,7 +5707,7 @@ qboolean WP_SaberFatiguedParry(gentity_t* blocker, gentity_t* attacker, const in
 	{
 		return qfalse;
 	}
-	if (g_in_cinematic_saber_anim(blocker))
+	if (G_InCinematicSaberAnim(blocker))
 	{
 		return qfalse;
 	}
@@ -6648,7 +6648,7 @@ static void WP_SaberDamageTrace(gentity_t* ent, int saberNum, int blade_num)
 		{
 			return;
 		}
-		if (g_in_cinematic_saber_anim(ent))
+		if (G_InCinematicSaberAnim(ent))
 		{
 			base_damage = 0.1f;
 		}
@@ -6856,7 +6856,7 @@ static void WP_SaberDamageTrace(gentity_t* ent, int saberNum, int blade_num)
 			&& !ent->client->ps.saberLockTime
 			&& saberNum == 0
 			&& blade_num == 0
-			&& !g_in_cinematic_saber_anim(ent))
+			&& !G_InCinematicSaberAnim(ent))
 		{
 			//only do once - for first blade
 			trace_t trace;
@@ -6890,7 +6890,7 @@ static void WP_SaberDamageTrace(gentity_t* ent, int saberNum, int blade_num)
 					&& !PM_InKnockDown(&traceEnt->client->ps)
 					&& !PM_LockedAnim(traceEnt->client->ps.legsAnim)
 					&& !PM_LockedAnim(traceEnt->client->ps.torsoAnim)
-					&& !g_in_cinematic_saber_anim(traceEnt))
+					&& !G_InCinematicSaberAnim(traceEnt))
 				{
 					//enemy client, push them away
 					if (!traceEnt->client->ps.saberLockTime
@@ -7133,7 +7133,7 @@ static void WP_SaberDamageTrace(gentity_t* ent, int saberNum, int blade_num)
 	}
 
 	if ((saberHitFraction < 1.0f || sabersCrossed >= 0 && sabersCrossed <= 32.0f) && (ent->client->ps.weaponstate ==
-		WEAPON_FIRING || ent->client->ps.saberInFlight || g_in_cinematic_saber_anim(ent)))
+		WEAPON_FIRING || ent->client->ps.saberInFlight || G_InCinematicSaberAnim(ent)))
 	{
 		// The saber (in-hand) hit another saber, mano.
 		qboolean in_flight_saber_blocked = qfalse;
@@ -7492,7 +7492,7 @@ static void WP_SaberDamageTrace(gentity_t* ent, int saberNum, int blade_num)
 								if (hit_owner->client->ps.blockPoints < BLOCKPOINTS_FATIGUE)
 								{
 									//Low points = bad blocks
-									sab_beh_saber_should_be_disarmed_blocker(hit_owner, saberNum);
+									SabBeh_SaberShouldBeDisarmedBlocker(hit_owner, saberNum);
 									WP_BlockPointsRegenerate_over_ride(hit_owner, BLOCKPOINTS_TEN);
 								}
 								else
@@ -9366,7 +9366,19 @@ static qboolean WP_SaberLaunch(gentity_t* self, gentity_t* saber, const qboolean
 	}
 	else
 	{
-		saber->s.apos.trDelta[0] = 600;
+		switch (self->client->ps.forcePowerLevel[FP_SABERTHROW])
+		{
+		default:
+		case FORCE_LEVEL_1:
+			saber->s.apos.trDelta[0] = 600;
+			break;
+		case FORCE_LEVEL_2:
+			saber->s.apos.trDelta[0] = 800;
+			break;
+		case FORCE_LEVEL_3:
+			saber->s.apos.trDelta[0] = 1000;
+			break;
+		}
 	}
 
 	//Take it out of my hand
@@ -11414,6 +11426,190 @@ qboolean manual_melee_dodging(const gentity_t* defender) //Is this guy dodgeing 
 		return qtrue;
 	}
 	return qfalse;
+}
+
+qboolean Manual_NPCSaberblocking(const gentity_t* defender) //Is this guy blocking or not?
+{
+	if (defender->s.number < MAX_CLIENTS || G_ControlledByPlayer(defender))
+	{
+		return qfalse;
+	}
+
+	if (defender->NPC && !G_ControlledByPlayer(defender) && defender->client->ps.weapon != WP_SABER)
+	{
+		return qfalse;
+	}
+
+	if (BG_IsAlreadyinTauntAnim(defender->client->ps.torsoAnim))
+	{
+		return qfalse;
+	}
+
+	if (defender->s.eFlags & EF_FORCE_DRAINED
+		|| defender->s.eFlags & EF_FORCE_GRIPPED)
+	{
+		return qfalse;
+	}
+
+	if (PM_SaberInKata(static_cast<saber_moveName_t>(defender->client->ps.saber_move)))
+	{
+		return qfalse;
+	}
+
+	// No blocking during cinematic camera
+	if (in_camera == qtrue)
+	{
+		return qfalse;
+	}
+
+	if (defender->health <= 1
+		|| BG_InKnockDown(defender->client->ps.legsAnim)
+		|| BG_InKnockDown(defender->client->ps.torsoAnim)
+		|| PM_InRoll(&defender->client->ps)
+		|| PM_SuperBreakLoseAnim(defender->client->ps.torsoAnim)
+		|| PM_SuperBreakWinAnim(defender->client->ps.torsoAnim)
+		|| pm_saber_in_special_attack(defender->client->ps.torsoAnim)
+		|| PM_SaberInMassiveBounce(defender->client->ps.torsoAnim)
+		|| PM_SaberInBashedAnim(defender->client->ps.torsoAnim)
+		|| PM_InSpecialJump(defender->client->ps.torsoAnim)
+		|| defender->client->ps.groundEntityNum == ENTITYNUM_NONE)
+	{
+		return qfalse;
+	}
+
+	if (defender->client->ps.weapon != WP_SABER
+		|| defender->client->ps.weapon == WP_NONE
+		|| defender->client->ps.weapon == WP_MELEE) //saber not here
+	{
+		return qfalse;
+	}
+
+	if (defender->client->ps.weapon == WP_SABER && !defender->client->ps.SaberActive())
+	{
+		//saber not currently in use or available, attempt to use our hands instead.
+		return qfalse;
+	}
+
+	if (defender->client->ps.weapon == WP_SABER && defender->client->ps.saberInFlight)
+	{
+		//saber not currently in use or available, attempt to use our hands instead.
+		return qfalse;
+	}
+
+	if (PM_SaberInMassiveBounce(defender->client->ps.torsoAnim) || PM_SaberInBashedAnim(defender->client->ps.torsoAnim))
+	{
+		return qfalse;
+	}
+
+	if (SaberAttacking(defender) && defender->client->ps.saberFatigueChainCount < MISHAPLEVEL_HUDFLASH)
+	{
+		//bots just randomly parry to make up for them not intelligently parrying.
+		return qtrue;
+	}
+
+	return qtrue;
+}
+
+qboolean NPC_Should_Block(const gentity_t* npc)
+{
+	// Safety
+	if (npc == NULL || npc->client == NULL)
+	{
+		return qfalse;
+	}
+
+	// Players and player‑controlled entities never use NPC block logic
+	if (npc->s.number < MAX_CLIENTS || G_ControlledByPlayer(npc) == qtrue)
+	{
+		return qfalse;
+	}
+
+	// No blocking during cinematic camera
+	if (in_camera == qtrue)
+	{
+		return qfalse;
+	}
+
+	// Must be a saber user
+	if (npc->client->ps.weapon != WP_SABER)
+	{
+		return qfalse;
+	}
+
+	// Saber must be active and not thrown
+	if (npc->client->ps.SaberActive() == qfalse ||
+		npc->client->ps.saberInFlight == qtrue)
+	{
+		return qfalse;
+	}
+
+	// Cannot block while force‑affected
+	if ((npc->s.eFlags & EF_FORCE_DRAINED) ||
+		(npc->s.eFlags & EF_FORCE_GRIPPED))
+	{
+		return qfalse;
+	}
+
+	// Cannot block during taunts
+	if (BG_IsAlreadyinTauntAnim(npc->client->ps.torsoAnim) == qtrue)
+	{
+		return qfalse;
+	}
+
+	// Cannot block during non‑blockable saber attacks
+	if (pm_saber_innonblockable_attack(npc->client->ps.torsoAnim) == qtrue)
+	{
+		return qfalse;
+	}
+
+	// Cannot block while knocked down, rolling, special jumps, massive bounce, etc.
+	if (npc->health <= 1 ||
+		BG_InKnockDown(npc->client->ps.legsAnim) == qtrue ||
+		BG_InKnockDown(npc->client->ps.torsoAnim) == qtrue ||
+		PM_InRoll(&npc->client->ps) == qtrue ||
+		PM_SuperBreakLoseAnim(npc->client->ps.torsoAnim) == qtrue ||
+		PM_SuperBreakWinAnim(npc->client->ps.torsoAnim) == qtrue ||
+		pm_saber_in_special_attack(npc->client->ps.torsoAnim) == qtrue ||
+		PM_SaberInMassiveBounce(npc->client->ps.torsoAnim) == qtrue ||
+		PM_SaberInBashedAnim(npc->client->ps.torsoAnim) == qtrue ||
+		PM_Saberinstab(npc->client->ps.saber_move) == qtrue ||
+		PM_InSpecialJump(npc->client->ps.torsoAnim) == qtrue ||
+		npc->client->ps.groundEntityNum == ENTITYNUM_NONE)
+	{
+		return qfalse;
+	}
+
+	// Must have an enemy to block
+	if (npc->enemy == NULL)
+	{
+		return qfalse;
+	}
+
+	// Distance‑based block stance logic
+	const float distSq = DistanceSquared(npc->currentOrigin, npc->enemy->currentOrigin);
+
+	// Tunable thresholds
+	const float BLOCK_ENGAGE_DIST_SQ = 128.0f * 128.0f;   // enter block
+	const float BLOCK_RELEASE_DIST_SQ = 192.0f * 192.0f;   // exit block
+
+	// Current stance flag
+	const qboolean blockActive =
+		((npc->client->ps.ManualBlockingFlags & (1 << MBF_NPCBLOCKSTANCE)) != 0 ? qtrue : qfalse);
+
+	// ENTER BLOCK STANCE
+	if (blockActive == qfalse && distSq <= BLOCK_ENGAGE_DIST_SQ)
+	{
+		return qtrue;
+	}
+
+	// EXIT BLOCK STANCE
+	if (blockActive == qtrue && distSq >= BLOCK_RELEASE_DIST_SQ)
+	{
+		return qfalse;
+	}
+
+	// If already blocking and still within the window → stay blocking
+	return blockActive;
 }
 
 static float wp_block_force_chance(const gentity_t* defender)
@@ -14159,7 +14355,7 @@ void wp_saber_update(gentity_t* self, const usercmd_t* ucmd)
 		minsize = 32.0f;
 
 	// Cinematic fake blocking
-	if (g_in_cinematic_saber_anim(self))
+	if (G_InCinematicSaberAnim(self))
 	{
 		self->client->ps.saberBlocking = BLK_TIGHT;
 
@@ -14262,7 +14458,7 @@ void wp_saber_update(gentity_t* self, const usercmd_t* ucmd)
 			qboolean npcManualBlock = (npcBlocking && controlledNPC) ? qtrue : qfalse;
 			qboolean blockingTime = (self->client->ps.saberBlockingTime > level.time) ? qtrue : qfalse;
 			qboolean attacking = (self->client->ps.weaponTime > 0) ? qtrue : qfalse;
-			qboolean inCinematic = g_in_cinematic_saber_anim(self) ? qtrue : qfalse;
+			qboolean inCinematic = G_InCinematicSaberAnim(self) ? qtrue : qfalse;
 
 			qboolean fullSizeBlockCondition =
 				(!force_block &&

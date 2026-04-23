@@ -109,7 +109,7 @@ extern qboolean G_TryingJumpAttack(const gentity_t* self, const usercmd_t* cmd);
 extern qboolean G_TryingJumpForwardAttack(const gentity_t* self, const usercmd_t* cmd);
 extern qboolean G_TryingLungeAttack(const gentity_t* self, const usercmd_t* cmd);
 extern qboolean G_TryingPullAttack(const gentity_t* self, const usercmd_t* cmd, qboolean am_pulling);
-extern qboolean g_in_cinematic_saber_anim(const gentity_t* self);
+extern qboolean G_InCinematicSaberAnim(const gentity_t* self);
 extern qboolean G_ControlledByPlayer(const gentity_t* self);
 extern qboolean PM_InSaberAnim(int anim);
 extern int g_crosshairEntNum;
@@ -5859,214 +5859,259 @@ void PM_SaberStartTransAnim(const int saberAnimLevel, const int anim, float* ani
 {
 	char buf[128];
 
+	// Read global saber animation speed multiplier
 	gi.Cvar_VariableStringBuffer("g_saberAnimSpeed", buf, sizeof buf);
 	const float saberanimscale = atof(buf);
 
-	if (gent->client->ps.weapon != WP_SABER)
+	// Only sabers use this system
+	if (!gent || !gent->client || gent->client->ps.weapon != WP_SABER)
 	{
 		return;
 	}
 
-	//Base JKA speeds for all modes
+	//======================================================================
+	// 1. Base JKA speeds for all modes
+	//======================================================================
 	if (anim >= BOTH_A1_T__B_ && anim <= BOTH_ROLL_STAB)
 	{
 		if (g_saberAnimSpeed->value != 1.0f)
 		{
 			*animSpeed *= g_saberAnimSpeed->value;
 		}
-		else if (gent && gent->client && gent->client->ps.weapon == WP_SABER)
+		else
 		{
+			// Saber 0
 			if (gent->client->ps.saber[0].animSpeedScale != 1.0f)
 			{
 				*animSpeed *= gent->client->ps.saber[0].animSpeedScale;
 			}
-			if (gent->client->ps.dualSabers && gent->client->ps.saber[1].animSpeedScale != 1.0f)
+
+			// Saber 1 (dual)
+			if (gent->client->ps.dualSabers &&
+				gent->client->ps.saber[1].animSpeedScale != 1.0f)
 			{
 				*animSpeed *= gent->client->ps.saber[1].animSpeedScale;
 			}
 		}
 	}
 
-	if (gent
-		&& gent->client
-		&& gent->client->ps.stats[STAT_WEAPONS] & 1 << WP_SCEPTER
-		&& gent->client->ps.dualSabers
-		&& saberAnimLevel == SS_DUAL
-		&& gent->weaponModel[1])
+	//======================================================================
+	// 2. Scepter dual-saber special case
+	//======================================================================
+	if (gent->client->ps.stats[STAT_WEAPONS] & 1 << WP_SCEPTER &&
+		gent->client->ps.dualSabers &&
+		saberAnimLevel == SS_DUAL &&
+		gent->weaponModel[1])
 	{
 		if (anim >= BOTH_A1_T__B_ && anim <= BOTH_H7_S7_BR)
 		{
-			*animSpeed *= 0.75;
+			*animSpeed *= 0.75f;
 		}
 	}
 
-	if (gent && gent->client && gent->client->ps.forceRageRecoveryTime > level.time)
+	//======================================================================
+	// 3. Rage recovery slows animations
+	//======================================================================
+	if (gent->client->ps.forceRageRecoveryTime > level.time)
 	{
-		//rage recovery
 		if (anim >= BOTH_A1_T__B_ && anim <= BOTH_H1_S1_BR)
 		{
-			//animate slower
-			*animSpeed *= 0.75;
+			*animSpeed *= 0.75f;
 		}
 	}
-	else if (gent && gent->NPC && gent->NPC->rank == RANK_CIVILIAN)
+
+	//======================================================================
+	// 4. Civilian NPCs have slower fast attacks
+	//======================================================================
+	else if (gent->NPC && gent->NPC->rank == RANK_CIVILIAN)
 	{
-		//grunt reborn
 		if (anim >= BOTH_A1_T__B_ && anim <= BOTH_R1_TR_S1)
 		{
-			//his fast attacks are slower
-			if (!PM_SpinningSaberAnim(anim))
+			const qboolean isSpin = PM_SpinningSaberAnim(anim) ? qtrue : qfalse;
+
+			if (!isSpin)
 			{
-				*animSpeed *= 0.75;
+				*animSpeed *= 0.75f;
 			}
 			return;
 		}
 	}
-	else if (gent && gent->client)
+
+	//======================================================================
+	// 5. Lance / Trident saber types slow fast attacks
+	//======================================================================
+	else if (gent->client &&
+		(gent->client->ps.saber[0].type == SABER_LANCE ||
+			gent->client->ps.saber[0].type == SABER_TRIDENT))
 	{
-		if (gent->client->ps.saber[0].type == SABER_LANCE || gent->client->ps.saber[0].type == SABER_TRIDENT)
+		if (anim >= BOTH_A1_T__B_ && anim <= BOTH_R1_TR_S1)
 		{
-			if (anim >= BOTH_A1_T__B_ && anim <= BOTH_R1_TR_S1)
+			const qboolean isSpin = PM_SpinningSaberAnim(anim) ? qtrue : qfalse;
+
+			if (!isSpin)
 			{
-				if (!PM_SpinningSaberAnim(anim))
-				{
-					*animSpeed *= 0.75;
-				}
-				return;
+				*animSpeed *= 0.75f;
 			}
+			return;
 		}
 	}
 
-	if (anim >= BOTH_A1_T__B_ && anim <= BOTH_H7_S7_BR ||
-		anim >= BOTH_T1_BR__R && anim <= BOTH_T1_BL_TL ||
-		anim >= BOTH_T2_BR__R && anim <= BOTH_T2_BL_TL ||
-		anim >= BOTH_T3_BR__R && anim <= BOTH_T3_BL_TL ||
-		anim >= BOTH_T4_BR__R && anim <= BOTH_T4_BL_TL ||
-		anim >= BOTH_T5_BR__R && anim <= BOTH_T5_BL_TL ||
-		anim >= BOTH_T6_BR__R && anim <= BOTH_T6_BL_TL ||
-		anim >= BOTH_T7_BR__R && anim <= BOTH_T7_BL_TL ||
-		anim >= BOTH_S1_S1_T_ && anim <= BOTH_S1_S1_TR ||
-		anim >= BOTH_S2_S1_T_ && anim <= BOTH_S2_S1_TR ||
-		anim >= BOTH_S3_S1_T_ && anim <= BOTH_S3_S1_TR ||
-		anim >= BOTH_S4_S1_T_ && anim <= BOTH_S4_S1_TR ||
-		anim >= BOTH_S5_S1_T_ && anim <= BOTH_S5_S1_TR)
+	if ((anim >= BOTH_A1_T__B_ && anim <= BOTH_H7_S7_BR) ||
+		(anim >= BOTH_T1_BR__R && anim <= BOTH_T1_BL_TL) ||
+		(anim >= BOTH_T2_BR__R && anim <= BOTH_T2_BL_TL) ||
+		(anim >= BOTH_T3_BR__R && anim <= BOTH_T3_BL_TL) ||
+		(anim >= BOTH_T4_BR__R && anim <= BOTH_T4_BL_TL) ||
+		(anim >= BOTH_T5_BR__R && anim <= BOTH_T5_BL_TL) ||
+		(anim >= BOTH_T6_BR__R && anim <= BOTH_T6_BL_TL) ||
+		(anim >= BOTH_T7_BR__R && anim <= BOTH_T7_BL_TL) ||
+		(anim >= BOTH_S1_S1_T_ && anim <= BOTH_S1_S1_TR) ||
+		(anim >= BOTH_S2_S1_T_ && anim <= BOTH_S2_S1_TR) ||
+		(anim >= BOTH_S3_S1_T_ && anim <= BOTH_S3_S1_TR) ||
+		(anim >= BOTH_S4_S1_T_ && anim <= BOTH_S4_S1_TR) ||
+		(anim >= BOTH_S5_S1_T_ && anim <= BOTH_S5_S1_TR))
 	{
-		if (gent && gent->client && gent->client->ps.saberFatigueChainCount >= MISHAPLEVEL_HUDFLASH)
+		if ((fatigued & (1 << FLAG_ATTACKFATIGUE)) != 0)
 		{
-			if (anim != (BOTH_FORCEWALLRELEASE_FORWARD | BOTH_FORCEWALLRUNFLIP_START | BOTH_FORCEWALLRUNFLIP_END | BOTH_JUMPFLIPSTABDOWN | BOTH_JUMPFLIPSLASHDOWN1 | BOTH_LUNGE2_B__T_))
-			{
-				constexpr float fatiguedanimscale = 0.85f;
-				*animSpeed *= fatiguedanimscale;
-			}
-		}
-		else if (fatigued & 1 << FLAG_SLOWBOUNCE)
-		{
-			//slow animation for slow bounces
-			if (PM_BounceAnim(anim))
-			{
-				*animSpeed *= 0.6f;
-			}
-			else if (PM_SaberReturnAnim(anim))
-			{
-				*animSpeed *= 0.8f;
-			}
-		}
-		else if (fatigued & 1 << FLAG_OLDSLOWBOUNCE)
-		{
-			//getting parried slows down your reaction
-			if (PM_BounceAnim(anim) || PM_SaberReturnAnim(anim))
-			{
-				//only apply to bounce and returns since this flag is technically turned off immediately after the animation is set.
-				*animSpeed *= 0.6f;
-			}
-		}
-		else if (fatigued & 1 << FLAG_PARRIED)
-		{
-			//getting parried slows down your reaction
-			if (PM_BounceAnim(anim) || PM_SaberReturnAnim(anim))
-			{
-				*animSpeed *= 0.90f;
-			}
-		}
-		else if (fatigued & 1 << FLAG_BLOCKED)
-		{
-			if (PM_BounceAnim(anim) || PM_SaberReturnAnim(anim))
+			// excludes each anim individually.
+			if (anim != BOTH_FORCEWALLRELEASE_FORWARD &&
+				anim != BOTH_FORCEWALLRUNFLIP_START &&
+				anim != BOTH_FORCEWALLRUNFLIP_END &&
+				anim != BOTH_JUMPFLIPSTABDOWN &&
+				anim != BOTH_JUMPFLIPSLASHDOWN1 &&
+				anim != BOTH_LUNGE2_B__T_)
 			{
 				*animSpeed *= 0.85f;
 			}
 		}
-		else if (fatigued & 1 << FLAG_MBLOCKBOUNCE)
+
+		//==============================================================
+		// 6B. Fatigue: Slow Bounce
+		//==============================================================
+		else if ((fatigued & (1 << FLAG_SLOWBOUNCE)) != 0)
 		{
-			//slow animation for all bounces
-			if (PM_SaberInMassiveBounce(anim))
+			const qboolean isBounce = PM_BounceAnim(anim) ? qtrue : qfalse;
+			const qboolean isReturn = PM_SaberReturnAnim(anim) ? qtrue : qfalse;
+
+			if (isBounce)
+			{
+				*animSpeed *= 0.6f;
+			}
+			else if (isReturn)
+			{
+				*animSpeed *= 0.8f;
+			}
+		}
+
+		//==============================================================
+		// 6C. Fatigue: Old Slow Bounce
+		//==============================================================
+		else if ((fatigued & (1 << FLAG_OLDSLOWBOUNCE)) != 0)
+		{
+			const qboolean isBounce = PM_BounceAnim(anim) ? qtrue : qfalse;
+			const qboolean isReturn = PM_SaberReturnAnim(anim) ? qtrue : qfalse;
+
+			if (isBounce || isReturn)
+			{
+				*animSpeed *= 0.6f;
+			}
+		}
+
+		//==============================================================
+		// 6D. Fatigue: Parried
+		//==============================================================
+		else if ((fatigued & (1 << FLAG_PARRIED)) != 0)
+		{
+			const qboolean isBounce = PM_BounceAnim(anim) ? qtrue : qfalse;
+			const qboolean isReturn = PM_SaberReturnAnim(anim) ? qtrue : qfalse;
+
+			if (isBounce || isReturn)
+			{
+				*animSpeed *= 0.90f;
+			}
+		}
+
+		//==============================================================
+		// 6E. Fatigue: Blocked
+		//==============================================================
+		else if ((fatigued & (1 << FLAG_BLOCKED)) != 0)
+		{
+			const qboolean isBounce = PM_BounceAnim(anim) ? qtrue : qfalse;
+			const qboolean isReturn = PM_SaberReturnAnim(anim) ? qtrue : qfalse;
+
+			if (isBounce || isReturn)
+			{
+				*animSpeed *= 0.85f;
+			}
+		}
+
+		//==============================================================
+		// 6F. Fatigue: Massive Bounce
+		//==============================================================
+		else if ((fatigued & (1 << FLAG_MBLOCKBOUNCE)) != 0)
+		{
+			const qboolean isMassive = PM_SaberInMassiveBounce(anim) ? qtrue : qfalse;
+
+			if (isMassive)
 			{
 				*animSpeed *= 0.5f;
 			}
 		}
-		else if (gent
-			&& gent->client
-			&& gent->client->NPC_class == CLASS_YODA)
+
+		//==============================================================
+		// 6H. Yoda special case
+		//==============================================================
+		else if (gent->client && gent->client->NPC_class == CLASS_YODA)
 		{
-			constexpr float yoda_animscale = 1.25f;
-			*animSpeed *= yoda_animscale;
+			*animSpeed *= 1.25f;
 		}
+
+		//==============================================================
+		// 6I. Saber style scaling
+		//==============================================================
 		else
 		{
-			if (saberAnimLevel == SS_DUAL)
+			switch (saberAnimLevel)
 			{
-				//slow down broken parries
+			case SS_DUAL:
 				if (anim >= BOTH_H6_S6_T_ && anim <= BOTH_H6_S6_BR)
 				{
-					//dual broken parries are 1/3 the frames of the single broken parries
 					*animSpeed *= 0.6f;
 				}
 				else
 				{
-					constexpr float dualanimscale = 0.90f;
-					*animSpeed *= dualanimscale;
+					*animSpeed *= 0.90f;
 				}
-			}
-			else if (saberAnimLevel == SS_STAFF)
-			{
+				break;
+
+			case SS_STAFF:
 				if (anim >= BOTH_H7_S7_T_ && anim <= BOTH_H7_S7_BR)
 				{
-					//doubles are 1/2 the frames of single broken parries
 					*animSpeed *= 0.8f;
 				}
 				else
 				{
-					constexpr float staffanimscale = 0.90f;
-					*animSpeed *= staffanimscale;
+					*animSpeed *= 0.90f;
 				}
-			}
-			else if (saberAnimLevel == SS_FAST)
-			{
-				constexpr float blueanimscale = 1.0f;
-				*animSpeed *= blueanimscale;
-			}
-			else if (saberAnimLevel == SS_MEDIUM)
-			{
-				constexpr float realisticanimscale = 0.98f;
-				*animSpeed *= realisticanimscale;
-			}
-			else if (saberAnimLevel == SS_STRONG)
-			{
-				constexpr float redanimscale = 1.0f;
-				*animSpeed *= redanimscale;
-			}
-			else if (saberAnimLevel == SS_DESANN)
-			{
-				constexpr float heavyanimscale = 1.0f;
-				*animSpeed *= heavyanimscale;
-			}
-			else if (saberAnimLevel == SS_TAVION)
-			{
-				constexpr float tavionanimscale = 0.9f;
-				*animSpeed *= tavionanimscale;
-			}
-			else
-			{
+				break;
+
+			case SS_FAST:
+				*animSpeed *= 1.1f;
+				break;
+			case SS_MEDIUM:
+				*animSpeed *= 1.0f;
+				break;
+			case SS_STRONG:
+			case SS_DESANN:
+				*animSpeed *= 0.95f;
+				break;
+
+			case SS_TAVION:
+				*animSpeed *= 0.9f;
+				break;
+
+			default:
 				*animSpeed *= saberanimscale;
+				break;
 			}
 		}
 	}
@@ -7262,7 +7307,7 @@ static void PM_TorsoAnimLightsaber()
 				// Idle for Lightsaber
 				if (pm->gent && pm->gent->client)
 				{
-					if (!g_in_cinematic_saber_anim(pm->gent))
+					if (!G_InCinematicSaberAnim(pm->gent))
 					{
 						pm->gent->client->ps.SaberDeactivateTrail(0);
 					}

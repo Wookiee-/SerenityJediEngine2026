@@ -95,6 +95,10 @@ extern void WP_BlockPointsDrain(const gentity_t* self, int fatigue);
 extern void CGCam_BlockShakeSP(float intensity, int duration);
 extern void G_KnockOver(gentity_t* self, gentity_t* attacker, const vec3_t push_dir, float strength, const qboolean breakSaberLock);
 extern qboolean WP_SaberFatiguedParryDirection(gentity_t* self, vec3_t hitloc, qboolean missileBlock);
+extern qboolean PM_CrouchAnim(const int anim);
+extern void G_Knockdown(gentity_t* self, gentity_t* attacker, const vec3_t push_dir, float strength, const qboolean breakSaberLock);
+extern qboolean PM_PainAnim(int anim);
+extern qboolean PM_InKnockDown(const playerState_t* ps);
 
 //-------------------------------------------------------------------------
 static void g_missile_bounce_effect(const gentity_t* ent, vec3_t org, vec3_t dir, const qboolean hit_world)
@@ -1531,16 +1535,33 @@ void G_MissileImpacted(gentity_t* ent, gentity_t* other, vec3_t impact_pos, vec3
 			G_Damage(other, ent, ent->owner, velocity, impact_pos, damage, ent->dflags, ent->methodOfDeath, hit_loc);
 
 			//
-			// Universal directional pain animation (Singleplayer)
+			// Universal directional pain animation
 			//
 			if (other->client &&
 				beskar == qfalse &&
 				boba_fett == qfalse &&
 				other->health > 0 &&
+				!PM_PainAnim(other->client->ps.torsoAnim) &&
 				!BG_InDeathAnim(other->client->ps.torsoAnim) &&
+				!PM_InKnockDown(&other->client->ps) &&
 				!WP_DoingForcedAnimationForForcePowers(other))
 			{
-				NPC_SetAnim(other, SETANIM_TORSO, Q_irand(BOTH_PAIN1, BOTH_PAIN3), SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+				if (Q_irand(0, 3))
+				{// 75% chance to play pain anim
+					if (PM_CrouchAnim(other->client->ps.legsAnim))
+					{
+						vec3_t dir;
+						VectorSubtract(ent->currentOrigin, other->currentOrigin, dir);
+						VectorNormalize(dir);
+
+						G_Knockdown(other, ent, dir, 50, qtrue);
+					}
+					else
+					{
+						NPC_SetAnim(other, SETANIM_TORSO, Q_irand(BOTH_PAIN2, BOTH_PAIN3), SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+						other->client->ps.torsoAnimTimer = 400;
+					}
+				}
 			}
 
 			// DEMP2 special behaviour
@@ -1761,7 +1782,12 @@ static void g_missile_impact(gentity_t* ent, trace_t* trace, const int hit_loc =
 		}
 	}
 
-	if (beskar || boba_fett)
+	if ((beskar || boba_fett) &&
+		other->health > 0 &&
+		!PM_PainAnim(other->client->ps.torsoAnim) &&
+		!BG_InDeathAnim(other->client->ps.torsoAnim) &&
+		!PM_InKnockDown(&other->client->ps) &&
+		!WP_DoingForcedAnimationForForcePowers(other))
 	{
 		bounce = qfalse;
 		// Check to see if there is a bounce count
@@ -1776,7 +1802,23 @@ static void g_missile_impact(gentity_t* ent, trace_t* trace, const int hit_loc =
 		}
 
 		G_BounceMissile(ent, trace);
-		NPC_SetAnim(other, SETANIM_TORSO, Q_irand(BOTH_PAIN1, BOTH_PAIN3), SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+
+		if (Q_irand(0, 3))
+		{// 75% chance to play pain anim
+			if (PM_CrouchAnim(other->client->ps.legsAnim))
+			{
+				vec3_t dir;
+				VectorSubtract(ent->currentOrigin, other->currentOrigin, dir);
+				VectorNormalize(dir);
+
+				G_Knockdown(other, ent, dir, 50, qtrue);
+			}
+			else
+			{
+				NPC_SetAnim(other, SETANIM_TORSO, Q_irand(BOTH_PAIN2, BOTH_PAIN3), SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+				other->client->ps.torsoAnimTimer = 400;
+			}
+		}
 
 		if (ent->owner)
 		{
