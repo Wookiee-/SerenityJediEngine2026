@@ -1425,6 +1425,7 @@ typedef struct playerState_s {
 
 	int	    dashstartTime;
 	int	    dashlaststartTime;
+	int     Dash_Count;
 
 	int     kickstartTime;
 	int     kicklaststartTime;
@@ -2023,6 +2024,7 @@ typedef struct entityState_s {
 
 	int	    dashstartTime;
 	int	    dashlaststartTime;
+	int     Dash_Count;
 
 	int     kickstartTime;
 	int     kicklaststartTime;

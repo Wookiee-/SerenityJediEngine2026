@@ -154,7 +154,7 @@ extern qboolean BG_InKnockDown(int anim);
 extern qboolean pm_saber_in_special_attack(int anim);
 extern qboolean PM_SaberInBounce(int move);
 extern qboolean PM_SaberInKnockaway(int move);
-extern qboolean PM_kick_move(int move);
+extern qboolean PM_KickMove(int move);
 extern bool in_camera;
 extern qboolean player_locked;
 extern qboolean stop_icarus;
@@ -8339,6 +8339,14 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 	// Activate the surrenderingTime flags
 	if (ent->s.number < MAX_CLIENTS || G_ControlledByPlayer(ent))
 	{
+		if ((client->ps.dashstartTime > level.time) ||
+			(client->ps.dashlaststartTime > level.time))
+		{
+			client->ps.dashstartTime = 0;
+			client->ps.dashlaststartTime = 0;
+			client->ps.Dash_Count = 0;
+			client->ps.communicatingflags &= ~(1 << DASHING);
+		}
 		if (IsRespecting(ent))
 		{
 			client->ps.respectingtime = level.time;
@@ -8414,56 +8422,46 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 				}
 			}
 		}
-		else if (IsPressingDashButton(ent)
-			&& !PM_SaberInAttack(ent->client->ps.saber_move)
-			&& !PM_kick_move(ent->client->ps.saber_move))
+		else if ((IsPressingDashButton(ent) == qtrue))
 		{
-			if (client->Dash_Count <= 2)
+			if (client->ps.Dash_Count < 2)
 			{
-				if (client->ps.dashstartTime <= 0 && level.time - client->ps.dashlaststartTime >= 100)
+				if ((client->ps.dashstartTime <= 0) &&
+					(level.time - client->ps.dashlaststartTime >= 100))
 				{
-					// They just pressed dash. Mark the time... 3000 wait between allowed dash.
 					client->ps.dashstartTime = level.time;
 					client->ps.dashlaststartTime = level.time;
-					client->Dash_Count++;
+					client->ps.Dash_Count++;
 
-					if (!(client->ps.communicatingflags & 1 << DASHING))
+					if ((client->ps.communicatingflags & (1 << DASHING)) == 0)
 					{
-						client->ps.communicatingflags |= 1 << DASHING;
+						client->ps.communicatingflags |= (1 << DASHING);
 					}
 				}
-				else
+				else if (level.time - client->ps.dashlaststartTime >= 10)
 				{
-					if (level.time - client->ps.dashlaststartTime >= 10)
-					{
-						// When dash was pressed, wait 3000 before letting go of dash.
-						client->ps.dashstartTime = 0;
-						client->ps.communicatingflags &= ~(1 << DASHING);
-					}
+					client->ps.dashstartTime = 0;
+					client->ps.communicatingflags &= ~(1 << DASHING);
 				}
 			}
 			else
 			{
-				if (client->ps.dashstartTime <= 0 && level.time - client->ps.dashlaststartTime >= 2500)
+				if ((client->ps.dashstartTime <= 0) &&
+					(level.time - client->ps.dashlaststartTime >= 2500))
 				{
-					// They just pressed dash. Mark the time... 8000 wait between allowed dash.
 					client->ps.dashstartTime = level.time;
 					client->ps.dashlaststartTime = level.time;
 
-					if (!(client->ps.communicatingflags & 1 << DASHING))
+					if ((client->ps.communicatingflags & (1 << DASHING)) == 0)
 					{
-						client->ps.communicatingflags |= 1 << DASHING;
+						client->ps.communicatingflags |= (1 << DASHING);
 					}
 				}
-				else
+				else if (level.time - client->ps.dashlaststartTime >= 2500)
 				{
-					if (level.time - client->ps.dashlaststartTime >= 2500)
-					{
-						// When dash was pressed, wait 3000 before letting go of dash.
-						client->ps.dashstartTime = 0;
-						client->Dash_Count = 0;
-						client->ps.communicatingflags &= ~(1 << DASHING);
-					}
+					client->ps.dashstartTime = 0;
+					client->ps.Dash_Count = 0;
+					client->ps.communicatingflags &= ~(1 << DASHING);
 				}
 			}
 		}
@@ -8536,9 +8534,6 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 		}
 		else
 		{
-			client->ps.respectingtime = 0;
-			client->ps.gesturingtime = 0;
-			client->ps.surrendertimeplayer = 0;
 			client->ps.communicatingflags &= ~(1 << CF_SABERLOCK_ADVANCE);
 			client->ps.communicatingflags &= ~(1 << CF_SABERLOCKING);
 			client->ps.communicatingflags &= ~(1 << SURRENDERING);
@@ -8546,6 +8541,9 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 			client->ps.communicatingflags &= ~(1 << GESTURING);
 			client->ps.communicatingflags &= ~(1 << DASHING);
 			client->ps.communicatingflags &= ~(1 << KICKING);
+			client->ps.communicatingflags &= ~(1 << UNDERSIZEDJEDI);
+			client->ps.communicatingflags &= ~(1 << OVERSIZEDGUNNER);
+			client->ps.communicatingflags &= ~(1 << UNDERSIZEDGUNNER);
 			if (client->ps.weapon != WP_STUN_BATON ||
 				(client->ps.communicatingflags |= client->ps.grapplestartTime >= 3000))
 			{

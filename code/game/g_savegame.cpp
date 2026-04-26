@@ -35,7 +35,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 extern void G_LoadSave_WriteMiscData();
 extern void G_LoadSave_ReadMiscData();
-extern void g_reload_saber_data(const gentity_t* ent);
+extern void G_ReloadSaberData(const gentity_t* ent);
 extern void fx_read();
 extern void fx_write();
 
@@ -1049,7 +1049,7 @@ static void ReadGEntities(const qboolean qbAutosave)
 
 			if (p_ent->s.number)
 			{
-				g_reload_saber_data(p_ent);
+				G_ReloadSaberData(p_ent);
 			}
 		}
 

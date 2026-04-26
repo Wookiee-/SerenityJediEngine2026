@@ -717,6 +717,7 @@ Ghoul2 Insert Start
 
 { NETF(dashstartTime), 32 },
 { NETF(dashlaststartTime), 32 },
+{ NETF(Dash_Count), 32 },
 
 { NETF(kickstartTime), 32 },
 { NETF(kicklaststartTime), 32 },
@@ -1227,6 +1228,7 @@ static const netField_t playerStateFields[] =
 
 	{PSF(dashstartTime), 32},
 	{PSF(dashlaststartTime), 32},
+	{PSF(Dash_Count), 32},
 
 	{PSF(kickstartTime), 32 },
 	{PSF(kicklaststartTime), 32 },

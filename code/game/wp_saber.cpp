@@ -175,7 +175,7 @@ extern void G_KnockOffVehicle(gentity_t* pRider, const gentity_t* self, qboolean
 extern qboolean PM_LockedAnim(int anim);
 extern qboolean Rosh_BeingHealed(const gentity_t* self);
 extern qboolean G_OkayToLean(const playerState_t* ps, const usercmd_t* cmd, qboolean interrupt_okay);
-extern qboolean PM_kick_move(int move);
+extern qboolean PM_KickMove(int move);
 int wp_absorb_conversion(const gentity_t* attacked, int atd_abs_level, int at_power, int at_power_level,
 	int at_force_spent);
 void WP_ForcePowerStart(gentity_t* self, forcePowers_t force_power, int override_amt);
@@ -2561,7 +2561,7 @@ static qboolean wp_saber_apply_damage(gentity_t* ent, const float base_damage, c
 		}
 	}
 
-	if (PM_kick_move(ent->client->ps.saber_move))
+	if (PM_KickMove(ent->client->ps.saber_move))
 	{
 		return qfalse;
 	}
@@ -9761,25 +9761,10 @@ void WP_SaberCatch(gentity_t* self, gentity_t* saber, const qboolean switch_to_s
 		// If saber is current weapon, restore G2 model + fatigue/force regen
 		if (self->client->ps.weapon == WP_SABER)
 		{
-			WP_SaberAddG2SaberModels(self, qfalse);
-
-			if (self->s.number >= MAX_CLIENTS && !G_ControlledByPlayer(self))
-			{
-				if (self->client->ps.saberFatigueChainCount >= MISHAPLEVEL_TEN)
-				{
-					self->client->ps.saberFatigueChainCount = MISHAPLEVEL_LIGHT;
-				}
-
-				WP_BlockPointsRegenerate(self, BLOCKPOINTS_TWENTYFIVE);
-			}
-		}
-
-		if (self->client->ps.weapon == WP_SABER)
-		{
 			//only do the first saber since we only throw the first one
 			WP_SaberAddG2SaberModels(self, qfalse);
 
-			if (self->s.number >= MAX_CLIENTS && !G_ControlledByPlayer(self)) //NPC only
+			if (self->s.number >= MAX_CLIENTS && !G_ControlledByPlayer(self))
 			{
 				if (self->client->ps.saberFatigueChainCount >= MISHAPLEVEL_TEN)
 				{
@@ -9793,6 +9778,14 @@ void WP_SaberCatch(gentity_t* self, gentity_t* saber, const qboolean switch_to_s
 				if (self->client->ps.saberFatigueChainCount >= MISHAPLEVEL_HUDFLASH)
 				{
 					self->client->ps.saberFatigueChainCount = MISHAPLEVEL_LIGHT;
+				}
+				if (self->client->ps.blockPoints < BLOCKPOINTS_TWENTYFIVE)
+				{
+					WP_BlockPointsRegenerate(self, BLOCKPOINTS_TWENTYFIVE);
+				}
+				if (self->client->ps.forcePower < BLOCKPOINTS_TWENTYFIVE)
+				{
+					WP_ForcePowerRegenerate(self, BLOCKPOINTS_TWENTYFIVE);
 				}
 			}
 		}
@@ -10960,7 +10953,7 @@ int wp_saber_must_block(gentity_t* self, const gentity_t* atk, const qboolean ch
 		return 0;
 	}
 
-	if (PM_kick_move(self->client->ps.saber_move))
+	if (PM_KickMove(self->client->ps.saber_move))
 	{
 		return 0;
 	}
@@ -11394,7 +11387,7 @@ qboolean manual_meleeblocking(const gentity_t* defender) //Is this guy blocking 
 	if (defender->client->ps.weapon == WP_MELEE
 		&& defender->client->buttons & BUTTON_WALKING
 		&& defender->client->buttons & BUTTON_BLOCK
-		&& !PM_kick_move(defender->client->ps.saber_move)
+		&& !PM_KickMove(defender->client->ps.saber_move)
 		&& !PM_KickingAnim(defender->client->ps.torsoAnim)
 		&& !PM_KickingAnim(defender->client->ps.legsAnim)
 		&& !PM_InRoll(&defender->client->ps)
@@ -11416,7 +11409,7 @@ qboolean manual_melee_dodging(const gentity_t* defender) //Is this guy dodgeing 
 		&& defender->client->buttons & BUTTON_USE
 		&& !(defender->client->buttons & BUTTON_WALKING)
 		&& !(defender->client->buttons & BUTTON_BLOCK)
-		&& !PM_kick_move(defender->client->ps.saber_move)
+		&& !PM_KickMove(defender->client->ps.saber_move)
 		&& !PM_KickingAnim(defender->client->ps.torsoAnim)
 		&& !PM_KickingAnim(defender->client->ps.legsAnim)
 		&& !PM_InRoll(&defender->client->ps)
@@ -11820,7 +11813,7 @@ int PlayerCanAbsorbKick(const gentity_t* defender, const vec3_t push_dir) //Can 
 		|| PM_SaberInBounce(defender->client->ps.saber_move) // Saber is bouncing
 		|| PM_SaberInKnockaway(defender->client->ps.saber_move) // Saber is being knocked away
 		|| PM_SaberInBrokenParry(defender->client->ps.saber_move) // Your parry got smashed open
-		|| PM_kick_move(defender->client->ps.saber_move) // If you are doing a kick / melee / slap
+		|| PM_KickMove(defender->client->ps.saber_move) // If you are doing a kick / melee / slap
 		|| SaberAttacking(defender) // you are saber attacking
 		|| PM_InGrappleMove(defender->client->ps.torsoAnim) // Trying to grab
 		|| defender->client->ps.forcePowerLevel[FP_SABER_DEFENSE] < FORCE_LEVEL_1
@@ -11880,7 +11873,7 @@ int BotCanAbsorbKick(const gentity_t* defender, const vec3_t push_dir) //Can the
 		|| PM_SaberInBounce(defender->client->ps.saber_move) // Saber is bouncing
 		|| PM_SaberInKnockaway(defender->client->ps.saber_move) // Saber is being knocked away
 		|| PM_SaberInBrokenParry(defender->client->ps.saber_move) // Your parry got smashed open
-		|| PM_kick_move(defender->client->ps.saber_move) // If you are doing a kick / melee / slap
+		|| PM_KickMove(defender->client->ps.saber_move) // If you are doing a kick / melee / slap
 		|| SaberAttacking(defender) // you are saber attacking
 		|| PM_InGrappleMove(defender->client->ps.torsoAnim) // Trying to grab
 		|| defender->client->ps.forcePowerLevel[FP_SABER_DEFENSE] < FORCE_LEVEL_1
@@ -14895,8 +14888,7 @@ void WP_ResistForcePush(gentity_t* self, const gentity_t* pusher, const qboolean
 		return;
 	}
 
-	if (PM_SaberInKata(static_cast<saber_moveName_t>(self->client->ps.saber_move)) || PM_InKataAnim(
-		self->client->ps.torsoAnim))
+	if (PM_SaberInKata(static_cast<saber_moveName_t>(self->client->ps.saber_move)) || PM_InKataAnim(self->client->ps.torsoAnim))
 	{
 		//don't throw saber when in special attack (alt+attack)
 		return;
@@ -18339,12 +18331,12 @@ int IsPressingDashButton(const gentity_t* self)
 {
 	if (PM_RunningAnim(self->client->ps.legsAnim)
 		&& !PM_SaberInAttack(self->client->ps.saber_move)
+		&& !PM_KickMove(self->client->ps.saber_move)
 		&& self->client->pers.cmd.upmove == 0
 		&& !self->client->hookhasbeenfired
 		&& (!(self->client->buttons & BUTTON_KICK))
 		&& (!(self->client->buttons & BUTTON_USE))
-		&& self->client->buttons & BUTTON_DASH
-		&& self->client->ps.pm_flags & PMF_DASH_HELD)
+		&& (self->client->buttons & BUTTON_DASH))
 	{
 		return qtrue;
 	}
@@ -18470,53 +18462,67 @@ void ForceDashAnimDash(gentity_t* self)
 
 static void ForceSpeedDash(gentity_t* self)
 {
+	// Must be alive
 	if (self->health <= 0)
 	{
 		return;
 	}
 
+	if (self->watertype == CONTENTS_WATER)
+	{
+		return;
+	}
+
+	// Must be on the ground
 	if (self->client->ps.groundEntityNum == ENTITYNUM_NONE)
 	{
-		//can't dash in mid-air
 		return;
 	}
 
-	if (PM_InLedgeMove(self->client->ps.legsAnim))
+	// Cannot dash during ledge moves
+	if (PM_InLedgeMove(self->client->ps.legsAnim) == qtrue)
 	{
 		return;
 	}
 
-	if (PM_SaberInAttack(self->client->ps.saber_move))
+	// Cannot dash during saber attacks
+	if (PM_SaberInAttack(self->client->ps.saber_move) == qtrue)
 	{
 		return;
 	}
 
-	if (PM_kick_move(self->client->ps.saber_move))
+	// Cannot dash during kicks
+	if (PM_KickMove(self->client->ps.saber_move) == qtrue)
 	{
 		return;
 	}
 
-	if (PM_InSlopeAnim(self->client->ps.legsAnim))
+	// Cannot dash during slope animations
+	if (PM_InSlopeAnim(self->client->ps.legsAnim) == qtrue)
 	{
 		return;
 	}
 
+	// Speed debounce (saved absolute time can block dash after load)
 	if (self->client->ps.forcePowerDebounce[FP_SPEED] > level.time)
 	{
-		//stops it while using it and also after using it, up to 3 second delay
 		return;
 	}
 
+	// Speed recovery (same issue)
 	if (self->client->ps.forceSpeedRecoveryTime >= level.time)
 	{
 		return;
 	}
 
-	if (BG_InKnockDown(self->client->ps.legsAnim) || PM_InKnockDown(&self->client->ps))
+	// Cannot dash while knocked down
+	if (BG_InKnockDown(self->client->ps.legsAnim) == qtrue ||
+		PM_InKnockDown(&self->client->ps) == qtrue)
 	{
 		return;
 	}
 
+	// Class restrictions
 	if (self->client->NPC_class == CLASS_DROIDEKA ||
 		self->client->NPC_class == CLASS_VEHICLE ||
 		self->client->NPC_class == CLASS_SBD ||
@@ -18526,15 +18532,16 @@ static void ForceSpeedDash(gentity_t* self)
 		return;
 	}
 
-	if (self->client->ps.forceAllowDeactivateTime < level.time && self->client->ps.forcePowersActive & 1 << FP_SPEED)
-	{
+	if ((self->client->ps.forceAllowDeactivateTime < level.time) &&
+		(self->client->ps.forcePowersActive & (1 << FP_SPEED)))
+	{// stop using it
 		WP_ForcePowerStop(self, FP_SPEED);
 		return;
 	}
 
-	if (self->client->ps.forcePowersActive & 1 << FP_SPEED) //If using speed at same time just in case
+	if (self->client->ps.forcePowersActive & (1 << FP_SPEED))
 	{
-		if (PM_RunningAnim(self->client->ps.legsAnim))
+		if (PM_RunningAnim(self->client->ps.legsAnim) == qtrue)
 		{
 			ForceHopAnim(self);
 			WP_ForcePowerStop(self, FP_SPEED);
@@ -18545,29 +18552,26 @@ static void ForceSpeedDash(gentity_t* self)
 		}
 	}
 
+	// Cannot dash during saberlock
 	if (self->client->ps.saberLockTime > level.time)
 	{
 		return;
 	}
-
-	if (!IsPressingDashButton(self))
-	{
-		//it's already turned on.  turn it off.
-		return;
-	}
-
+	// Note that the above check , so you can still hold the button during a saber lock
+	// and have the dash start immediately after the lock ends, which is nice.
 	if (!(self->client->ps.communicatingflags & 1 << DASHING))
-	{
+	{// not actually dashing, so don't start the anim or sound
 		return;
 	}
 
-	if (!(self->client->ps.pm_flags & PMF_DASH_HELD))
-	{
+	// this is causing problems with the dash anim and sound not playing after loading a save, so I moved it down
+	if (!IsPressingDashButton(self))
+	{// not actually pressing the button, so don't start the anim or sound
 		return;
 	}
 
 	if (self->client->ps.groundEntityNum != ENTITYNUM_NONE)
-	{
+	{// animate and give the speed boost
 		vec3_t dir;
 
 		AngleVectors(self->client->ps.viewangles, dir, nullptr, nullptr);
@@ -22043,22 +22047,25 @@ static void ForceShootstrike(gentity_t* self)
 						}
 						else
 						{
-							if (traceEnt->s.weapon == WP_SABER
-								&& traceEnt->client->ps.SaberActive()
-								&& !traceEnt->client->ps.saberInFlight
-								&& InFOV(self->currentOrigin, traceEnt->currentOrigin,
-									traceEnt->client->ps.viewangles, 20, 35)
-								&& !PM_InKnockDown(&traceEnt->client->ps)
-								&& !PM_SuperBreakLoseAnim(traceEnt->client->ps.torsoAnim)
-								&& !PM_SuperBreakWinAnim(traceEnt->client->ps.torsoAnim)
-								&& !pm_saber_in_special_attack(traceEnt->client->ps.torsoAnim)
-								&& !PM_InSpecialJump(traceEnt->client->ps.torsoAnim)
-								&& manual_saberblocking(traceEnt))
+							if (traceEnt->s.weapon == WP_SABER &&
+								traceEnt->client->ps.SaberActive() == qtrue &&
+								traceEnt->client->ps.saberInFlight == qfalse &&
+								InFOV(self->currentOrigin,
+									traceEnt->currentOrigin,
+									traceEnt->client->ps.viewangles,
+									20,
+									35) == qtrue &&
+								PM_InKnockDown(&traceEnt->client->ps) == qfalse &&
+								PM_SuperBreakLoseAnim(traceEnt->client->ps.torsoAnim) == qfalse &&
+								PM_SuperBreakWinAnim(traceEnt->client->ps.torsoAnim) == qfalse &&
+								pm_saber_in_special_attack(traceEnt->client->ps.torsoAnim) == qfalse &&
+								PM_InSpecialJump(traceEnt->client->ps.torsoAnim) == qfalse &&
+								manual_saberblocking(traceEnt) == qtrue)
 							{
-								//saber can block lightning make them do a parry
+								// saber can block lightning — make them do a parry
 								VectorNegate(dir, forward);
 
-								//randomise direction a bit
+								// randomise direction a bit
 								MakeNormalVectors(forward, right, up);
 								VectorMA(forward, Q_irand(0, 360), right, forward);
 								VectorMA(forward, Q_irand(0, 360), up, forward);
@@ -22072,6 +22079,7 @@ static void ForceShootstrike(gentity_t* self)
 										Q_flrand(0, 1),
 										traceEnt->client->ps.saber[npc_saber_num].blade[npc_blade_num].muzzleDir,
 										end);
+
 									G_PlayEffect(G_EffectIndex("saber/fizz.efx"), end, forward);
 								}
 
@@ -22080,29 +22088,22 @@ static void ForceShootstrike(gentity_t* self)
 								case SS_DUAL:
 									NPC_SetAnim(traceEnt, SETANIM_TORSO, BOTH_P6_S6_T_, SETANIM_AFLAG_PACE);
 									break;
+
 								case SS_STAFF:
 									NPC_SetAnim(traceEnt, SETANIM_TORSO, BOTH_P7_S7_T_, SETANIM_AFLAG_PACE);
 									break;
+
 								case SS_FAST:
-									NPC_SetAnim(traceEnt, SETANIM_TORSO, BOTH_P1_S1_T_, SETANIM_AFLAG_PACE);
-									break;
 								case SS_TAVION:
-									NPC_SetAnim(traceEnt, SETANIM_TORSO, BOTH_P1_S1_T_, SETANIM_AFLAG_PACE);
-									break;
 								case SS_STRONG:
-									NPC_SetAnim(traceEnt, SETANIM_TORSO, BOTH_P1_S1_T_, SETANIM_AFLAG_PACE);
-									break;
 								case SS_DESANN:
-									NPC_SetAnim(traceEnt, SETANIM_TORSO, BOTH_P1_S1_T_, SETANIM_AFLAG_PACE);
-									break;
 								case SS_MEDIUM:
-									NPC_SetAnim(traceEnt, SETANIM_TORSO, BOTH_P1_S1_T_, SETANIM_AFLAG_PACE);
-									break;
 								case SS_NONE:
 								default:
 									NPC_SetAnim(traceEnt, SETANIM_TORSO, BOTH_P1_S1_T_, SETANIM_AFLAG_PACE);
 									break;
 								}
+
 								traceEnt->client->ps.weaponTime = Q_irand(300, 600);
 							}
 							else
@@ -22311,8 +22312,7 @@ void ForceLightning(gentity_t* self)
 	WP_ForcePowerStart(self, FP_LIGHTNING, self->client->ps.torsoAnimTimer);
 }
 
-static void force_lightning_damage(gentity_t* self, gentity_t* traceEnt, vec3_t dir, const float dist, const float dot,
-	vec3_t impact_point)
+static void force_lightning_damage(gentity_t* self, gentity_t* traceEnt, vec3_t dir, const float dist, const float dot,	vec3_t impact_point)
 {
 	int lightning_blocked = qfalse;
 
@@ -22936,22 +22936,26 @@ static void force_lightning_damage(gentity_t* self, gentity_t* traceEnt, vec3_t 
 						//need to pad deathtime some to stick around long enough for death effect to play
 						traceEnt->NPC->timeOfDeath = level.time + 2000;
 					}
-
-					if (PM_RunningAnim(traceEnt->client->ps.legsAnim) && traceEnt->health > 1)
+					
+					if ((PM_RunningAnim(traceEnt->client->ps.legsAnim) ||
+						PM_SaberInKata(static_cast<saber_moveName_t>(traceEnt->client->ps.saber_move)) ||
+						PM_InKataAnim(traceEnt->client->ps.torsoAnim)) &&
+						traceEnt->health > 1)
 					{
 						G_KnockOver(traceEnt, self, dir, 25, qtrue);
 					}
-					else if (traceEnt->client->ps.groundEntityNum == ENTITYNUM_NONE && traceEnt->health > 1)
+					else if (traceEnt->client->ps.groundEntityNum == ENTITYNUM_NONE &&
+						traceEnt->health > 1)
 					{
 						g_throw(traceEnt, dir, 2);
-						NPC_SetAnim(traceEnt, SETANIM_BOTH, Q_irand(BOTH_SLAPDOWNRIGHT, BOTH_SLAPDOWNLEFT),
-							SETANIM_AFLAG_PACE);
+						NPC_SetAnim(traceEnt, SETANIM_BOTH, Q_irand(BOTH_SLAPDOWNRIGHT, BOTH_SLAPDOWNLEFT),	SETANIM_AFLAG_PACE);
 					}
 					else
 					{
 						if (!PM_RunningAnim(traceEnt->client->ps.legsAnim)
-							&& !PM_InKnockDown(&traceEnt->client->ps)
-							&& traceEnt->health > 1)
+							&& !PM_InKnockDown(&traceEnt->client->ps) &&
+							traceEnt->client->ps.groundEntityNum != ENTITYNUM_NONE &&
+							traceEnt->health > 1)
 						{
 							if (traceEnt->health < 75)
 							{
@@ -22968,8 +22972,7 @@ static void force_lightning_damage(gentity_t* self, gentity_t* traceEnt, vec3_t 
 						}
 						else
 						{
-							if ((traceEnt->NPC || traceEnt->s.eType == ET_PLAYER)
-								&& traceEnt->client->ps.stats[STAT_HEALTH] < 2 && class_is_gunner(traceEnt))
+							if (traceEnt->health < 2 && class_is_gunner(traceEnt))
 							{
 								vec3_t defaultDir;
 								VectorSet(defaultDir, 0, 0, 1);
@@ -29350,8 +29353,8 @@ void WP_ForcePowersUpdate(gentity_t* self, usercmd_t* ucmd)
 		ForceLightning(self);
 	}
 
-	if (self->client->ps.communicatingflags & 1 << DASHING)
-	{//dash is one of the powers with its own button.. if it's held, call the specific dash power function.
+	if (IsPressingDashButton(self) == qtrue)
+	{// Dash is also a power with its own button,so just check if the button is being held and call the function if it is.
 		ForceSpeedDash(self);
 	}
 

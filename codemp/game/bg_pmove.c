@@ -13589,7 +13589,7 @@ static void PM_Weapon(void)
 			if (!PM_SaberInBounce(pm->ps->saber_move)
 				&& !PM_SaberInKnockaway(pm->ps->saber_move)
 				&& !PM_SaberInBrokenParry(pm->ps->saber_move)
-				&& !PM_kick_move(pm->ps->saber_move)
+				&& !PM_KickMove(pm->ps->saber_move)
 				&& !PM_KickingAnim(pm->ps->torsoAnim)
 				&& !PM_KickingAnim(pm->ps->legsAnim)
 				&& !BG_InRoll(pm->ps, pm->ps->legsAnim)
@@ -14325,7 +14325,7 @@ static void PM_Weapon(void)
 				if (!PM_SaberInBounce(pm->ps->saber_move)
 					&& !PM_SaberInKnockaway(pm->ps->saber_move)
 					&& !PM_SaberInBrokenParry(pm->ps->saber_move)
-					&& !PM_kick_move(pm->ps->saber_move)
+					&& !PM_KickMove(pm->ps->saber_move)
 					&& !PM_KickingAnim(pm->ps->torsoAnim)
 					&& !PM_KickingAnim(pm->ps->legsAnim)
 					&& !BG_InRoll(pm->ps, pm->ps->legsAnim)
@@ -15346,7 +15346,7 @@ void PM_UpdateViewAngles(int saberAnimLevel, playerState_t* ps, const usercmd_t*
 	if (ps->weapon == WP_SABER
 		&& !BG_SabersOff(ps)
 		&& !ps->saberInFlight
-		&& !PM_kick_move(ps->saber_move)
+		&& !PM_KickMove(ps->saber_move)
 		&& cmd->forwardmove >= 0
 		&& !PM_WalkingOrRunningAnim(ps->legsAnim)
 		&& !PM_WalkingOrRunningAnim(ps->torsoAnim)
@@ -18496,7 +18496,7 @@ static void PmoveSingle(pmove_t* pmove)
 	{
 		stiffenedUp = qtrue;
 	}
-	else if (PM_kick_move(pm->ps->saber_move) || PM_KickingAnim(pm->ps->legsAnim))
+	else if (PM_KickMove(pm->ps->saber_move) || PM_KickingAnim(pm->ps->legsAnim))
 	{
 		stiffenedUp = qtrue;
 		if (pm->ps->legsTimer <= 0)
@@ -19776,7 +19776,7 @@ void Pmove(pmove_t* pmove)
 	{
 		pm->ps->pm_flags &= ~PMF_ALT_ATTACK_HELD;
 	}
-	if (pm->cmd.buttons & BUTTON_DASH && !(pm->cmd.buttons & BUTTON_KICK))
+	if (pm->cmd.buttons & BUTTON_DASH)
 	{
 		pm->ps->pm_flags |= PMF_DASH_HELD;
 	}
@@ -19794,7 +19794,7 @@ void Pmove(pmove_t* pmove)
 		pm->ps->pm_flags &= ~PMF_BLOCK_HELD;
 	}
 
-	if (pm->cmd.buttons & BUTTON_KICK && !(pm->cmd.buttons & BUTTON_DASH))
+	if (pm->cmd.buttons & BUTTON_KICK)
 	{
 		pm->ps->pm_flags |= PMF_KICK_HELD;
 	}
@@ -20147,305 +20147,316 @@ extern qboolean PM_LockedAnim(int anim);
 
 static qboolean PM_CheckRollGetup(void)
 {
-	//racc - try getting up from a knockdown by using a getup roll move.
 #ifdef _GAME
 	gentity_t* self = &g_entities[pm->ps->clientNum];
 #endif
-	if (pm->ps->legsAnim == BOTH_KNOCKDOWN1
-		|| pm->ps->legsAnim == BOTH_KNOCKDOWN2
-		|| pm->ps->legsAnim == BOTH_KNOCKDOWN3
-		|| pm->ps->legsAnim == BOTH_KNOCKDOWN4
-		|| pm->ps->legsAnim == BOTH_KNOCKDOWN5
-		|| pm->ps->legsAnim == BOTH_SLAPDOWNRIGHT
-		|| pm->ps->legsAnim == BOTH_SLAPDOWNLEFT
-		|| pm->ps->legsAnim == BOTH_LK_DL_ST_T_SB_1_L
-		|| pm->ps->legsAnim == BOTH_PLAYER_PA_3_FLY
-		|| pm->ps->legsAnim == BOTH_RELEASED)
+
+	// ------------------------------------------------------------
+	// VALID KNOCKDOWN STATES
+	// ------------------------------------------------------------
+	if (pm->ps->legsAnim == BOTH_KNOCKDOWN1 ||
+		pm->ps->legsAnim == BOTH_KNOCKDOWN2 ||
+		pm->ps->legsAnim == BOTH_KNOCKDOWN3 ||
+		pm->ps->legsAnim == BOTH_KNOCKDOWN4 ||
+		pm->ps->legsAnim == BOTH_KNOCKDOWN5 ||
+		pm->ps->legsAnim == BOTH_SLAPDOWNRIGHT ||
+		pm->ps->legsAnim == BOTH_SLAPDOWNLEFT ||
+		pm->ps->legsAnim == BOTH_LK_DL_ST_T_SB_1_L ||
+		pm->ps->legsAnim == BOTH_PLAYER_PA_3_FLY ||
+		pm->ps->legsAnim == BOTH_RELEASED)
 	{
-		//lying on back or front
-		if (pm->ps->clientNum < MAX_CLIENTS //player
-			&& !(pm->ps->userInt3 & 1 << FLAG_FATIGUED) //can't do roll getups while fatigued.
-			&& (pm->cmd.rightmove //pressing left or right
-				|| pm->cmd.forwardmove && pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0)
-			//or pressing fwd/back and have force jump.
+		// ------------------------------------------------------------
+		// PLAYER ROLL CONDITIONS
+		// ------------------------------------------------------------
+		qboolean canPlayerRoll =
+			(pm->ps->clientNum < MAX_CLIENTS) ? qtrue : qfalse;
+
+		qboolean notFatigued =
+			((pm->ps->userInt3 & (1 << FLAG_FATIGUED)) == 0) ? qtrue : qfalse;
+
+		qboolean movePressed =
+			(pm->cmd.rightmove != 0) ? qtrue : qfalse;
+
+		qboolean forwardMoveWithForce =
+			((pm->cmd.forwardmove != 0) &&
+				(pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0))
+			? qtrue : qfalse;
+
+		// ------------------------------------------------------------
+		// NPC ROLL CONDITIONS
+		// ------------------------------------------------------------
+		qboolean npcRoll = qfalse;
+
 #ifdef _GAME
-			|| pm->ps->clientNum >= MAX_CLIENTS
-			&& self->NPC //an NPC
-			&& pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0 //have at least force jump 1
-			&& self->enemy //I have an enemy
-			&& self->enemy->client //a client
-			&& self->enemy->enemy == self //he's mad at me!
-			&& (PM_GoingToAttackDown(&self->enemy->client->ps) || !Q_irand(0, 2))
-			//he's attacking downward! (or we just feel like doing it this time)
-			&& (self->client && self->client->NPC_class == CLASS_ALORA || Q_irand(0, RANK_CAPTAIN) < self->NPC->rank)
-			//higher rank I am, more likely I am to roll away!
-#endif
-			)
+		if (pm->ps->clientNum >= MAX_CLIENTS &&
+			self && self->NPC)
 		{
-			//roll away!
-			int anim;
+			if (pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0 &&
+				self->enemy &&
+				self->enemy->client &&
+				self->enemy->enemy == self &&
+				(PM_GoingToAttackDown(&self->enemy->client->ps) || !Q_irand(0, 2)) &&
+				((self->client && self->client->NPC_class == CLASS_ALORA) ||
+					(Q_irand(0, RANK_CAPTAIN) < self->NPC->rank)))
+			{
+				npcRoll = qtrue;
+			}
+		}
+#endif
+
+		// ------------------------------------------------------------
+		// FINAL ROLL PERMISSION CHECK
+		// ------------------------------------------------------------
+		if ((canPlayerRoll && notFatigued && (movePressed || forwardMoveWithForce)) ||
+			(npcRoll == qtrue))
+		{
+			int anim = BOTH_GETUP_BROLL_F;
 			qboolean forceGetUp = qfalse;
+
+			// ------------------------------------------------------------
+			// DETERMINE ROLL DIRECTION
+			// ------------------------------------------------------------
+			qboolean onFront =
+				(pm->ps->legsAnim == BOTH_KNOCKDOWN3 ||
+					pm->ps->legsAnim == BOTH_KNOCKDOWN5 ||
+					pm->ps->legsAnim == BOTH_SLAPDOWNRIGHT ||
+					pm->ps->legsAnim == BOTH_SLAPDOWNLEFT ||
+					pm->ps->legsAnim == BOTH_LK_DL_ST_T_SB_1_L)
+				? qtrue : qfalse;
+
+			// Forward roll
 			if (pm->cmd.forwardmove > 0)
 			{
-				if (pm->ps->legsAnim == BOTH_KNOCKDOWN3
-					|| pm->ps->legsAnim == BOTH_KNOCKDOWN5
-					|| pm->ps->legsAnim == BOTH_SLAPDOWNRIGHT
-					|| pm->ps->legsAnim == BOTH_SLAPDOWNLEFT
-					|| pm->ps->legsAnim == BOTH_LK_DL_ST_T_SB_1_L)
-				{
-					anim = BOTH_GETUP_FROLL_F;
-				}
-				else
-				{
-					anim = BOTH_GETUP_BROLL_F;
-				}
+				anim = onFront ? BOTH_GETUP_FROLL_F : BOTH_GETUP_BROLL_F;
 				forceGetUp = qtrue;
 			}
+			// Backward roll
 			else if (pm->cmd.forwardmove < 0)
 			{
-				if (pm->ps->legsAnim == BOTH_KNOCKDOWN3
-					|| pm->ps->legsAnim == BOTH_KNOCKDOWN5
-					|| pm->ps->legsAnim == BOTH_SLAPDOWNRIGHT
-					|| pm->ps->legsAnim == BOTH_SLAPDOWNLEFT
-					|| pm->ps->legsAnim == BOTH_LK_DL_ST_T_SB_1_L)
-				{
-					anim = BOTH_GETUP_FROLL_B;
-				}
-				else
-				{
-					anim = BOTH_GETUP_BROLL_B;
-				}
+				anim = onFront ? BOTH_GETUP_FROLL_B : BOTH_GETUP_BROLL_B;
 				forceGetUp = qtrue;
 			}
+			// Right roll
 			else if (pm->cmd.rightmove > 0)
 			{
-				if (pm->ps->legsAnim == BOTH_KNOCKDOWN3
-					|| pm->ps->legsAnim == BOTH_KNOCKDOWN5
-					|| pm->ps->legsAnim == BOTH_SLAPDOWNRIGHT
-					|| pm->ps->legsAnim == BOTH_SLAPDOWNLEFT
-					|| pm->ps->legsAnim == BOTH_LK_DL_ST_T_SB_1_L)
-				{
-					anim = BOTH_GETUP_FROLL_R;
-				}
-				else
-				{
-					anim = BOTH_GETUP_BROLL_R;
-				}
+				anim = onFront ? BOTH_GETUP_FROLL_R : BOTH_GETUP_BROLL_R;
 			}
+			// Left roll
 			else if (pm->cmd.rightmove < 0)
 			{
-				if (pm->ps->legsAnim == BOTH_KNOCKDOWN3
-					|| pm->ps->legsAnim == BOTH_KNOCKDOWN5
-					|| pm->ps->legsAnim == BOTH_SLAPDOWNRIGHT
-					|| pm->ps->legsAnim == BOTH_SLAPDOWNLEFT
-					|| pm->ps->legsAnim == BOTH_LK_DL_ST_T_SB_1_L)
-				{
-					anim = BOTH_GETUP_FROLL_L;
-				}
-				else
-				{
-					anim = BOTH_GETUP_BROLL_L;
-				}
+				anim = onFront ? BOTH_GETUP_FROLL_L : BOTH_GETUP_BROLL_L;
 			}
+			// NPC random roll
 			else
 			{
-				//racc - If no move, then randomly select a roll move.  This only only works for NPCs.
-				if (pm->ps->legsAnim == BOTH_KNOCKDOWN3
-					|| pm->ps->legsAnim == BOTH_KNOCKDOWN5
-					|| pm->ps->legsAnim == BOTH_SLAPDOWNRIGHT
-					|| pm->ps->legsAnim == BOTH_SLAPDOWNLEFT
-					|| pm->ps->legsAnim == BOTH_LK_DL_ST_T_SB_1_L)
-				{
-					//on your front
-					anim = PM_irand_timesync(BOTH_GETUP_FROLL_B, BOTH_GETUP_FROLL_R);
-				}
-				else
-				{
-					anim = PM_irand_timesync(BOTH_GETUP_BROLL_B, BOTH_GETUP_BROLL_R);
-				}
+				anim = onFront
+					? PM_irand_timesync(BOTH_GETUP_FROLL_B, BOTH_GETUP_FROLL_R)
+					: PM_irand_timesync(BOTH_GETUP_BROLL_B, BOTH_GETUP_BROLL_R);
 			}
 
+			// ------------------------------------------------------------
+			// NPC SAFETY CHECKS
+			// ------------------------------------------------------------
 			if (pm->ps->clientNum >= MAX_CLIENTS)
 			{
-				//racc - NPCs do roll safety checks to make sure they can safely roll in that direction.
 				if (!PM_CheckRollSafety(anim, 64))
 				{
-					//oops, try other one
-					if (pm->ps->legsAnim == BOTH_KNOCKDOWN3
-						|| pm->ps->legsAnim == BOTH_KNOCKDOWN5
-						|| pm->ps->legsAnim == BOTH_SLAPDOWNRIGHT
-						|| pm->ps->legsAnim == BOTH_SLAPDOWNLEFT
-						|| pm->ps->legsAnim == BOTH_LK_DL_ST_T_SB_1_L)
+					// Try alternate direction
+					if (onFront)
 					{
-						if (anim == BOTH_GETUP_FROLL_R)
-						{
-							anim = BOTH_GETUP_FROLL_L;
-						}
-						else if (anim == BOTH_GETUP_FROLL_F)
-						{
-							anim = BOTH_GETUP_FROLL_B;
-						}
-						else if (anim == BOTH_GETUP_FROLL_B)
-						{
-							anim = BOTH_GETUP_FROLL_F;
-						}
-						else
-						{
-							anim = BOTH_GETUP_FROLL_L;
-						}
+						if (anim == BOTH_GETUP_FROLL_R) anim = BOTH_GETUP_FROLL_L;
+						else if (anim == BOTH_GETUP_FROLL_F) anim = BOTH_GETUP_FROLL_B;
+						else if (anim == BOTH_GETUP_FROLL_B) anim = BOTH_GETUP_FROLL_F;
+						else anim = BOTH_GETUP_FROLL_L;
+
 						if (!PM_CheckRollSafety(anim, 64))
 						{
-							//neither side is clear, screw it
 							return qfalse;
 						}
 					}
 					else
 					{
-						if (anim == BOTH_GETUP_BROLL_R)
-						{
-							anim = BOTH_GETUP_BROLL_L;
-						}
-						else if (anim == BOTH_GETUP_BROLL_F)
-						{
-							anim = BOTH_GETUP_BROLL_B;
-						}
-						else if (anim == BOTH_GETUP_FROLL_B)
-						{
-							anim = BOTH_GETUP_BROLL_F;
-						}
-						else
-						{
-							anim = BOTH_GETUP_BROLL_L;
-						}
+						if (anim == BOTH_GETUP_BROLL_R) anim = BOTH_GETUP_BROLL_L;
+						else if (anim == BOTH_GETUP_BROLL_F) anim = BOTH_GETUP_BROLL_B;
+						else if (anim == BOTH_GETUP_FROLL_B) anim = BOTH_GETUP_BROLL_F;
+						else anim = BOTH_GETUP_BROLL_L;
+
 						if (!PM_CheckRollSafety(anim, 64))
 						{
-							//neither side is clear, screw it
 							return qfalse;
 						}
 					}
 				}
 			}
-			pm->cmd.rightmove = pm->cmd.forwardmove = 0;
+
+			// ------------------------------------------------------------
+			// APPLY ANIMATION
+			// ------------------------------------------------------------
+			pm->cmd.rightmove = 0;
+			pm->cmd.forwardmove = 0;
+
 			if (PM_LockedAnim(pm->ps->torsoAnim))
 			{
-				//need to be able to override this anim
 				pm->ps->torsoTimer = 0;
 			}
 			if (PM_LockedAnim(pm->ps->legsAnim))
 			{
-				//need to be able to override this anim
 				pm->ps->legsTimer = 0;
 			}
-			PM_SetAnim(SETANIM_BOTH, anim, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD | SETANIM_FLAG_HOLDLESS);
-			pm->ps->weaponTime = pm->ps->torsoTimer - 300; //don't attack until near end of this anim
-			pm->ps->saber_move = pm->ps->saberBounceMove = LS_READY;
-			//don't finish whatever saber anim you may have been in
+
+			PM_SetAnim(SETANIM_BOTH, anim,
+				SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD | SETANIM_FLAG_HOLDLESS);
+
+			pm->ps->weaponTime = pm->ps->torsoTimer - 300;
+			pm->ps->saber_move = LS_READY;
+			pm->ps->saberBounceMove = LS_READY;
 			pm->ps->saberBlocked = BLOCKED_NONE;
-			if (forceGetUp)
+
+			// ------------------------------------------------------------
+			// FORCE‑GETUP EFFECTS
+			// ------------------------------------------------------------
+			if (forceGetUp == qtrue)
 			{
 #ifdef _GAME
-				if (self && self->client && self->client->playerTeam == NPCTEAM_ENEMY
-					&& self->NPC && self->NPC->blockedSpeechDebounceTime < level.time
-					&& !Q_irand(0, 1))
+				// Safety guard to avoid C6011
+				if (self && self->client)
 				{
-					//racc - evil NPCs sometimes taunt when they use the force to jump up from a knockdown.
-					PM_AddEvent(Q_irand(EV_COMBAT1, EV_COMBAT3));
-					self->NPC->blockedSpeechDebounceTime = level.time + 1000;
-				}
-				if (self->client->ps.fd.forcePowerLevel[FP_LEVITATION] < FORCE_LEVEL_3)
-				{
-					//short burst
-					G_Sound(self, CHAN_BODY, G_SoundIndex("sound/weapons/force/jumpsmall.mp3"));
-				}
-				else
-				{
-					//holding it
-					G_PreDefSound(self->client->ps.origin, PDSOUND_FORCEJUMP);
+					if (self->client->playerTeam == NPCTEAM_ENEMY &&
+						self->NPC &&
+						self->NPC->blockedSpeechDebounceTime < level.time &&
+						!Q_irand(0, 1))
+					{
+						PM_AddEvent(Q_irand(EV_COMBAT1, EV_COMBAT3));
+						self->NPC->blockedSpeechDebounceTime = level.time + 1000;
+					}
+
+					if (self->client->ps.fd.forcePowerLevel[FP_LEVITATION] < FORCE_LEVEL_3)
+					{
+						G_Sound(self, CHAN_BODY, G_SoundIndex("sound/weapons/force/jumpsmall.mp3"));
+					}
+					else
+					{
+						G_PreDefSound(self->client->ps.origin, PDSOUND_FORCEJUMP);
+					}
 				}
 #endif
-				//launch off ground?
-				pm->ps->weaponTime = 300; //just to make sure it's cleared
+				pm->ps->weaponTime = 300;
 			}
+
 			return qtrue;
 		}
 	}
+
 	return qfalse;
 }
 
 qboolean PM_GettingUpFromKnockDown(const float standheight, const float crouchheight)
 {
 	const bgEntity_t* pEnt = pm_entSelf;
-
 	const int legsAnim = pm->ps->legsAnim;
 
-	if (legsAnim == BOTH_KNOCKDOWN1
-		|| legsAnim == BOTH_KNOCKDOWN2
-		|| legsAnim == BOTH_KNOCKDOWN3
-		|| legsAnim == BOTH_KNOCKDOWN4
-		|| legsAnim == BOTH_KNOCKDOWN5
-		|| legsAnim == BOTH_SLAPDOWNRIGHT
-		|| legsAnim == BOTH_SLAPDOWNLEFT
-		|| legsAnim == BOTH_PLAYER_PA_3_FLY
-		|| legsAnim == BOTH_LK_DL_ST_T_SB_1_L
-		|| legsAnim == BOTH_RELEASED)
+	// ------------------------------------------------------------
+	// VALID KNOCKDOWN STATES
+	// ------------------------------------------------------------
+	if (legsAnim == BOTH_KNOCKDOWN1 ||
+		legsAnim == BOTH_KNOCKDOWN2 ||
+		legsAnim == BOTH_KNOCKDOWN3 ||
+		legsAnim == BOTH_KNOCKDOWN4 ||
+		legsAnim == BOTH_KNOCKDOWN5 ||
+		legsAnim == BOTH_SLAPDOWNRIGHT ||
+		legsAnim == BOTH_SLAPDOWNLEFT ||
+		legsAnim == BOTH_PLAYER_PA_3_FLY ||
+		legsAnim == BOTH_LK_DL_ST_T_SB_1_L ||
+		legsAnim == BOTH_RELEASED)
 	{
-		//in a knockdown
 		const int minTimeLeft = G_MinGetUpTime(pm->ps);
 
+		// ------------------------------------------------------------
+		// ROLL GETUP OPTION (only when timer is nearly done)
+		// ------------------------------------------------------------
 		if (pm->ps->legsTimer <= minTimeLeft)
 		{
-			//if only a quarter of a second left, allow roll-aways
-			if (PM_CheckRollGetup())
+			if (PM_CheckRollGetup() == qtrue)
 			{
-				//racc - decided to use a getup roll.
-				pm->cmd.rightmove = pm->cmd.forwardmove = 0;
+				pm->cmd.rightmove = 0;
+				pm->cmd.forwardmove = 0;
 				return qtrue;
 			}
 		}
+
 #ifdef _GAME
+		// ------------------------------------------------------------
+		// NPC "no straight getup" timer
+		// ------------------------------------------------------------
 		if (TIMER_Exists(&g_entities[pm->ps->clientNum], "noGetUpStraight"))
 		{
-			//racc - check for a npc don't-getup-right-now timer for this NPC.
 			if (!TIMER_Done2(&g_entities[pm->ps->clientNum], "noGetUpStraight", qtrue))
 			{
-				//not allowed to do straight get-ups for another few seconds
 				if (pm->ps->legsTimer <= minTimeLeft)
 				{
-					//hold it for a bit
 					pm->ps->legsTimer = minTimeLeft + 1;
 				}
 			}
 		}
 #endif
-		if (!pm->ps->legsTimer //our knockdown is over
-			|| pm->ps->legsTimer <= minTimeLeft //or we're strong enough to get up earlier.
-			&& (pm->cmd.upmove > 0 || pEnt->s.NPC_class == CLASS_ALORA)) //and we're trying to get up
+
+		// ------------------------------------------------------------
+		// STRAIGHT GETUP CONDITIONS
+		// ------------------------------------------------------------
+		qboolean knockdownOver =
+			(pm->ps->legsTimer == 0) ? qtrue : qfalse;
+
+		qboolean strongEnoughEarly =
+			(pm->ps->legsTimer <= minTimeLeft) ? qtrue : qfalse;
+
+		qboolean tryingToGetUp =
+			((pm->cmd.upmove > 0) || (pEnt->s.NPC_class == CLASS_ALORA))
+			? qtrue : qfalse;
+
+		if (knockdownOver == qtrue ||
+			(strongEnoughEarly == qtrue && tryingToGetUp == qtrue))
 		{
-			//done with the knockdown - FIXME: somehow this is allowing an *instant* getup...???
+			// ------------------------------------------------------------
+			// CROUCH GETUP
+			// ------------------------------------------------------------
 			if (pm->cmd.upmove < 0)
 			{
 				return PM_CrouchGetup(crouchheight);
 			}
-			trace_t trace;
-			// try to stand up
-			pm->maxs[2] = standheight;
-			pm->trace(&trace, pm->ps->origin, pm->mins, pm->maxs, pm->ps->origin, pm->ps->clientNum, pm->tracemask);
 
-			if (!trace.allsolid)
+			// ------------------------------------------------------------
+			// TRY TO STAND UP
+			// ------------------------------------------------------------
+			trace_t trace;
+			pm->maxs[2] = standheight;
+
+			pm->trace(&trace,
+				pm->ps->origin,
+				pm->mins,
+				pm->maxs,
+				pm->ps->origin,
+				pm->ps->clientNum,
+				pm->tracemask);
+
+			if (trace.allsolid == qfalse)
 			{
-				//stand up
+				// ------------------------------------------------------------
+				// SELECT GETUP ANIMATION
+				// ------------------------------------------------------------
 				int anim = BOTH_GETUP1;
 				qboolean forceGetUp = qfalse;
+
 				pm->maxs[2] = standheight;
 				pm->ps->viewheight = standheight + STANDARD_VIEWHEIGHT_OFFSET;
 
-				switch (pm->ps->legsAnim)
+				switch (legsAnim)
 				{
 				case BOTH_KNOCKDOWN1:
-					if (pm->ps->clientNum && pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0 || pm->ps->
-						clientNum < MAX_CLIENTS && !(pm->ps->userInt3 & 1 << FLAG_FATIGUED)
-						&& pm->cmd.upmove > 0
-						&& pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0)
+					if ((pm->ps->clientNum && pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0) ||
+						(pm->ps->clientNum < MAX_CLIENTS &&
+							!(pm->ps->userInt3 & (1 << FLAG_FATIGUED)) &&
+							pm->cmd.upmove > 0 &&
+							pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0))
 					{
 						anim = PM_irand_timesync(BOTH_FORCE_GETUP_B1, BOTH_FORCE_GETUP_B6);
 						forceGetUp = qtrue;
@@ -20455,15 +20466,16 @@ qboolean PM_GettingUpFromKnockDown(const float standheight, const float crouchhe
 						anim = BOTH_GETUP1;
 					}
 					break;
+
 				case BOTH_KNOCKDOWN2:
 				case BOTH_PLAYER_PA_3_FLY:
-					if (pm->ps->clientNum && pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0 || pm->ps->
-						clientNum < MAX_CLIENTS && !(pm->ps->userInt3 & 1 << FLAG_FATIGUED)
-						&& pm->cmd.upmove > 0
-						&& pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0)
+					if ((pm->ps->clientNum && pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0) ||
+						(pm->ps->clientNum < MAX_CLIENTS &&
+							!(pm->ps->userInt3 & (1 << FLAG_FATIGUED)) &&
+							pm->cmd.upmove > 0 &&
+							pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0))
 					{
 						anim = PM_irand_timesync(BOTH_FORCE_GETUP_B1, BOTH_FORCE_GETUP_B6);
-						//NOTE: BOTH_FORCE_GETUP_B5 takes soe steps forward at end
 						forceGetUp = qtrue;
 					}
 					else
@@ -20471,11 +20483,13 @@ qboolean PM_GettingUpFromKnockDown(const float standheight, const float crouchhe
 						anim = BOTH_GETUP2;
 					}
 					break;
+
 				case BOTH_KNOCKDOWN3:
-					if (pm->ps->clientNum && pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0 || pm->ps->
-						clientNum < MAX_CLIENTS && !(pm->ps->userInt3 & 1 << FLAG_FATIGUED)
-						&& pm->cmd.upmove > 0
-						&& pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0)
+					if ((pm->ps->clientNum && pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0) ||
+						(pm->ps->clientNum < MAX_CLIENTS &&
+							!(pm->ps->userInt3 & (1 << FLAG_FATIGUED)) &&
+							pm->cmd.upmove > 0 &&
+							pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0))
 					{
 						anim = PM_irand_timesync(BOTH_FORCE_GETUP_F1, BOTH_FORCE_GETUP_F2);
 						forceGetUp = qtrue;
@@ -20485,15 +20499,16 @@ qboolean PM_GettingUpFromKnockDown(const float standheight, const float crouchhe
 						anim = BOTH_GETUP3;
 					}
 					break;
+
 				case BOTH_KNOCKDOWN4:
 				case BOTH_RELEASED:
-					if (pm->ps->clientNum && pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0 || pm->ps->
-						clientNum < MAX_CLIENTS && !(pm->ps->userInt3 & 1 << FLAG_FATIGUED)
-						&& pm->cmd.upmove > 0
-						&& pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0)
+					if ((pm->ps->clientNum && pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0) ||
+						(pm->ps->clientNum < MAX_CLIENTS &&
+							!(pm->ps->userInt3 & (1 << FLAG_FATIGUED)) &&
+							pm->cmd.upmove > 0 &&
+							pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0))
 					{
 						anim = PM_irand_timesync(BOTH_FORCE_GETUP_B1, BOTH_FORCE_GETUP_B6);
-						//NOTE: BOTH_FORCE_GETUP_B5 takes soe steps forward at end
 						forceGetUp = qtrue;
 					}
 					else
@@ -20501,14 +20516,16 @@ qboolean PM_GettingUpFromKnockDown(const float standheight, const float crouchhe
 						anim = BOTH_GETUP4;
 					}
 					break;
+
 				case BOTH_KNOCKDOWN5:
 				case BOTH_SLAPDOWNRIGHT:
 				case BOTH_SLAPDOWNLEFT:
 				case BOTH_LK_DL_ST_T_SB_1_L:
-					if (pm->ps->clientNum && pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0 || pm->ps->
-						clientNum < MAX_CLIENTS && !(pm->ps->userInt3 & 1 << FLAG_FATIGUED)
-						&& pm->cmd.upmove > 0
-						&& pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0)
+					if ((pm->ps->clientNum && pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0) ||
+						(pm->ps->clientNum < MAX_CLIENTS &&
+							!(pm->ps->userInt3 & (1 << FLAG_FATIGUED)) &&
+							pm->cmd.upmove > 0 &&
+							pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0))
 					{
 						anim = PM_irand_timesync(BOTH_FORCE_GETUP_F1, BOTH_FORCE_GETUP_F2);
 						forceGetUp = qtrue;
@@ -20518,61 +20535,83 @@ qboolean PM_GettingUpFromKnockDown(const float standheight, const float crouchhe
 						anim = BOTH_GETUP5;
 					}
 					break;
-				default:;
+
+				default:
+					break;
 				}
-				if (forceGetUp)
+
+				// ------------------------------------------------------------
+				// FORCE‑GETUP EFFECTS
+				// ------------------------------------------------------------
+				if (forceGetUp == qtrue)
 				{
 #ifdef _GAME
 					gentity_t* self = &g_entities[pm->ps->clientNum];
-					if (self && self->client && self->client->playerTeam == NPCTEAM_ENEMY
-						&& self->NPC && self->NPC->blockedSpeechDebounceTime < level.time
-						&& !Q_irand(0, 1))
+
+					// Safety guard for C6011
+					if (self && self->client)
 					{
-						//racc - enemy bots talk a little smack if they
-						PM_AddEvent(Q_irand(EV_COMBAT1, EV_COMBAT3));
-						self->NPC->blockedSpeechDebounceTime = level.time + 1000;
-					}
-					if (self->client->ps.fd.forcePowerLevel[FP_LEVITATION] < FORCE_LEVEL_3)
-					{
-						//short burst
-						G_Sound(self, CHAN_BODY, G_SoundIndex("sound/weapons/force/jumpsmall.mp3"));
-					}
-					else
-					{
-						//holding it
-						G_PreDefSound(self->client->ps.origin, PDSOUND_FORCEJUMP);
+						if (self->client->playerTeam == NPCTEAM_ENEMY &&
+							self->NPC &&
+							self->NPC->blockedSpeechDebounceTime < level.time &&
+							!Q_irand(0, 1))
+						{
+							PM_AddEvent(Q_irand(EV_COMBAT1, EV_COMBAT3));
+							self->NPC->blockedSpeechDebounceTime = level.time + 1000;
+						}
+
+						if (self->client->ps.fd.forcePowerLevel[FP_LEVITATION] < FORCE_LEVEL_3)
+						{
+							G_Sound(self, CHAN_BODY, G_SoundIndex("sound/weapons/force/jumpsmall.mp3"));
+						}
+						else
+						{
+							G_PreDefSound(self->client->ps.origin, PDSOUND_FORCEJUMP);
+						}
 					}
 #endif
-					//launch off ground?
-					pm->ps->weaponTime = 300; //just to make sure it's cleared
+					pm->ps->weaponTime = 300;
 				}
+
+				// ------------------------------------------------------------
+				// APPLY ANIMATION
+				// ------------------------------------------------------------
 				if (PM_LockedAnim(pm->ps->torsoAnim))
 				{
-					//need to be able to override this anim
 					pm->ps->torsoTimer = 0;
 				}
 				if (PM_LockedAnim(pm->ps->legsAnim))
 				{
-					//need to be able to override this anim
 					pm->ps->legsTimer = 0;
 				}
-				PM_SetAnim(SETANIM_BOTH, anim, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD | SETANIM_FLAG_HOLDLESS);
-				pm->ps->saber_move = pm->ps->saberBounceMove = LS_READY;
-				//don't finish whatever saber anim you may have been in
+
+				PM_SetAnim(SETANIM_BOTH, anim,
+					SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD | SETANIM_FLAG_HOLDLESS);
+
+				pm->ps->saber_move = LS_READY;
+				pm->ps->saberBounceMove = LS_READY;
 				pm->ps->saberBlocked = BLOCKED_NONE;
+
 				return qtrue;
 			}
+
+			// Standing blocked → try crouch getup
 			return PM_CrouchGetup(crouchheight);
 		}
-		if (pm->ps->legsAnim == BOTH_LK_DL_ST_T_SB_1_L)
+
+		// ------------------------------------------------------------
+		// SPECIAL ROLL CMD FOR THIS ANIM
+		// ------------------------------------------------------------
+		if (legsAnim == BOTH_LK_DL_ST_T_SB_1_L)
 		{
-			//racc - apprenently this move has a special cmd for it.
-			PM_CmdForRoll(pm->ps, pm->ps->legsAnim, &pm->cmd);
+			PM_CmdForRoll(pm->ps, legsAnim, &pm->cmd);
 		}
 		else
 		{
-			pm->cmd.rightmove = pm->cmd.forwardmove = 0;
+			pm->cmd.rightmove = 0;
+			pm->cmd.forwardmove = 0;
 		}
 	}
+
 	return qfalse;
 }

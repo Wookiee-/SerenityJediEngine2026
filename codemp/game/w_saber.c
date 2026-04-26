@@ -3353,7 +3353,7 @@ int wp_saber_must_block(gentity_t* self, const gentity_t* atk, const qboolean ch
 		return 0;
 	}
 
-	if (PM_kick_move(self->client->ps.saber_move))
+	if (PM_KickMove(self->client->ps.saber_move))
 	{
 		return 0;
 	}
@@ -3739,7 +3739,7 @@ int wp_saber_must_bolt_block(gentity_t* self, const gentity_t* atk, const qboole
 		return 0;
 	}
 
-	if (PM_kick_move(self->client->ps.saber_move))
+	if (PM_KickMove(self->client->ps.saber_move))
 	{
 		return 0;
 	}
@@ -6355,7 +6355,7 @@ static QINLINE qboolean CheckSaberDamage(
 			{
 				if (g_saberRealisticCombat.integer > 2)
 				{
-					if (PM_kick_move(self->client->ps.saber_move) ||
+					if (PM_KickMove(self->client->ps.saber_move) ||
 						PM_KickingAnim(self->client->ps.legsAnim) ||
 						PM_KickingAnim(self->client->ps.torsoAnim))
 					{
@@ -6378,7 +6378,7 @@ static QINLINE qboolean CheckSaberDamage(
 				}
 				else
 				{
-					if (PM_kick_move(self->client->ps.saber_move) ||
+					if (PM_KickMove(self->client->ps.saber_move) ||
 						PM_KickingAnim(self->client->ps.legsAnim) ||
 						PM_KickingAnim(self->client->ps.torsoAnim))
 					{
@@ -6402,7 +6402,7 @@ static QINLINE qboolean CheckSaberDamage(
 			}
 			else
 			{
-				if (PM_kick_move(self->client->ps.saber_move) ||
+				if (PM_KickMove(self->client->ps.saber_move) ||
 					PM_KickingAnim(self->client->ps.legsAnim) ||
 					PM_KickingAnim(self->client->ps.torsoAnim))
 				{
@@ -6426,7 +6426,7 @@ static QINLINE qboolean CheckSaberDamage(
 		}
 		else
 		{
-			if (PM_kick_move(self->client->ps.saber_move) ||
+			if (PM_KickMove(self->client->ps.saber_move) ||
 				PM_KickingAnim(self->client->ps.legsAnim) ||
 				PM_KickingAnim(self->client->ps.torsoAnim))
 			{
@@ -8174,6 +8174,15 @@ static void DrownedSaberTouch(gentity_t* self, gentity_t* other, trace_t* trace)
 
 		G_Sound(self, CHAN_AUTO, G_SoundIndex("sound/weapons/saber/saber_catch.mp3"));
 
+		if (other->client->ps.saberFatigueChainCount >= MISHAPLEVEL_HUDFLASH)
+		{
+			other->client->ps.saberFatigueChainCount = MISHAPLEVEL_LIGHT;
+		}
+		if (other->client->ps.fd.blockPoints < BLOCKPOINTS_TWENTYFIVE)
+		{
+			WP_BlockPointsRegenerate(other, BLOCKPOINTS_TWENTYFIVE);
+		}
+
 		other->client->ps.saberInFlight = qfalse;
 		other->client->ps.saberEntityState = 0;
 		other->client->ps.saberCanThrow = qfalse;
@@ -8857,6 +8866,15 @@ void WP_saberBackToOwner(gentity_t* saberent)
 		if (owner_len <= 32)
 		{
 			G_Sound(saberent, CHAN_AUTO, G_SoundIndex("sound/weapons/saber/saber_catch.mp3"));
+
+			if (saber_owner->client->ps.saberFatigueChainCount >= MISHAPLEVEL_HUDFLASH)
+			{
+				saber_owner->client->ps.saberFatigueChainCount = MISHAPLEVEL_LIGHT;
+			}
+			if (saber_owner->client->ps.fd.blockPoints < BLOCKPOINTS_TWENTYFIVE)
+			{
+				WP_BlockPointsRegenerate(saber_owner, BLOCKPOINTS_TWENTYFIVE);
+			}
 
 			saber_owner->client->ps.saberInFlight = qfalse;
 			saber_owner->client->ps.saberEntityState = 0;
@@ -12662,7 +12680,7 @@ qboolean manual_meleeblocking(const gentity_t* defender) //Is this guy blocking 
 	if (defender->client->ps.weapon == WP_MELEE
 		&& defender->client->buttons & BUTTON_WALKING
 		&& defender->client->buttons & BUTTON_BLOCK
-		&& !PM_kick_move(defender->client->ps.saber_move)
+		&& !PM_KickMove(defender->client->ps.saber_move)
 		&& !PM_KickingAnim(defender->client->ps.torsoAnim)
 		&& !PM_KickingAnim(defender->client->ps.legsAnim)
 		&& !PM_InRoll(&defender->client->ps)
@@ -12685,7 +12703,7 @@ qboolean manual_melee_dodging(const gentity_t* defender) //Is this guy dodgeing 
 		&& defender->client->buttons & BUTTON_USE
 		&& !(defender->client->buttons & BUTTON_WALKING)
 		&& !(defender->client->buttons & BUTTON_BLOCK)
-		&& !PM_kick_move(defender->client->ps.saber_move)
+		&& !PM_KickMove(defender->client->ps.saber_move)
 		&& !PM_KickingAnim(defender->client->ps.torsoAnim)
 		&& !PM_KickingAnim(defender->client->ps.legsAnim)
 		&& !PM_InRoll(&defender->client->ps)
@@ -12808,7 +12826,7 @@ int PlayerCanAbsorbKick(const gentity_t* defender, const vec3_t push_dir) //Can 
 		|| PM_SaberInBounce(defender->client->ps.saber_move) // Saber is bouncing
 		|| PM_SaberInKnockaway(defender->client->ps.saber_move) // Saber is being knocked away
 		|| PM_SaberInBrokenParry(defender->client->ps.saber_move) // Your parry got smashed open
-		|| PM_kick_move(defender->client->ps.saber_move) // If you are doing a kick / melee / slap
+		|| PM_KickMove(defender->client->ps.saber_move) // If you are doing a kick / melee / slap
 		|| SaberAttacking(defender) // you are saber attacking
 		|| PM_InGrappleMove(defender->client->ps.torsoAnim) // Trying to grab
 		|| defender->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] < FORCE_LEVEL_1
@@ -12862,7 +12880,7 @@ int BotCanAbsorbKick(const gentity_t* defender, const vec3_t push_dir) //Can the
 		|| PM_SaberInBounce(defender->client->ps.saber_move) // Saber is bouncing
 		|| PM_SaberInKnockaway(defender->client->ps.saber_move) // Saber is being knocked away
 		|| PM_SaberInBrokenParry(defender->client->ps.saber_move) // Your parry got smashed open
-		|| PM_kick_move(defender->client->ps.saber_move) // If you are doing a kick / melee / slap
+		|| PM_KickMove(defender->client->ps.saber_move) // If you are doing a kick / melee / slap
 		|| SaberAttacking(defender) // you are saber attacking
 		|| PM_InGrappleMove(defender->client->ps.torsoAnim) // Trying to grab
 		|| defender->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] < FORCE_LEVEL_1
@@ -14815,6 +14833,15 @@ static void SaberBallisticsThink(gentity_t* saberEnt)
 			//racc - picked up the saber.
 			G_Sound(saberEnt, CHAN_AUTO, G_SoundIndex("sound/weapons/saber/saber_catch.mp3"));
 			G_SetAnim(saber_owner, NULL, SETANIM_TORSO, BOTH_STAND1TO2, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
+
+			if (saber_owner->client->ps.saberFatigueChainCount >= MISHAPLEVEL_HUDFLASH)
+			{
+				saber_owner->client->ps.saberFatigueChainCount = MISHAPLEVEL_LIGHT;
+			}
+			if (saber_owner->client->ps.fd.blockPoints < BLOCKPOINTS_TWENTYFIVE)
+			{
+				WP_BlockPointsRegenerate(saber_owner, BLOCKPOINTS_TWENTYFIVE);
+			}
 
 			saberEnt->s.eFlags &= ~EF_MISSILE_STICK;
 			saberReactivate(saberEnt, saber_owner);

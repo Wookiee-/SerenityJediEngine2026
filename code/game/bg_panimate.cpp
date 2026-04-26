@@ -2208,7 +2208,7 @@ qboolean SaberAttacking(const gentity_t* self)
 	return qfalse;
 }
 
-qboolean PM_kick_move(const int move)
+qboolean PM_KickMove(const int move)
 {
 	switch (move)
 	{

@@ -566,6 +566,36 @@ static void client_clean_name(const char* in, char* out, const int outSize)
 		Q_strncpyz(out, "Padawan", outSize);
 }
 
+// -----------------------------------------------------------------------------
+// reset communicating / dash / speed-related state after save-load
+// -----------------------------------------------------------------------------
+static void Client_ResetCommunicatingDashAndSpeedState(gclient_t* client)
+{
+	// Clear communicating / gesture / special flags
+	client->ps.communicatingflags &= ~(1 << CF_SABERLOCK_ADVANCE);
+	client->ps.communicatingflags &= ~(1 << CF_SABERLOCKING);
+	client->ps.communicatingflags &= ~(1 << SURRENDERING);
+	client->ps.communicatingflags &= ~(1 << RESPECTING);
+	client->ps.communicatingflags &= ~(1 << GESTURING);
+	client->ps.communicatingflags &= ~(1 << DASHING);
+	client->ps.communicatingflags &= ~(1 << KICKING);
+	// Reset speed timers
+	client->ps.forcePowerDebounce[FP_SPEED] = 0;
+	client->ps.forcePowerDuration[FP_SPEED] = 0;
+	client->ps.forceAllowDeactivateTime = 0;
+	client->ps.forceSpeedRecoveryTime = 0;
+	client->ps.forcePowersActive &= ~(1 << FP_SPEED);
+
+	// Reset dash timers/count so cooldowns don't block post-load dashing
+	client->ps.dashstartTime = 0;
+	client->ps.dashlaststartTime = 0;
+	client->ps.Dash_Count = 0;
+	client->ps.pm_flags &= ~PMF_DASH_HELD;
+	client->pers.lastCommand.buttons &= ~BUTTON_DASH;
+	client->latched_buttons &= ~BUTTON_DASH;
+	client->buttons &= ~BUTTON_DASH;
+}
+
 /*
 ===========
 client_userinfo_changed
@@ -660,6 +690,9 @@ char* client_connect(const int clientNum, const qboolean first_time,
 			client->playerTeam = TEAM_PLAYER;
 			//set these now because after an auto_load kyle can see your team for a bit before you really join.
 			client->enemyTeam = TEAM_ENEMY;
+
+			// Reset communicating / dash / speed-related state on full save-load
+			Client_ResetCommunicatingDashAndSpeedState(client);
 		}
 	}
 
@@ -670,6 +703,9 @@ char* client_connect(const int clientNum, const qboolean first_time,
 		// G_WriteClientSessionData( client ); // forget it, this is DM stuff anyway
 		// get and distribute relevent paramters
 		client_userinfo_changed(clientNum);
+
+		// Reset communicating / dash / speed-related state on full save-load
+		Client_ResetCommunicatingDashAndSpeedState(client);
 	}
 	else
 	{
@@ -682,6 +718,9 @@ char* client_connect(const int clientNum, const qboolean first_time,
 
 		// get and distribute relevent paramters
 		client_userinfo_changed(clientNum);
+
+		// Reset communicating / dash / speed-related state on full save-load
+		Client_ResetCommunicatingDashAndSpeedState(client);
 
 		// don't do the "xxx connected" messages if they were caried over from previous level
 		if (first_time)
@@ -712,6 +751,9 @@ void client_begin(const int clientNum, const usercmd_t* cmd, const SavedGameJust
 		client->pers.connected = CON_CONNECTED;
 		ent->client = client;
 		ClientSpawn(ent, e_saved_game_just_loaded);
+
+		// Reset communicating / dash / speed-related state on full save-load
+		Client_ResetCommunicatingDashAndSpeedState(client);
 	}
 	else
 	{
@@ -742,6 +784,9 @@ void client_begin(const int clientNum, const usercmd_t* cmd, const SavedGameJust
 		}
 		client->ps.inventory[INV_GOODIE_KEY] = 0;
 		client->ps.inventory[INV_SECURITY_KEY] = 0;
+
+		// Reset communicating / dash / speed-related state on full save-load
+		Client_ResetCommunicatingDashAndSpeedState(client);
 	}
 }
 
@@ -2449,7 +2494,7 @@ void G_InitPlayerFromCvars(gentity_t* ent)
 	}
 }
 
-void g_reload_saber_data(const gentity_t* ent)
+void G_ReloadSaberData(const gentity_t* ent)
 {
 	//dualSabers should already be set
 	if (ent->client->ps.saber[0].name != nullptr)
@@ -2921,13 +2966,19 @@ qboolean ClientSpawn(gentity_t* ent, SavedGameJustLoaded_e e_saved_game_just_loa
 		}
 		else
 		{
+			// Rebuild the player from the saved character cvars after a full save-load.
+			// This mirrors the in-game character menu workaround and refreshes model,
+			// sound, saber, and weapon state that can otherwise go stale.
+			//G_InitPlayerFromCvars(ent);
 			G_LoadAnimFileSet(ent, ent->NPC_type);
 			G_SetSkin(ent);
 		}
 
 		//setup sabers
-		g_reload_saber_data(ent);
-		//force power levels should already be set
+		G_ReloadSaberData(ent);
+
+		// On full save-load, ensure dash / speed / communicating state is clean
+		Client_ResetCommunicatingDashAndSpeedState(client);
 	}
 	else
 	{
@@ -3142,8 +3193,7 @@ qboolean ClientSpawn(gentity_t* ent, SavedGameJustLoaded_e e_saved_game_just_loa
 			if (!(spawn_point->spawnflags & 1)) // not KEEP_PREV
 			{
 				//then restore health and armor
-				ent->health = client->ps.stats[STAT_ARMOR] = client->ps.stats[STAT_HEALTH] = client->ps.stats[
-					STAT_MAX_HEALTH];
+				ent->health = client->ps.stats[STAT_ARMOR] = client->ps.stats[STAT_HEALTH] = client->ps.stats[STAT_MAX_HEALTH];
 				ent->client->ps.forcePower = ent->client->ps.forcePowerMax;
 				ent->client->ps.cloakFuel = 100;
 				ent->client->ps.blockPoints = 100;
@@ -3155,6 +3205,9 @@ qboolean ClientSpawn(gentity_t* ent, SavedGameJustLoaded_e e_saved_game_just_loa
 				ent->client->ps.muzzleOverheatTime = 0;
 			}
 			G_InitPlayerFromCvars(ent);
+
+			// Reset communicating / dash / speed-related state on full save-load
+			Client_ResetCommunicatingDashAndSpeedState(client);
 		}
 		else
 		{
@@ -3172,8 +3225,10 @@ qboolean ClientSpawn(gentity_t* ent, SavedGameJustLoaded_e e_saved_game_just_loa
 				G_LoadAnimFileSet(ent, ent->NPC_type);
 				G_SetSkin(ent);
 			}
-			g_reload_saber_data(ent);
-			//force power levels should already be set
+			G_ReloadSaberData(ent);
+
+			// Reset communicating / dash / speed-related state on full save-load
+			Client_ResetCommunicatingDashAndSpeedState(client);
 		}
 
 		//NEVER start a map with either of your sabers or blades on...

@@ -942,60 +942,84 @@ Spectators will only interact with teleporters.
 */
 void G_TouchTriggers(gentity_t* ent)
 {
-	int touch[MAX_GENTITIES];
+	// ------------------------------------------------------------
+	// STATIC STORAGE TO AVOID LARGE STACK USAGE (C6262)
+	// ------------------------------------------------------------
+	// MAX_GENTITIES can be large; keeping this on the stack triggers
+	// warning C6262. Making it static preserves behaviour and avoids
+	// per-call stack bloat.
+	static int touch[MAX_GENTITIES];
+
 	trace_t trace;
 	vec3_t mins, maxs;
-	static vec3_t range = { 40, 40, 52 };
+	static vec3_t range = { 40.0f, 40.0f, 52.0f };
 
+	// ------------------------------------------------------------
+	// VALID CLIENT CHECKS
+	// ------------------------------------------------------------
 	if (!ent->client)
 	{
 		return;
 	}
 
-	// dead clients don't activate triggers!
+	// Dead clients don't activate triggers
 	if (ent->client->ps.stats[STAT_HEALTH] <= 0)
 	{
 		return;
 	}
 
+	// ------------------------------------------------------------
+	// FIND CANDIDATE TRIGGERS IN RANGE
+	// ------------------------------------------------------------
 	VectorSubtract(ent->client->ps.origin, range, mins);
 	VectorAdd(ent->client->ps.origin, range, maxs);
 
 	const int num = trap->EntitiesInBox(mins, maxs, touch, MAX_GENTITIES);
 
-	// can't use ent->r.absmin, because that has a one unit pad
+	// Can't use ent->r.absmin because that has a one?unit pad
 	VectorAdd(ent->client->ps.origin, ent->r.mins, mins);
 	VectorAdd(ent->client->ps.origin, ent->r.maxs, maxs);
 
+	// ------------------------------------------------------------
+	// PROCESS ALL CANDIDATE ENTITIES
+	// ------------------------------------------------------------
 	for (int i = 0; i < num; i++)
 	{
 		gentity_t* hit = &g_entities[touch[i]];
 
+		// If neither side has a touch function, skip
 		if (!hit->touch && !ent->touch)
 		{
 			continue;
 		}
+
+		// Only triggers are interesting here
 		if (!(hit->r.contents & CONTENTS_TRIGGER))
 		{
 			continue;
 		}
 
-		// ignore most entities if a spectator
+		// --------------------------------------------------------
+		// SPECTATOR RESTRICTIONS
+		// --------------------------------------------------------
 		if (ent->client->sess.sessionTeam == TEAM_SPECTATOR)
 		{
+			// Only allow teleport triggers and door triggers
 			if (hit->s.eType != ET_TELEPORT_TRIGGER &&
-				// this is ugly but adding a new ET_? type will
-				// most likely cause network incompatibilities
+				// This is ugly but adding a new ET_? type would
+				// likely cause network incompatibilities
 				hit->touch != Touch_DoorTrigger)
 			{
 				continue;
 			}
 		}
 
-		// use seperate code for determining if an item is picked up
-		// so you don't have to actually contact its bounding box
+		// --------------------------------------------------------
+		// ITEM PICKUP VS. GENERAL TRIGGER CONTACT
+		// --------------------------------------------------------
 		if (hit->s.eType == ET_ITEM)
 		{
+			// Item pickup uses a special touch test
 			if (!BG_PlayerTouchesItem(&ent->client->ps, &hit->s, level.time))
 			{
 				continue;
@@ -1003,26 +1027,34 @@ void G_TouchTriggers(gentity_t* ent)
 		}
 		else
 		{
+			// General trigger contact uses bounding box overlap
 			if (!trap->EntityContact(mins, maxs, (sharedEntity_t*)hit, qfalse))
 			{
 				continue;
 			}
 		}
 
-		memset(&trace, 0, sizeof trace);
+		// --------------------------------------------------------
+		// DISPATCH TOUCH CALLBACKS
+		// --------------------------------------------------------
+		memset(&trace, 0, sizeof(trace));
 
 		if (hit->touch)
 		{
 			hit->touch(hit, ent, &trace);
 		}
 
-		if (ent->r.svFlags & SVF_BOT && ent->touch)
+		// Bots can have their own touch logic
+		if ((ent->r.svFlags & SVF_BOT) && ent->touch)
 		{
 			ent->touch(ent, hit, &trace);
 		}
 	}
 
-	// if we didn't touch a jump pad this pmove frame
+	// ------------------------------------------------------------
+	// JUMPPAD STATE CLEANUP
+	// ------------------------------------------------------------
+	// If we didn't touch a jump pad this pmove frame, clear state
 	if (ent->client->ps.jumppad_frame != ent->client->ps.pmove_framecount)
 	{
 		ent->client->ps.jumppad_frame = 0;
@@ -1040,45 +1072,69 @@ Spectators will only interact with teleporters.
 */
 void g_mover_touch_push_triggers(gentity_t* ent, vec3_t old_org)
 {
+	// ------------------------------------------------------------
+	// STATIC STORAGE TO AVOID LARGE STACK USAGE (fixes C6262)
+	// ------------------------------------------------------------
+	static int touch[MAX_GENTITIES];
+
 	trace_t trace;
 	vec3_t dir, size;
-	const vec3_t range = { 40, 40, 52 };
+	const vec3_t range = { 40.0f, 40.0f, 52.0f };
 
-	// non-moving movers don't hit triggers!
-	if (!VectorLengthSquared(ent->s.pos.trDelta))
+	// ------------------------------------------------------------
+	// NON?MOVING MOVERS DO NOT HIT TRIGGERS
+	// ------------------------------------------------------------
+	if (VectorLengthSquared(ent->s.pos.trDelta) == 0.0f)
 	{
 		return;
 	}
 
+	// ------------------------------------------------------------
+	// COMPUTE STEP SIZE BASED ON MOVER BOUNDS
+	// ------------------------------------------------------------
 	VectorSubtract(ent->r.mins, ent->r.maxs, size);
 	float stepSize = VectorLength(size);
-	if (stepSize < 1)
+	if (stepSize < 1.0f)
 	{
-		stepSize = 1;
+		stepSize = 1.0f;
 	}
 
+	// ------------------------------------------------------------
+	// MOVEMENT DIRECTION AND DISTANCE
+	// ------------------------------------------------------------
 	VectorSubtract(ent->r.currentOrigin, old_org, dir);
 	const float dist = VectorNormalize(dir);
-	for (float step = 0; step <= dist; step += stepSize)
+
+	// ------------------------------------------------------------
+	// STEP THROUGH THE MOVER'S PATH
+	// ------------------------------------------------------------
+	for (float step = 0.0f; step <= dist; step += stepSize)
 	{
 		vec3_t checkSpot;
-		vec3_t maxs;
 		vec3_t mins;
-		int touch[MAX_GENTITIES];
+		vec3_t maxs;
+
+		// Position along movement path
 		VectorMA(ent->r.currentOrigin, step, dir, checkSpot);
+
+		// Broadphase box
 		VectorSubtract(checkSpot, range, mins);
 		VectorAdd(checkSpot, range, maxs);
 
 		const int num = trap->EntitiesInBox(mins, maxs, touch, MAX_GENTITIES);
 
-		// can't use ent->r.absmin, because that has a one unit pad
+		// Narrowphase box (actual mover bounds)
 		VectorAdd(checkSpot, ent->r.mins, mins);
 		VectorAdd(checkSpot, ent->r.maxs, maxs);
 
+		// --------------------------------------------------------
+		// PROCESS ALL CANDIDATE ENTITIES
+		// --------------------------------------------------------
 		for (int i = 0; i < num; i++)
 		{
 			gentity_t* hit = &g_entities[touch[i]];
 
+			// Only push triggers matter
 			if (hit->s.eType != ET_PUSH_TRIGGER)
 			{
 				continue;
@@ -1094,17 +1150,18 @@ void g_mover_touch_push_triggers(gentity_t* ent, vec3_t old_org)
 				continue;
 			}
 
+			// Must actually contact the trigger bounds
 			if (!trap->EntityContact(mins, maxs, (sharedEntity_t*)hit, qfalse))
 			{
 				continue;
 			}
 
-			memset(&trace, 0, sizeof trace);
+			// ----------------------------------------------------
+			// DISPATCH TOUCH CALLBACK
+			// ----------------------------------------------------
+			memset(&trace, 0, sizeof(trace));
 
-			if (hit->touch != NULL)
-			{
-				hit->touch(hit, ent, &trace);
-			}
+			hit->touch(hit, ent, &trace);
 		}
 	}
 }
@@ -1548,42 +1605,65 @@ but any server game effects are handled here
 
 static void ClientEvents(gentity_t* ent, int old_event_sequence)
 {
-	int damage;
+	// ------------------------------------------------------------
+	// SAFETY GUARD: ent->client may be NULL (fixes C6011)
+	// ------------------------------------------------------------
+	if (!ent || !ent->client)
+	{
+		return;
+	}
 
-	const gclient_t* Client = ent->client;
+	int damage = 0;
 
+	gclient_t* Client = ent->client;
+
+	// ------------------------------------------------------------
+	// CLAMP OLD EVENT SEQUENCE
+	// ------------------------------------------------------------
 	if (old_event_sequence < Client->ps.eventSequence - MAX_PS_EVENTS)
 	{
 		old_event_sequence = Client->ps.eventSequence - MAX_PS_EVENTS;
 	}
+
+	// ------------------------------------------------------------
+	// PROCESS ALL NEW EVENTS
+	// ------------------------------------------------------------
 	for (int i = old_event_sequence; i < Client->ps.eventSequence; i++)
 	{
 		vec3_t dir;
-		const int event = Client->ps.events[i & MAX_PS_EVENTS - 1];
+		const int index = (i & (MAX_PS_EVENTS - 1));
+		const int event = Client->ps.events[index];
 
 		switch (event)
 		{
+			// ========================================================
+			// FALL DAMAGE
+			// ========================================================
 		case EV_FALL:
 		{
-			const int delta = Client->ps.eventParms[i & MAX_PS_EVENTS - 1];
+			const int delta = Client->ps.eventParms[index];
 			qboolean knockDownage = qfalse;
 
-			if (Client && Client->ps.fallingToDeath)
+			// Ignore if falling to death
+			if (Client->ps.fallingToDeath)
 			{
 				break;
 			}
 
+			// Only players take fall damage
 			if (ent->s.eType != ET_PLAYER)
 			{
-				break; // not in the player model
+				break;
 			}
 
+			// DF_NO_FALLING disables fall damage
 			if (dmflags.integer & DF_NO_FALLING)
 			{
 				break;
 			}
 
-			if (Client && PM_InKnockDownOnly(Client->ps.legsAnim))
+			// Knockdown fall thresholds
+			if (PM_InKnockDownOnly(Client->ps.legsAnim))
 			{
 				if (delta <= 14)
 				{
@@ -1599,29 +1679,26 @@ static void ClientEvents(gentity_t* ent, int old_event_sequence)
 				}
 			}
 
-			if (knockDownage)
+			// Damage calculation
+			if (knockDownage == qtrue)
 			{
 				damage = delta * 1;
-				//you suffer for falling unprepared. A lot. Makes throws and things useful, and more realistic I suppose.
 			}
 			else
 			{
-				if (level.gametype == GT_SIEGE &&
-					delta > 60)
+				if (level.gametype == GT_SIEGE && delta > 60)
 				{
-					//longer falls hurt more
-					damage = delta * 1; //good enough for now, I guess
+					damage = delta * 1;
 				}
 				else
 				{
-					//damage = delta * 0.16; //good enough for now, I guess
-					damage = delta * 1; //good enough for now, I guess
+					damage = delta * 1;
 				}
 			}
 
-			VectorSet(dir, 0, 0, 1);
+			VectorSet(dir, 0.0f, 0.0f, 1.0f);
 
-			ent->pain_debounce_time = level.time + 200; // no normal pain sound
+			ent->pain_debounce_time = level.time + 200;
 			G_Damage(ent, NULL, NULL, NULL, NULL, damage, DAMAGE_NO_ARMOR, MOD_FALLING);
 
 			if (ent->health < 1)
@@ -1630,19 +1707,23 @@ static void ClientEvents(gentity_t* ent, int old_event_sequence)
 			}
 		}
 		break;
+
+		// ========================================================
+		// ROLL DAMAGE (similar to fall)
+		// ========================================================
 		case EV_ROLL:
 		{
-			const int delta = Client->ps.eventParms[i & MAX_PS_EVENTS - 1];
+			const int delta = Client->ps.eventParms[index];
 			qboolean knock_downage = qfalse;
 
-			if (Client && Client->ps.fallingToDeath)
+			if (Client->ps.fallingToDeath)
 			{
 				break;
 			}
 
 			if (ent->s.eType != ET_PLAYER)
 			{
-				break; // not in the player model
+				break;
 			}
 
 			if (dmflags.integer & DF_NO_FALLING)
@@ -1666,28 +1747,25 @@ static void ClientEvents(gentity_t* ent, int old_event_sequence)
 				}
 			}
 
-			if (knock_downage)
+			if (knock_downage == qtrue)
 			{
 				damage = delta * 1;
-				//you suffer for falling unprepared. A lot. Makes throws and things useful, and more realistic I suppose.
 			}
 			else
 			{
-				if (level.gametype == GT_SIEGE &&
-					delta > 60)
+				if (level.gametype == GT_SIEGE && delta > 60)
 				{
-					//longer falls hurt more
-					damage = delta * 1; //good enough for now, I guess
+					damage = delta * 1;
 				}
 				else
 				{
-					damage = delta * 0.16; //good enough for now, I guess
+					damage = (int)(delta * 0.16f);
 				}
 			}
 
-			VectorSet(dir, 0, 0, 1);
+			VectorSet(dir, 0.0f, 0.0f, 1.0f);
 
-			ent->pain_debounce_time = level.time + 200; // no normal pain sound
+			ent->pain_debounce_time = level.time + 200;
 			G_Damage(ent, NULL, NULL, NULL, NULL, damage, DAMAGE_NO_ARMOR, MOD_FALLING);
 
 			if (ent->health < 1)
@@ -1696,16 +1774,21 @@ static void ClientEvents(gentity_t* ent, int old_event_sequence)
 			}
 		}
 		break;
+
+		// ========================================================
+		// WEAPON FIRE EVENTS
+		// ========================================================
 		case EV_FIRE_WEAPON:
 			if (PM_ReloadAnim(Client->ps.torsoAnim))
 			{
 				return;
 			}
 
-			if (ent && ent->client && ent->client->frozenTime > level.time)
+			if (ent->client->frozenTime > level.time)
 			{
-				return; //this entity is mind-tricking the current client, so don't render it
+				return;
 			}
+
 			FireWeapon(ent, qfalse);
 			ent->client->dangerTime = level.time;
 			ent->client->ps.eFlags &= ~EF_INVULNERABLE;
@@ -1718,10 +1801,11 @@ static void ClientEvents(gentity_t* ent, int old_event_sequence)
 				return;
 			}
 
-			if (ent && ent->client && ent->client->frozenTime > level.time)
+			if (ent->client->frozenTime > level.time)
 			{
-				return; //this entity is mind-tricking the current client, so don't render it
+				return;
 			}
+
 			FireWeapon(ent, qtrue);
 			ent->client->dangerTime = level.time;
 			ent->client->ps.eFlags &= ~EF_INVULNERABLE;
@@ -1734,55 +1818,26 @@ static void ClientEvents(gentity_t* ent, int old_event_sequence)
 			ent->client->invulnerableTimer = 0;
 			break;
 
-			//rww - Note that these must be in the same order (ITEM#-wise) as they are in holdable_t
-		case EV_USE_ITEM1: //seeker droid        HI_SEEKER
-			ItemUse_Seeker(ent);
-			break;
-		case EV_USE_ITEM2: //shield              HI_SHIELD
-			ItemUse_Shield(ent);
-			break;
-		case EV_USE_ITEM3: //medpack             HI_MEDPAC
-			ItemUse_MedPack(ent);
-			break;
-		case EV_USE_ITEM4: //big medpack         HI_MEDPAC_BIG
-			ItemUse_MedPack_Big(ent);
-			break;
-		case EV_USE_ITEM5: //binoculars          HI_BINOCULARS
-			ItemUse_Binoculars(ent);
-			break;
-		case EV_USE_ITEM6: //sentry gun          HI_SENTRY_GUN
-			ItemUse_Sentry(ent);
-			break;
-		case EV_USE_ITEM7: //jetpack             HI_JETPACK
-			ItemUse_Jetpack(ent);
-			break;
-		case EV_USE_ITEM8: //health disp         HI_HEALTHDISP
-			ItemUse_UseDisp(ent, HI_HEALTHDISP);
-			break;
-		case EV_USE_ITEM9: //ammo disp           HI_AMMODISP
-			ItemUse_UseDisp(ent, HI_AMMODISP);
-			break;
-		case EV_USE_ITEM10: //eweb               HI_EWEB
-			ItemUse_UseEWeb(ent);
-			break;
-		case EV_USE_ITEM11: //cloak              HI_CLOAK
-			ItemUse_UseCloak(ent);
-			break;
-		case EV_USE_ITEM12: //flamethrower       HI_FLAMETHROWER
-			ItemUse_FlameThrower(ent);
-			break;
-		case EV_USE_ITEM13: //swoop              HI_SWOOP
-			ItemUse_Swoop(ent);
-			break;
-		case EV_USE_ITEM14: //Decca              HI_DROIDEKA
-			ItemUse_Decca(ent);
-			break;
-		case EV_USE_ITEM15: //sphereshield       HI_SPHERESHIELD
-			ItemUse_UseSphereshield(ent);
-			break;
-		case EV_USE_ITEM16: //Grapple hook       HI_GRAPPLE
-			//
-			break;
+			// ========================================================
+			// ITEM USE EVENTS
+			// ========================================================
+		case EV_USE_ITEM1:  ItemUse_Seeker(ent); break;
+		case EV_USE_ITEM2:  ItemUse_Shield(ent); break;
+		case EV_USE_ITEM3:  ItemUse_MedPack(ent); break;
+		case EV_USE_ITEM4:  ItemUse_MedPack_Big(ent); break;
+		case EV_USE_ITEM5:  ItemUse_Binoculars(ent); break;
+		case EV_USE_ITEM6:  ItemUse_Sentry(ent); break;
+		case EV_USE_ITEM7:  ItemUse_Jetpack(ent); break;
+		case EV_USE_ITEM8:  ItemUse_UseDisp(ent, HI_HEALTHDISP); break;
+		case EV_USE_ITEM9:  ItemUse_UseDisp(ent, HI_AMMODISP); break;
+		case EV_USE_ITEM10: ItemUse_UseEWeb(ent); break;
+		case EV_USE_ITEM11: ItemUse_UseCloak(ent); break;
+		case EV_USE_ITEM12: ItemUse_FlameThrower(ent); break;
+		case EV_USE_ITEM13: ItemUse_Swoop(ent); break;
+		case EV_USE_ITEM14: ItemUse_Decca(ent); break;
+		case EV_USE_ITEM15: ItemUse_UseSphereshield(ent); break;
+		case EV_USE_ITEM16: /* Grapple hook */ break;
+
 		default:
 			break;
 		}
@@ -4359,6 +4414,11 @@ extern void Weapon_AltStun_Fire(gentity_t* ent);
 
 static void ClientThink_real(gentity_t* ent)
 {
+	if (!ent || !ent->client)
+	{
+		return;
+	}
+
 	gclient_t* client;
 	pmove_t pmove;
 	int old_event_sequence;
@@ -4681,25 +4741,16 @@ static void ClientThink_real(gentity_t* ent)
 			}
 		}
 	}
-
-	if (ent && ent->client && (ent->client->ps.eFlags & EF_TALK))
+	
+	if (client->ps.eFlags & EF_TALK)
 	{
-		//#ifdef _GAME
-				//if (g_chat_protection.integer == 1 && !ent->client->ps.duelInProgress && !ent->client->pers.isbeingpunished)
-				//{
 		ent->flags |= FL_GODMODE;
-		//}
-//#endif
 	}
 	else
 	{
-		//#ifdef _GAME
-				//if (g_chat_protection.integer == 1 && !ent->client->ps.duelInProgress && !ent->client->pers.isbeingpunished)
-				//{
 		ent->flags &= ~FL_GODMODE;
-		//}
-//#endif
 	}
+
 
 	if (ent && ent->s.eType != ET_NPC)
 	{
@@ -4709,13 +4760,6 @@ static void ClientThink_real(gentity_t* ent)
 			return;
 		}
 	}
-
-	// clear the rewards if time
-	/*if (level.time > client->rewardTime)
-	{
-		client->ps.eFlags &= ~(EF_AWARD_IMPRESSIVE | EF_AWARD_EXCELLENT | EF_AWARD_GAUNTLET | EF_AWARD_ASSIST | EF_AWARD_DEFEND | EF_AWARD_CAP);
-	}*/
-
 	//Check if we should have a fullbody push effect around the player
 	if (client->pushEffectTime > level.time)
 	{
@@ -5669,56 +5713,54 @@ static void ClientThink_real(gentity_t* ent)
 	// Activate the surrenderingTime flags
 	if (!(ent->r.svFlags & SVF_BOT))
 	{
-		if (IsPressingDashButton(ent)
-			&& !PM_kick_move(ent->client->ps.saber_move)
-			&& !PM_SaberInAttack(ent->client->ps.saber_move))
+		if ((client->ps.dashstartTime > level.time) ||
+			(client->ps.dashlaststartTime > level.time))
 		{
-			if (client->Dash_Count <= 2)
+			client->ps.dashstartTime = 0;
+			client->ps.dashlaststartTime = 0;
+			client->ps.Dash_Count = 0;
+			client->ps.communicatingflags &= ~(1 << DASHING);
+		}
+		if ((IsPressingDashButton(ent) == qtrue))
+		{
+			if (client->ps.Dash_Count < 2)
 			{
-				if (client->ps.dashstartTime <= 0 && level.time - client->ps.dashlaststartTime >= 100)
+				if ((client->ps.dashstartTime <= 0) &&
+					(level.time - client->ps.dashlaststartTime >= 100))
 				{
-					// They just pressed dash. Mark the time... 3000 wait between allowed dash.
 					client->ps.dashstartTime = level.time;
 					client->ps.dashlaststartTime = level.time;
-					client->Dash_Count++;
+					client->ps.Dash_Count++;
 
-					if (!(client->ps.communicatingflags & 1 << DASHING))
+					if ((client->ps.communicatingflags & (1 << DASHING)) == 0)
 					{
-						client->ps.communicatingflags |= 1 << DASHING;
+						client->ps.communicatingflags |= (1 << DASHING);
 					}
 				}
-				else
+				else if (level.time - client->ps.dashlaststartTime >= 10)
 				{
-					if (level.time - client->ps.dashlaststartTime >= 10)
-					{
-						// When dash was pressed, wait 3000 before letting go of dash.
-						client->ps.dashstartTime = 0;
-						client->ps.communicatingflags &= ~(1 << DASHING);
-					}
+					client->ps.dashstartTime = 0;
+					client->ps.communicatingflags &= ~(1 << DASHING);
 				}
 			}
 			else
 			{
-				if (client->ps.dashstartTime <= 0 && level.time - client->ps.dashlaststartTime >= 2500)
+				if ((client->ps.dashstartTime <= 0) &&
+					(level.time - client->ps.dashlaststartTime >= 2500))
 				{
-					// They just pressed dash. Mark the time... 8000 wait between allowed dash.
 					client->ps.dashstartTime = level.time;
 					client->ps.dashlaststartTime = level.time;
 
-					if (!(client->ps.communicatingflags & 1 << DASHING))
+					if ((client->ps.communicatingflags & (1 << DASHING)) == 0)
 					{
-						client->ps.communicatingflags |= 1 << DASHING;
+						client->ps.communicatingflags |= (1 << DASHING);
 					}
 				}
-				else
+				else if (level.time - client->ps.dashlaststartTime >= 2500)
 				{
-					if (level.time - client->ps.dashlaststartTime >= 2500)
-					{
-						// When dash was pressed, wait 3000 before letting go of dash.
-						client->ps.dashstartTime = 0;
-						client->Dash_Count = 0;
-						client->ps.communicatingflags &= ~(1 << DASHING);
-					}
+					client->ps.dashstartTime = 0;
+					client->ps.Dash_Count = 0;
+					client->ps.communicatingflags &= ~(1 << DASHING);
 				}
 			}
 		}
@@ -5848,9 +5890,6 @@ static void ClientThink_real(gentity_t* ent)
 		}
 		else
 		{
-			client->ps.respectingtime = 0;
-			client->ps.gesturingtime = 0;
-			client->ps.surrendertimeplayer = 0;
 			client->ps.communicatingflags &= ~(1 << CF_SABERLOCK_ADVANCE);
 			client->ps.communicatingflags &= ~(1 << CF_SABERLOCKING);
 			client->ps.communicatingflags &= ~(1 << SURRENDERING);
@@ -6097,7 +6136,7 @@ static void ClientThink_real(gentity_t* ent)
 
 	memset(&pmove, 0, sizeof pmove);
 
-	if (client && ent->flags & FL_FORCE_GESTURE)
+	if (ent->flags & FL_FORCE_GESTURE)
 	{
 		ent->flags &= ~FL_FORCE_GESTURE;
 		ent->client->pers.cmd.buttons |= BUTTON_GESTURE;
