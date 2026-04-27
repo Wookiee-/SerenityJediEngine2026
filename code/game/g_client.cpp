@@ -592,8 +592,18 @@ static void Client_ResetCommunicatingDashAndSpeedState(gclient_t* client)
 	client->ps.Dash_Count = 0;
 	client->ps.pm_flags &= ~PMF_DASH_HELD;
 	client->pers.lastCommand.buttons &= ~BUTTON_DASH;
+	// Also clear any persisted command/button state that may have been saved
+	// (e.g. held dash in client->pers.cmd) so the player doesn't need to
+	// press another key after load to re-enable normal dashing.
+	client->pers.cmd.buttons &= ~BUTTON_DASH;
+	client->pers.cmd.forwardmove = 0;
+	client->pers.cmd.rightmove = 0;
+	client->pers.cmd.upmove = 0;
 	client->latched_buttons &= ~BUTTON_DASH;
 	client->buttons &= ~BUTTON_DASH;
+
+	// Clear userInt3 DASHING flag if a saved game mistakenly left it set.
+	client->ps.userInt3 &= ~(1 << FLAG_DASHING);
 }
 
 /*
