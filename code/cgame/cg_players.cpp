@@ -2898,7 +2898,7 @@ static void CG_G2PlayerAngles(centity_t* cent, vec3_t legs[3], vec3_t angles)
 		&& cent->gent->client->NPC_class != CLASS_R5D2
 		&& (cent->gent->client->NPC_class != CLASS_ATST || !cent->gent->s.number))
 	{
-		vec3_t trailing_legs_angles;
+		vec3_t trailing_legs_angles = { 0.0f, 0.0f, 0.0f };
 		// If we are rendering third person, we should just force the player body to always fully face
 		//	whatever way they are looking, otherwise, you can end up with gun shots coming off of the
 		//	gun at angles that just look really wrong.
@@ -3287,7 +3287,7 @@ static void CG_G2PlayerAngles(centity_t* cent, vec3_t legs[3], vec3_t angles)
 
 			VectorCopy(view_angles, look_angles);
 
-			vec3_t trailing_legs_angles;
+			vec3_t trailing_legs_angles = { 0.0f, 0.0f, 0.0f };
 			if (cent->gent && cent->gent->client && cent->gent->client->NPC_class == CLASS_ATST)
 			{
 				CG_ATSTLegsYaw(cent, trailing_legs_angles);

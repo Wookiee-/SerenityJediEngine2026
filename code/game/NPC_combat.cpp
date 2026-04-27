@@ -678,13 +678,14 @@ void G_SetEnemy(gentity_t* self, gentity_t* enemy)
 			}
 		}
 
-		//Alert anyone else in the area
-		if (Q_stricmp("STCommander", self->NPC_type) != 0 && Q_stricmp("ImpCommander", self->NPC_type) != 0)
+		// Alert anyone else in the area (except special holodeck enemies)
+		if (Q_stricmp("STCommander", self->NPC_type) != 0 &&
+			Q_stricmp("ImpCommander", self->NPC_type) != 0)
 		{
-			//special enemies exception
-			if (!(self->client->ps.eFlags & EF_FORCE_GRIPPED) && !(self->client->ps.eFlags & EF_FORCE_GRABBED))
+			if (self->client &&                      
+				!(self->client->ps.eFlags & EF_FORCE_GRIPPED) &&
+				!(self->client->ps.eFlags & EF_FORCE_GRABBED))
 			{
-				//gripped people can't call for help
 				G_AngerAlert(self);
 			}
 		}

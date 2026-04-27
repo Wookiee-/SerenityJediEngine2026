@@ -871,6 +871,8 @@ qboolean NPC_CheckPlayerTeamStealth()
 
 static qboolean NPC_CheckEnemiesInSpotlight()
 {
+	const qboolean isYavin1b = (Q_stricmp(level.mapname, "yavin1b") == 0) ? qtrue : qfalse;
+
 	if (!NPC || !NPC->client || !NPCInfo)
 	{
 		return qfalse;
@@ -887,7 +889,7 @@ static qboolean NPC_CheckEnemiesInSpotlight()
 
 	for (int i = 0; i < 3; i++)
 	{
-		if (g_spskill->integer <= 2 || in_camera)
+		if (g_spskill->integer <= 2 || in_camera || isYavin1b)
 		{// Normal and easy have a smaller detection radius
 			mins[i] = NPC->client->renderInfo.eyePoint[i] - DETECTION_RADIUS;
 			maxs[i] = NPC->client->renderInfo.eyePoint[i] + DETECTION_RADIUS;
@@ -922,7 +924,7 @@ static qboolean NPC_CheckEnemiesInSpotlight()
 			continue;
 		}
 
-		if (g_spskill->integer <= 2 || in_camera)
+		if (g_spskill->integer <= 2 || in_camera || isYavin1b)
 		{// Normal and easy have a smaller detection radius
 			// Primary cone check with distance limit
 			const float dist_sq = DistanceSquared(NPC->client->renderInfo.eyePoint, enemy->currentOrigin);
@@ -2607,7 +2609,8 @@ static void ST_Commander(void)
 		}
 
 		// If enemy is lost but still in same region, track directly instead of using CP
-		if (enemy_lost == qtrue && NPC->enemy && NAV::InSameRegion(NPC, NPC->enemy->currentOrigin))
+		if (enemy_lost == qtrue && NPC->enemy != nullptr &&
+			NAV::InSameRegion(NPC, NPC->enemy->currentOrigin) == qtrue)
 		{
 			ST_TrackEnemy(NPC, NPC->enemy->currentOrigin);
 			continue;

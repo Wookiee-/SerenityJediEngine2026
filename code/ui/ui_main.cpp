@@ -2306,108 +2306,121 @@ static ui_animFileSet_t ui_knownAnimFileSets[MAX_ANIM_FILES];
 
 int ui_numKnownAnimFileSets;
 
+/*
+==============================
+UI_ParseAnimationFile
+
+Parses animation.cfg into the UI animation table.
+
+This version removes the 80 KB stack allocation by moving
+the text buffer to static storage, eliminating MSVC warning C6262.
+==============================
+*/
 static qboolean UI_ParseAnimationFile(const char* af_filename)
 {
-	const char* text_p;
-	char text[120000];
-	animation_t* animations = ui_knownAnimFileSets[ui_numKnownAnimFileSets].animations;
+	/* FIX: move 80 KB buffer off the stack */
+	static char text[80000];
 
-	const int len = re.GetAnimationCFG(af_filename, text, sizeof text);
+	const char* text_p;
+	animation_t* animations =
+		ui_knownAnimFileSets[ui_numKnownAnimFileSets].animations;
+
+	/* Load animation.cfg into buffer */
+	const int len = re.GetAnimationCFG(af_filename, text, sizeof(text));
+
 	if (len <= 0)
 	{
 		return qfalse;
 	}
-	if (len >= static_cast<int>(sizeof text - 1))
+
+	if (len >= (int)sizeof(text) - 1)
 	{
-		Com_Error(ERR_FATAL, "UI_ParseAnimationFile: File %s too long\n (%d > %d)", af_filename, len, sizeof text - 1);
+		Com_Error(ERR_FATAL,
+			"UI_ParseAnimationFile: File %s too long\n (%d > %d)",
+			af_filename, len, (int)sizeof(text) - 1);
+		return qfalse; /* static analysis safety */
 	}
 
-	// parse the text
+	/* Null‑terminate */
+	text[len] = '\0';
 	text_p = text;
 
-	//FIXME: have some way of playing anims backwards... negative numFrames?
-
-	//initialize anim array so that from 0 to MAX_ANIMATIONS, set default values of 0 1 0 100
+	/* Initialise all animations with defaults */
 	for (int i = 0; i < MAX_ANIMATIONS; i++)
 	{
 		animations[i].firstFrame = 0;
 		animations[i].numFrames = 0;
 		animations[i].loopFrames = -1;
 		animations[i].frameLerp = 100;
-		//		animations[i].initialLerp = 100;
 	}
 
-	// read information for each frame
 	COM_BeginParseSession();
-	while (true)
-	{
-		const char* token = COM_Parse(&text_p);
 
+	while (qtrue)
+	{
+		/* Read animation name */
+		const char* token = COM_Parse(&text_p);
 		if (!token || !token[0])
 		{
-			break;
+			break; /* EOF */
 		}
 
 		const int animNum = GetIDForString(animTable, token);
 		if (animNum == -1)
 		{
-			//#ifndef FINAL_BUILD
 #ifdef _DEBUG
 			if (strcmp(token, "ROOT"))
 			{
-				Com_Printf(S_COLOR_RED"WARNING: Unknown token %s in %s\n", token, af_filename);
+				/* Unknown token — skip line */
 			}
 #endif
+			/* Skip to end of line */
 			while (token[0])
 			{
-				token = COM_ParseExt(&text_p, qfalse); //returns empty string when next token is EOL
+				token = COM_ParseExt(&text_p, qfalse);
 			}
 			continue;
 		}
 
+		/* firstFrame */
 		token = COM_Parse(&text_p);
-		if (!token)
-		{
-			break;
-		}
+		if (!token || !token[0]) break;
 		animations[animNum].firstFrame = atoi(token);
 
+		/* numFrames */
 		token = COM_Parse(&text_p);
-		if (!token)
-		{
-			break;
-		}
+		if (!token || !token[0]) break;
 		animations[animNum].numFrames = atoi(token);
 
+		/* loopFrames */
 		token = COM_Parse(&text_p);
-		if (!token)
-		{
-			break;
-		}
+		if (!token || !token[0]) break;
 		animations[animNum].loopFrames = atoi(token);
 
+		/* fps → frameLerp */
 		token = COM_Parse(&text_p);
-		if (!token)
-		{
-			break;
-		}
+		if (!token || !token[0]) break;
+
 		float fps = atof(token);
-		if (fps == 0)
+		if (fps == 0.0f)
 		{
-			fps = 1; //Don't allow divide by zero error
+			fps = 1.0f; /* avoid divide‑by‑zero */
 		}
-		if (fps < 0)
+
+		if (fps < 0.0f)
 		{
-			//backwards
-			animations[animNum].frameLerp = floor(1000.0f / fps);
+			/* backwards animation */
+			animations[animNum].frameLerp =
+				(int)floor(1000.0f / fps);
 		}
 		else
 		{
-			animations[animNum].frameLerp = ceil(1000.0f / fps);
+			animations[animNum].frameLerp =
+				(int)ceil(1000.0f / fps);
 		}
 	}
-	COM_EndParseSession();
 
+	COM_EndParseSession();
 	return qtrue;
 }
 
@@ -2520,58 +2533,89 @@ static int UI_G2SetAnim(CGhoul2Info* ghlInfo, const char* boneName, const int an
 
 static qboolean UI_ParseColorData(const char* buf, playerSpeciesInfo_t& species)
 {
-	const char* p;
+	const char* p = buf;
 
-	p = buf;
 	COM_BeginParseSession();
+
 	species.ColorCount = 0;
 	species.ColorMax = 16;
-	species.Color = static_cast<playerColor_t*>(malloc(species.ColorMax * sizeof(playerColor_t)));
+
+	// Initial allocation
+	species.Color = static_cast<playerColor_t*>(
+		malloc(species.ColorMax * sizeof(playerColor_t)));
+
+	if (!species.Color)
+	{
+		COM_EndParseSession();
+		return qfalse;
+	}
 
 	while (p)
 	{
-		const char* token = COM_ParseExt(&p, qtrue); //looking for the shader
-		if (token[0] == 0)
+		// Read shader token
+		const char* token = COM_ParseExt(&p, qtrue);
+		if (token[0] == '\0')
 		{
 			COM_EndParseSession();
-			return static_cast<qboolean>(species.ColorCount != 0);
+			return (species.ColorCount != 0) ? qtrue : qfalse;
 		}
 
+		// Expand array if needed (SAFE REALLOC)
 		if (species.ColorCount >= species.ColorMax)
 		{
 			species.ColorMax *= 2;
-			species.Color = static_cast<playerColor_t*>(
-				realloc(species.Color, species.ColorMax * sizeof(playerColor_t)));
+
+			void* newPtr = realloc(species.Color,
+				species.ColorMax * sizeof(playerColor_t));
+
+			if (!newPtr)
+			{
+				// Free everything allocated so far
+				free(species.Color);
+				species.Color = nullptr;
+
+				COM_EndParseSession();
+				return qfalse;
+			}
+
+			species.Color = static_cast<playerColor_t*>(newPtr);
 		}
 
+		// Prepare new entry
 		memset(&species.Color[species.ColorCount], 0, sizeof(playerColor_t));
-
 		Q_strncpyz(species.Color[species.ColorCount].shader, token, MAX_QPATH);
 
-		token = COM_ParseExt(&p, qtrue); //looking for action block {
+		// Expect '{'
+		token = COM_ParseExt(&p, qtrue);
 		if (token[0] != '{')
 		{
 			COM_EndParseSession();
 			return qfalse;
 		}
 
-		token = COM_ParseExt(&p, qtrue); //looking for action commands
+		// Parse action block
+		token = COM_ParseExt(&p, qtrue);
 		while (token[0] != '}')
 		{
-			if (token[0] == 0)
+			if (token[0] == '\0')
 			{
-				//EOF
 				COM_EndParseSession();
 				return qfalse;
 			}
-			Q_strcat(species.Color[species.ColorCount].actionText, ACTION_BUFFER_SIZE, token);
-			Q_strcat(species.Color[species.ColorCount].actionText, ACTION_BUFFER_SIZE, " ");
-			token = COM_ParseExt(&p, qtrue); //looking for action commands or final }
+
+			Q_strcat(species.Color[species.ColorCount].actionText,
+				ACTION_BUFFER_SIZE, token);
+			Q_strcat(species.Color[species.ColorCount].actionText,
+				ACTION_BUFFER_SIZE, " ");
+
+			token = COM_ParseExt(&p, qtrue);
 		}
-		species.ColorCount++; //next color please
+
+		species.ColorCount++;
 	}
+
 	COM_EndParseSession();
-	return qtrue; //never get here
+	return qtrue; // logically unreachable, but kept for completeness
 }
 
 /*
@@ -2635,55 +2679,71 @@ void UI_FreeAllSpecies()
 PlayerModel_BuildList
 =================
 */
+// Build the list of player species/models from models/players
 static void UI_BuildPlayerModel_List(const qboolean inGameLoad)
 {
 	static constexpr size_t DIR_LIST_SIZE = 16384;
 
-	size_t dirListSize = DIR_LIST_SIZE;
-	char stackDirList[8192]{};
-	int dirlen = 0;
-	const int building = Cvar_VariableIntegerValue("com_buildscript");
-
-	auto dirlist = static_cast<char*>(malloc(DIR_LIST_SIZE));
-	if (!dirlist)
+	// Allocate directory list on heap (avoid large stack usage)
+	char* dirlist = static_cast<char*>(malloc(DIR_LIST_SIZE));
+	if (dirlist == nullptr)
 	{
-		Com_Printf(S_COLOR_YELLOW "WARNING: Failed to allocate %u bytes of memory for player model "
-			"directory list. Using stack allocated buffer of %u bytes instead.",
-			DIR_LIST_SIZE, sizeof stackDirList);
-
-		dirlist = stackDirList;
-		dirListSize = sizeof stackDirList;
+		Com_Printf(S_COLOR_RED "ERROR: UI_BuildPlayerModel_List: Failed to allocate %zu bytes for player model directory list.\n",
+			DIR_LIST_SIZE);
+		return;
 	}
 
+	const int building = Cvar_VariableIntegerValue("com_buildscript");
+
+	// Reset species info
 	uiInfo.playerSpeciesCount = 0;
 	uiInfo.playerSpeciesIndex = 0;
 	uiInfo.playerSpeciesMax = 8;
-	uiInfo.playerSpecies = static_cast<playerSpeciesInfo_t*>(malloc(
-		uiInfo.playerSpeciesMax * sizeof(playerSpeciesInfo_t)));
 
-	// iterate directory of all player models
-	const int numdirs = ui.FS_GetFileList("models/players", "/", dirlist, dirListSize);
+	uiInfo.playerSpecies = static_cast<playerSpeciesInfo_t*>(
+		malloc(uiInfo.playerSpeciesMax * sizeof(playerSpeciesInfo_t)));
+
+	if (uiInfo.playerSpecies == nullptr)
+	{
+		free(dirlist);
+		Com_Printf(S_COLOR_RED "ERROR: UI_BuildPlayerModel_List: Failed to allocate initial playerSpecies array.\n");
+		return;
+	}
+
+	// Get list of player model directories
+	int dirlen = 0;
+	const int numdirs = ui.FS_GetFileList("models/players", "/", dirlist, static_cast<int>(DIR_LIST_SIZE));
 	char* dirptr = dirlist;
+
 	for (int i = 0; i < numdirs; i++, dirptr += dirlen + 1)
 	{
 		int f = 0;
 		char fpath[MAX_QPATH];
 
-		dirlen = strlen(dirptr);
-
-		if (dirlen)
-		{
-			if (dirptr[dirlen - 1] == '/')
-				dirptr[dirlen - 1] = '\0';
-		}
-		else
+		dirlen = static_cast<int>(strlen(dirptr));
+		if (dirlen <= 0)
 		{
 			continue;
 		}
 
+		// Strip trailing slash
+		if (dirptr[dirlen - 1] == '/')
+		{
+			dirptr[dirlen - 1] = '\0';
+			dirlen--;
+			if (dirlen <= 0)
+			{
+				continue;
+			}
+		}
+
+		// Skip "." and ".."
 		if (strcmp(dirptr, ".") == 0 || strcmp(dirptr, "..") == 0)
+		{
 			continue;
+		}
 
+		// Look for PlayerChoice.txt
 		if (ui_com_outcast.integer == 0)
 		{
 			Com_sprintf(fpath, sizeof fpath, "models/players/%s/PlayerChoice.txt", dirptr); //academy version
@@ -2724,129 +2784,234 @@ static void UI_BuildPlayerModel_List(const qboolean inGameLoad)
 		{
 			Com_sprintf(fpath, sizeof fpath, "models/players/%s/PlayerChoice.txt", dirptr); // default version
 		}
+		const int filelenChoice = ui.FS_FOpenFile(fpath, &f, FS_READ);
 
-		int filelen = ui.FS_FOpenFile(fpath, &f, FS_READ);
-
-		if (f)
+		if (f == 0 || filelenChoice <= 0)
 		{
-			char filelist[2048];
-
-			std::vector<char> buffer(filelen + 1);
-			ui.FS_Read(&buffer[0], filelen, f);
-			ui.FS_FCloseFile(f);
-
-			buffer[filelen] = 0;
-
-			//record this species
-			if (uiInfo.playerSpeciesCount >= uiInfo.playerSpeciesMax)
+			if (f != 0)
 			{
-				uiInfo.playerSpeciesMax *= 2;
-				uiInfo.playerSpecies = static_cast<playerSpeciesInfo_t*>(realloc(
-					uiInfo.playerSpecies, uiInfo.playerSpeciesMax * sizeof(playerSpeciesInfo_t)));
+				ui.FS_FCloseFile(f);
 			}
-			playerSpeciesInfo_t* species = &uiInfo.playerSpecies[uiInfo.playerSpeciesCount];
-			memset(species, 0, sizeof(playerSpeciesInfo_t));
-			Q_strncpyz(species->Name, dirptr, MAX_QPATH);
+			continue;
+		}
 
-			if (!UI_ParseColorData(buffer.data(), *species))
+		// Read PlayerChoice.txt into buffer
+		std::vector<char> buffer(static_cast<size_t>(filelenChoice) + 1u);
+		ui.FS_Read(buffer.data(), filelenChoice, f);
+		ui.FS_FCloseFile(f);
+
+		buffer[static_cast<size_t>(filelenChoice)] = '\0';
+
+		// Expand species array if needed
+		if (uiInfo.playerSpeciesCount >= uiInfo.playerSpeciesMax)
+		{
+			uiInfo.playerSpeciesMax *= 2;
+
+			void* newPtr = realloc(uiInfo.playerSpecies,
+				uiInfo.playerSpeciesMax * sizeof(playerSpeciesInfo_t));
+
+			if (newPtr == nullptr)
 			{
-				ui.Printf("UI_BuildPlayerModel_List: Errors parsing '%s'\n", fpath);
+				free(dirlist);
+				Com_Printf(S_COLOR_RED "ERROR: UI_BuildPlayerModel_List: realloc failed for playerSpecies.\n");
+				return;
 			}
 
-			species->SkinHeadMax = 8;
-			species->SkinTorsoMax = 8;
-			species->SkinLegMax = 8;
+			uiInfo.playerSpecies = static_cast<playerSpeciesInfo_t*>(newPtr);
+		}
 
-			species->SkinHead = static_cast<skinName_t*>(malloc(species->SkinHeadMax * sizeof(skinName_t)));
-			species->SkinTorso = static_cast<skinName_t*>(malloc(species->SkinTorsoMax * sizeof(skinName_t)));
-			species->SkinLeg = static_cast<skinName_t*>(malloc(species->SkinLegMax * sizeof(skinName_t)));
+		// Initialize new species entry
+		playerSpeciesInfo_t* species = &uiInfo.playerSpecies[uiInfo.playerSpeciesCount];
+		memset(species, 0, sizeof(playerSpeciesInfo_t));
+		Q_strncpyz(species->Name, dirptr, MAX_QPATH);
 
-			int iSkinParts = 0;
+		if (UI_ParseColorData(buffer.data(), *species) == qfalse)
+		{
+			ui.Printf("UI_BuildPlayerModel_List: Errors parsing '%s'\n", fpath);
+		}
 
-			const int numfiles = ui.FS_GetFileList(va("models/players/%s", dirptr), ".skin", filelist, sizeof filelist);
-			char* fileptr = filelist;
-			for (int j = 0; j < numfiles; j++, fileptr += filelen + 1)
+		// Initial skin array sizes
+		species->SkinHeadMax = 8;
+		species->SkinTorsoMax = 8;
+		species->SkinLegMax = 8;
+
+		species->SkinHead = static_cast<skinName_t*>(malloc(species->SkinHeadMax * sizeof(skinName_t)));
+		species->SkinTorso = static_cast<skinName_t*>(malloc(species->SkinTorsoMax * sizeof(skinName_t)));
+		species->SkinLeg = static_cast<skinName_t*>(malloc(species->SkinLegMax * sizeof(skinName_t)));
+
+		if (species->SkinHead == nullptr || species->SkinTorso == nullptr || species->SkinLeg == nullptr)
+		{
+			UI_FreeSpecies(species);
+			continue;
+		}
+
+		int iSkinParts = 0;
+
+		// Scan .skin files for this model
+		char filelist[2048];
+		const int numfiles = ui.FS_GetFileList(
+			va("models/players/%s", dirptr),
+			".skin",
+			filelist,
+			sizeof(filelist));
+
+		char* fileptr = filelist;
+
+		for (int j = 0; j < numfiles; j++)
+		{
+			// Always compute filelen BEFORE advancing fileptr
+			const int filelen = static_cast<int>(strlen(fileptr));
+			if (filelen <= 0)
 			{
-				char skinname[64];
-				if (building)
-				{
-					ui.FS_FOpenFile(va("models/players/%s/%s", dirptr, fileptr), &f, FS_READ);
-					if (f) ui.FS_FCloseFile(f);
-					ui.FS_FOpenFile(va("models/players/%s/sounds.cfg", dirptr), &f, FS_READ);
-					if (f) ui.FS_FCloseFile(f);
-					ui.FS_FOpenFile(va("models/players/%s/animevents.cfg", dirptr), &f, FS_READ);
-					if (f) ui.FS_FCloseFile(f);
-				}
-
-				filelen = strlen(fileptr);
-				COM_StripExtension(fileptr, skinname, sizeof skinname);
-
-				if (IsImageFile(dirptr, skinname, static_cast<qboolean>(building != 0)))
-				{
-					//if it exists
-					if (Q_stricmpn(skinname, "head_", 5) == 0)
-					{
-						if (species->SkinHeadCount >= species->SkinHeadMax)
-						{
-							species->SkinHeadMax *= 2;
-							species->SkinHead = static_cast<skinName_t*>(realloc(
-								species->SkinHead, species->SkinHeadMax * sizeof(skinName_t)));
-						}
-						Q_strncpyz(species->SkinHead[species->SkinHeadCount++].name, skinname, SKIN_LENGTH);
-						iSkinParts |= 1 << 0;
-					}
-					else if (Q_stricmpn(skinname, "torso_", 6) == 0)
-					{
-						if (species->SkinTorsoCount >= species->SkinTorsoMax)
-						{
-							species->SkinTorsoMax *= 2;
-							species->SkinTorso = static_cast<skinName_t*>(realloc(
-								species->SkinTorso, species->SkinTorsoMax * sizeof(skinName_t)));
-						}
-						Q_strncpyz(species->SkinTorso[species->SkinTorsoCount++].name, skinname, SKIN_LENGTH);
-						iSkinParts |= 1 << 1;
-					}
-					else if (Q_stricmpn(skinname, "lower_", 6) == 0)
-					{
-						if (species->SkinLegCount >= species->SkinLegMax)
-						{
-							species->SkinLegMax *= 2;
-							species->SkinLeg = static_cast<skinName_t*>(realloc(
-								species->SkinLeg, species->SkinLegMax * sizeof(skinName_t)));
-						}
-						Q_strncpyz(species->SkinLeg[species->SkinLegCount++].name, skinname, SKIN_LENGTH);
-						iSkinParts |= 1 << 2;
-					}
-				}
-			}
-			if (iSkinParts < 7)
-			{
-				//didn't get a skin for each, then skip this model.
-				UI_FreeSpecies(species);
+				fileptr++;
 				continue;
 			}
-			uiInfo.playerSpeciesCount++;
 
-			if (ui_com_rend2.integer == 0) //rend2 is off
+			char skinname[64];
+			COM_StripExtension(fileptr, skinname, sizeof(skinname));
+
+			// Advance pointer safely to next entry
+			fileptr += filelen + 1;
+
+			if (building != 0)
 			{
-				if (!inGameLoad && ui_PrecacheModels.integer)
+				ui.FS_FOpenFile(va("models/players/%s/%s", dirptr, skinname), &f, FS_READ);
+				if (f != 0)
 				{
-					CGhoul2Info_v ghoul2;
-					Com_sprintf(fpath, sizeof fpath, "models/players/%s/model.glm", dirptr);
-					const int g2Model = DC->g2_InitGhoul2Model(ghoul2, fpath, 0, 0, 0, 0, 0);
-					if (g2Model >= 0)
+					ui.FS_FCloseFile(f);
+				}
+
+				ui.FS_FOpenFile(va("models/players/%s/sounds.cfg", dirptr), &f, FS_READ);
+				if (f != 0)
+				{
+					ui.FS_FCloseFile(f);
+				}
+
+				ui.FS_FOpenFile(va("models/players/%s/animevents.cfg", dirptr), &f, FS_READ);
+				if (f != 0)
+				{
+					ui.FS_FCloseFile(f);
+				}
+			}
+
+			if (IsImageFile(dirptr, skinname, (building != 0) ? qtrue : qfalse) == qfalse)
+			{
+				continue;
+			}
+
+			// -----------------------------
+			// HEAD SKINS
+			// -----------------------------
+			if (Q_stricmpn(skinname, "head_", 5) == 0)
+			{
+				if (species->SkinHeadCount >= species->SkinHeadMax)
+				{
+					species->SkinHeadMax *= 2;
+
+					void* newPtr = realloc(species->SkinHead,
+						species->SkinHeadMax * sizeof(skinName_t));
+
+					if (newPtr == nullptr)
 					{
-						DC->g2_RemoveGhoul2Model(ghoul2, 0);
+						UI_FreeSpecies(species);
+						species->SkinHead = nullptr;
+						species->SkinTorso = nullptr;
+						species->SkinLeg = nullptr;
+						break;
 					}
+
+					species->SkinHead = static_cast<skinName_t*>(newPtr);
+				}
+
+				Q_strncpyz(species->SkinHead[species->SkinHeadCount].name, skinname, SKIN_LENGTH);
+				species->SkinHeadCount++;
+				iSkinParts |= (1 << 0);
+			}
+			// -----------------------------
+			// TORSO SKINS
+			// -----------------------------
+			else if (Q_stricmpn(skinname, "torso_", 6) == 0)
+			{
+				if (species->SkinTorsoCount >= species->SkinTorsoMax)
+				{
+					species->SkinTorsoMax *= 2;
+
+					void* newPtr = realloc(species->SkinTorso,
+						species->SkinTorsoMax * sizeof(skinName_t));
+
+					if (newPtr == nullptr)
+					{
+						UI_FreeSpecies(species);
+						species->SkinHead = nullptr;
+						species->SkinTorso = nullptr;
+						species->SkinLeg = nullptr;
+						break;
+					}
+
+					species->SkinTorso = static_cast<skinName_t*>(newPtr);
+				}
+
+				Q_strncpyz(species->SkinTorso[species->SkinTorsoCount].name, skinname, SKIN_LENGTH);
+				species->SkinTorsoCount++;
+				iSkinParts |= (1 << 1);
+			}
+			// -----------------------------
+			// LEG SKINS
+			// -----------------------------
+			else if (Q_stricmpn(skinname, "lower_", 6) == 0)
+			{
+				if (species->SkinLegCount >= species->SkinLegMax)
+				{
+					species->SkinLegMax *= 2;
+
+					void* newPtr = realloc(species->SkinLeg,
+						species->SkinLegMax * sizeof(skinName_t));
+
+					if (newPtr == nullptr)
+					{
+						UI_FreeSpecies(species);
+						species->SkinHead = nullptr;
+						species->SkinTorso = nullptr;
+						species->SkinLeg = nullptr;
+						break;
+					}
+
+					species->SkinLeg = static_cast<skinName_t*>(newPtr);
+				}
+
+				Q_strncpyz(species->SkinLeg[species->SkinLegCount].name, skinname, SKIN_LENGTH);
+				species->SkinLegCount++;
+				iSkinParts |= (1 << 2);
+			}
+		}
+
+		// Must have head + torso + legs (bits 0,1,2 set → 7)
+		if (iSkinParts != 7)
+		{
+			UI_FreeSpecies(species);
+			continue;
+		}
+
+		uiInfo.playerSpeciesCount++;
+
+		// Optional precache (skip for rend2)
+		if (ui_com_rend2.integer == 0)
+		{
+			if (inGameLoad == qfalse && ui_PrecacheModels.integer != 0)
+			{
+				CGhoul2Info_v ghoul2;
+				Com_sprintf(fpath, sizeof(fpath), "models/players/%s/model.glm", dirptr);
+
+				const int g2Model = DC->g2_InitGhoul2Model(ghoul2, fpath, 0, 0, 0, 0, 0);
+				if (g2Model >= 0)
+				{
+					DC->g2_RemoveGhoul2Model(ghoul2, 0);
 				}
 			}
 		}
 	}
 
-	if (dirlist != stackDirList)
-	{
-		free(dirlist);
-	}
+	free(dirlist);
 }
 
 /*
