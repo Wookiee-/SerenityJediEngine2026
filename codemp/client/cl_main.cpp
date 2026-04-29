@@ -1396,6 +1396,9 @@ static void CL_Configstrings_f(void)
 		}
 		Com_Printf("%4i: %s\n", i, cl.gameState.stringData + ofs);
 	}
+
+	// GCJ: Add this line to be able to report how much data our config strings are using
+	Com_Printf("Config String Length: %i\n", cl.gameState.dataCount);
 }
 
 /*

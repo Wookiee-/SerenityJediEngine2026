@@ -603,6 +603,7 @@ void CG_RegisterWeapon(const int weapon_num)
 		cgs.media.limeSaberCoreShader = cgi_R_RegisterShader("gfx/effects/sabers/lime_line");
 		//TFA Sabers
 		cgs.media.rgbTFASaberCoreShader = cgi_R_RegisterShader("gfx/effects/TFASabers/blade_TFA");
+
 		cgs.media.unstableBlurShader = cgi_R_RegisterShader("gfx/effects/TFASabers/trail_unstable");
 		cgs.media.unstableRedSaberCoreShader = cgi_R_RegisterShader("gfx/effects/sabers/unstable_red_line");
 

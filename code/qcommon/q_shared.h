@@ -663,13 +663,9 @@ constexpr auto GENTITYNUM_BITS = 12;// don't need to send any more
 #define	ENTITYNUM_WORLD		(MAX_GENTITIES-2)
 #define	ENTITYNUM_MAX_NORMAL	(MAX_GENTITIES-2)
 
-constexpr auto MAX_MODELS = 256;
+constexpr auto MAX_MODELS = 512;
 
-#ifdef JK2_MODE
-#define MAX_SOUNDS (256)
-#else
-constexpr auto MAX_SOUNDS = 380;
-#endif // JK2_MODE
+constexpr auto MAX_SOUNDS = 512;
 
 constexpr auto MAX_SUB_BSP = 32;
 
@@ -679,11 +675,7 @@ constexpr auto MAX_FX = 256;
 
 constexpr auto MAX_ICONS = 128;
 
-#ifdef JK2_MODE
-#define MAX_WORLD_FX (4)
-#else
-constexpr auto MAX_WORLD_FX = 66; // was 16 // was 4;
-#endif // JK2_MODE
+constexpr auto MAX_WORLD_FX = 128;
 
 /*
 Ghoul2 Insert Start
@@ -696,7 +688,7 @@ Ghoul2 Insert End
 #ifdef JK2_MODE
 #define MAX_CONFIGSTRINGS (1024)
 #else
-#define	MAX_CONFIGSTRINGS	1600//1024 //rww - I had to up this for terrains
+#define	MAX_CONFIGSTRINGS	2048//1024 //rww - I had to up this for terrains
 #endif // JK2_MODE
 
 // these are the only configstrings that the system reserves, all the

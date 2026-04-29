@@ -498,6 +498,9 @@ static void CL_Configstrings_f()
 		}
 		Com_Printf("%4i: %s\n", i, cl.gameState.stringData + ofs);
 	}
+
+	// GCJ: Add this line to be able to report how much data our config strings are using
+	Com_Printf("Config String Length: %i\n", cl.gameState.dataCount);
 }
 
 /*
@@ -1345,8 +1348,8 @@ void CL_Init()
 
 	Com_Printf("-----------------------------------------------------------------\n");
 	Com_Printf("---------- Genuine SerenityJediEngine-(Solaris Edition)----------\n");
-	Com_Printf("---------------------Build date 27/04/2026-----------------------\n"); // build date
-	Com_Printf("---------------------------Build 09------------------------------\n");
+	Com_Printf("---------------------Build date 26/04/2026-----------------------\n"); // build date
+	Com_Printf("---------------------------Build 08------------------------------\n");
 	Com_Printf("-----------------------------------------------------------------\n");
 	Com_Printf("------------------------LightSaber-------------------------------\n");
 	Com_Printf("-----------An elegant weapon for a more civilized age------------\n");

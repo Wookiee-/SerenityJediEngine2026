@@ -156,6 +156,7 @@ void UI_CacheSaberGlowGraphics()
 	blackSaberBladeShader = re.RegisterShader("gfx/effects/sabers/black_blade");
 	limeSaberGlowShader = re.RegisterShader("gfx/effects/sabers/lime_glow");
 	limeSaberCoreShader = re.RegisterShader("gfx/effects/sabers/lime_line");
+
 	rgbTFASaberCoreShader = re.RegisterShader("gfx/effects/TFASabers/blade_TFA");
 
 	//Episode I Sabers

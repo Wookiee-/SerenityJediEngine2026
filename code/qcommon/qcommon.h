@@ -144,7 +144,7 @@ const char* NET_AdrToString(netadr_t a);
 qboolean NET_StringToAdr(const char* s, netadr_t* a);
 qboolean NET_GetLoopPacket(netsrc_t sock, netadr_t* net_from, msg_t* net_message);
 
-#define	MAX_MSGLEN				(1*17408)		// max length of a message, which may
+#define	MAX_MSGLEN				(2*17408)		// max length of a message, which may
 /*
 Netchan handles packet fragmentation and out of order / duplicate suppression
 */
