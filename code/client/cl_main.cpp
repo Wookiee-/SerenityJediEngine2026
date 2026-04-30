@@ -1479,7 +1479,7 @@ void CL_Init()
 		Cvar_Get("name", "Jaden", CVAR_USERINFO | CVAR_ARCHIVE_ND);
 	}
 
-	Cvar_Get("snaps", "120", CVAR_USERINFO | CVAR_ARCHIVE_ND);
+	Cvar_Get("snaps", "20", CVAR_USERINFO | CVAR_ARCHIVE_ND);
 
 	if (com_outcast->integer == 0) //playing academy
 	{
