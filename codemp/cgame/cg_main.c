@@ -722,7 +722,8 @@ static void CG_RegisterSounds(void)
 	cgs.media.limeSaberCoreShader = trap->R_RegisterShader("gfx/effects/sabers/lime_line");
 	//TFA Sabers
 	cgs.media.rgbTFASaberCoreShader = trap->R_RegisterShader("gfx/effects/TFASabers/blade_TFA");
-	cgs.media.unstableRedSaberCoreShader = trap->R_RegisterShader("gfx/effects/sabers/saber_blade_unstable");
+	//cgs.media.unstableRedSaberCoreShader = trap->R_RegisterShader("gfx/effects/sabers/saber_blade_unstable");
+	cgs.media.unstableRedSaberCoreShader = trap->R_RegisterShader("gfx/effects/TFASabers/blade_TFA");
 
 	//Original Trilogy Sabers
 	cgs.media.otSaberCoreShader = trap->R_RegisterShader("gfx/effects/OTsabers/ot_saberCore");

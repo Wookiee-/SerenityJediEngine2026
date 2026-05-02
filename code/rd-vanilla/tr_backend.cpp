@@ -66,16 +66,19 @@ void GL_Bind(image_t* image) {
 		texnum = image->texnum;
 	}
 
-	if (r_nobind->integer && tr.dlightImage) {		// performance evaluation option
+	if (r_nobind->integer && tr.dlightImage) {      // performance evaluation option
 		texnum = tr.dlightImage->texnum;
 	}
 
 	if (glState.currenttextures[glState.currenttmu] != texnum) {
-		image->frameUsed = tr.frameCount;
+		if (image) {
+			image->frameUsed = tr.frameCount;
+		}
 		glState.currenttextures[glState.currenttmu] = texnum;
 		qglBindTexture(GL_TEXTURE_2D, texnum);
 	}
 }
+
 
 /*
 ** GL_SelectTexture

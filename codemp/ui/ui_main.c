@@ -1721,16 +1721,24 @@ static void UI_DrawGameType(rectDef_t* rect, float scale, vec4_t color, int text
 
 static void UI_DrawNetGameType(rectDef_t* rect, float scale, vec4_t color, int textStyle, int i_menu_font)
 {
-	if (ui_netGametype.integer < 0 || ui_netGametype.integer >= uiInfo.numGameTypes)
+	int gt = ui_netGametype.integer;
+
+	// Clamp safely
+	if (gt < 0 || gt >= uiInfo.numGameTypes)
 	{
+		gt = 0;
 		trap->Cvar_Set("ui_netGametype", "0");
 		trap->Cvar_Update(&ui_netGametype);
 		trap->Cvar_Set("ui_actualNetGametype", "0");
 		trap->Cvar_Update(&ui_actualNetGametype);
 	}
-	Text_Paint(rect->x, rect->y, scale, color, UI_GetGameTypeName(uiInfo.gameTypes[ui_netGametype.integer].gtEnum), 0,
-		0, textStyle, i_menu_font);
+
+	// SAFE: use clamped local variable
+	Text_Paint(rect->x, rect->y, scale, color,
+		UI_GetGameTypeName(uiInfo.gameTypes[gt].gtEnum),
+		0, 0, textStyle, i_menu_font);
 }
+
 
 static void UI_DrawAutoSwitch(rectDef_t* rect, float scale, vec4_t color, int textStyle, int i_menu_font)
 {
@@ -1762,15 +1770,22 @@ static void UI_DrawAutoSwitch(rectDef_t* rect, float scale, vec4_t color, int te
 
 static void UI_DrawJoinGameType(rectDef_t* rect, float scale, vec4_t color, int textStyle, int i_menu_font)
 {
-	if (ui_joinGametype.integer < 0 || ui_joinGametype.integer > uiInfo.numJoinGameTypes)
+	int gt = ui_joinGametype.integer;
+
+	// Clamp safely
+	if (gt < 0 || gt >= uiInfo.numJoinGameTypes)
 	{
+		gt = 0;
 		trap->Cvar_Set("ui_joinGametype", "0");
 		trap->Cvar_Update(&ui_joinGametype);
 	}
 
-	Text_Paint(rect->x, rect->y, scale, color, UI_GetGameTypeName(uiInfo.joinGameTypes[ui_joinGametype.integer].gtEnum),
+	// SAFE: use clamped local variable
+	Text_Paint(rect->x, rect->y, scale, color,
+		UI_GetGameTypeName(uiInfo.joinGameTypes[gt].gtEnum),
 		0, 0, textStyle, i_menu_font);
 }
+
 
 static int UI_TeamIndexFromName(const char* name)
 {

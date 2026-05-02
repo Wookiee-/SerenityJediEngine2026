@@ -61,23 +61,29 @@ void GL_Bind(image_t* image) {
 	int texnum;
 
 	if (!image) {
-		ri->Printf(PRINT_ALL, S_COLOR_YELLOW  "GL_Bind: NULL image\n");
+		ri->Printf(PRINT_ALL, S_COLOR_YELLOW "GL_Bind: NULL image\n");
 		texnum = tr.defaultImage->texnum;
 	}
 	else {
 		texnum = image->texnum;
 	}
 
-	if (r_nobind->integer && tr.dlightImage) {		// performance evaluation option
+	if (r_nobind->integer && tr.dlightImage) {
 		texnum = tr.dlightImage->texnum;
 	}
 
 	if (glState.currenttextures[glState.currenttmu] != texnum) {
-		image->frameUsed = tr.frameCount;
+
+		// FIX: only write frameUsed if image is valid
+		if (image) {
+			image->frameUsed = tr.frameCount;
+		}
+
 		glState.currenttextures[glState.currenttmu] = texnum;
 		qglBindTexture(GL_TEXTURE_2D, texnum);
 	}
 }
+
 
 /*
 ** GL_SelectTexture

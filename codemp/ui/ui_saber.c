@@ -2270,7 +2270,7 @@ static void UI_SaberDrawBlade(itemDef_t* item, const char* saber_name, int saber
 	{// Draw the Raven blade.
 		if (saberType == SABER_UNSTABLE || saberType == SABER_STAFF_UNSTABLE)
 		{
-			UI_DoSaberUnstable(bladeOrigin, axis[0], bladeLength, bladeLength, bladeRadius, bladeColor, snum);
+			UI_DoTFASaber(bladeOrigin, axis[0], bladeLength, bladeLength, bladeRadius, bladeColor, snum);
 		}
 		else
 		{

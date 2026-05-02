@@ -1313,28 +1313,9 @@ void NPC_Begin(gentity_t* ent)
 	}
 	else if (ent->NPC->stats.health) // Was health supplied in NPC.cfg?
 	{
-		if (ent->client->NPC_class != CLASS_REBORN
-			&& ent->client->NPC_class != CLASS_SHADOWTROOPER
-			&& ent->client->NPC_class != CLASS_JEDI)
-		{
-			// up everyone except jedi
-			if (!Q_stricmp("tavion_sith_sword", ent->NPC_type)
-				|| !Q_stricmp("tavion_scepter", ent->NPC_type)
-				|| !Q_stricmp("kyle_boss", ent->NPC_type)
-				|| !Q_stricmp("alora_dual", ent->NPC_type)
-				|| !Q_stricmp("alora_boss", ent->NPC_type))
-			{
-				//bosses are a bit different
-				ent->NPC->stats.health = ceil(
-					static_cast<float>(ent->NPC->stats.health) * 0.75f + static_cast<float>(ent->NPC->stats.health) /
-					4.0f * g_spskill->value); // 75% on easy, 100% on medium, 125% on hard
-			}
-			else
-			{
-				ent->NPC->stats.health += ent->NPC->stats.health / 4 * g_spskill->integer;
-				// 100% on easy, 125% on medium, 150% on hard
-			}
-		}
+
+		// Affect all NPCs - 75% on easy, 100% on medium, 125% on hard
+		ent->NPC->stats.health = ceil(static_cast<float>(ent->NPC->stats.health) * 0.75f + static_cast<float>(ent->NPC->stats.health) / 4.0f * g_spskill->value);
 
 		ent->max_health = client->pers.maxHealth = client->ps.stats[STAT_MAX_HEALTH] = ent->NPC->stats.health;
 	}

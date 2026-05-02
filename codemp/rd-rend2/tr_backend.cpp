@@ -50,25 +50,37 @@ void GL_Bind(image_t* image) {
 		texnum = image->texnum;
 	}
 
-	if (r_nobind->integer && tr.dlightImage) {		// performance evaluation option
+	if (r_nobind->integer && tr.dlightImage) {
 		texnum = tr.dlightImage->texnum;
 	}
 
 	if (glState.currenttextures[glState.currenttmu] != texnum) {
+
+		// SAFE: only write frameUsed if image is valid
 		if (image) {
 			image->frameUsed = tr.frameCount;
 		}
+
 		glState.currenttextures[glState.currenttmu] = texnum;
-		if (image && image->flags & IMGFLAG_CUBEMAP)
+
+		// SAFE: guard ALL flag checks
+		if (image && (image->flags & IMGFLAG_CUBEMAP)) {
 			qglBindTexture(GL_TEXTURE_CUBE_MAP, texnum);
-		else if (image->flags & IMGFLAG_3D)
+		}
+		else if (image && (image->flags & IMGFLAG_3D)) {
 			qglBindTexture(GL_TEXTURE_3D, texnum);
-		else if (image->flags & IMGFLAG_2D_ARRAY)
+		}
+		else if (image && (image->flags & IMGFLAG_2D_ARRAY)) {
 			qglBindTexture(GL_TEXTURE_2D_ARRAY, texnum);
-		else
+		}
+		else {
 			qglBindTexture(GL_TEXTURE_2D, texnum);
+		}
 	}
 }
+
+
+
 
 /*
 ** GL_SelectTexture
