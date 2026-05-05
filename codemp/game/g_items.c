@@ -1815,7 +1815,7 @@ void ItemUse_UseCloak(gentity_t* ent)
 				if (ent->health > 0
 					&& ent->painDebounceTime < level.time
 					&& !ent->client->ps.saberInFlight
-					&& !PM_SaberInAttack(ent->client->ps.saber_move)
+					&& !PM_SaberInAttack(ent->client->ps.saberMove)
 					&& ent->client->ps.fd.forceGripBeingGripped < level.time
 					&& !(ent->client->ps.communicatingflags & 1 << CLOAK_CHARGE_RESTRICTION))
 				{
@@ -1895,7 +1895,7 @@ static void SpecialItemThink(gentity_t* ent)
 
 static void G_SpecialSpawnItem(gentity_t* ent, gitem_t* item)
 {
-	register_item(item);
+	RegisterItem(item);
 	ent->item = item;
 
 	//go away if no one wants me
@@ -1939,13 +1939,13 @@ void G_PrecacheDispensers(void)
 	const gitem_t* item = BG_FindItem(DISP_HEALTH_ITEM);
 	if (item)
 	{
-		register_item(item);
+		RegisterItem(item);
 	}
 
 	item = BG_FindItem(DISP_AMMO_ITEM);
 	if (item)
 	{
-		register_item(item);
+		RegisterItem(item);
 	}
 }
 
@@ -1954,13 +1954,13 @@ void G_LoadDispensers(void)
 	const gitem_t* item = BG_FindItem(DISP_HEALTH_ITEM);
 	if (item)
 	{
-		register_item(item);
+		RegisterItem(item);
 	}
 
 	item = BG_FindItem(DISP_AMMO_ITEM);
 	if (item)
 	{
-		register_item(item);
+		RegisterItem(item);
 	}
 }
 
@@ -2046,7 +2046,7 @@ static void EWebDisattach(const gentity_t* owner, gentity_t* eweb)
 //precache misc e-web assets
 void EWebPrecache(void)
 {
-	register_item(BG_FindItemForWeapon(WP_TURRET));
+	RegisterItem(BG_FindItemForWeapon(WP_TURRET));
 	G_EffectIndex("detpack/explosion.efx");
 	G_EffectIndex("turret/muzzle_flash.efx");
 }
@@ -3859,18 +3859,18 @@ void clear_registered_items(void)
 	memset(itemRegistered, 0, sizeof itemRegistered);
 
 	// players always start with the base weapon
-	register_item(BG_FindItemForWeapon(WP_BRYAR_PISTOL));
-	register_item(BG_FindItemForWeapon(WP_STUN_BATON));
-	register_item(BG_FindItemForWeapon(WP_MELEE));
-	register_item(BG_FindItemForWeapon(WP_SABER));
+	RegisterItem(BG_FindItemForWeapon(WP_BRYAR_PISTOL));
+	RegisterItem(BG_FindItemForWeapon(WP_STUN_BATON));
+	RegisterItem(BG_FindItemForWeapon(WP_MELEE));
+	RegisterItem(BG_FindItemForWeapon(WP_SABER));
 	//addition possible starting weapons
-	register_item(BG_FindItemForWeapon(WP_BLASTER));
-	register_item(BG_FindItemForWeapon(WP_THERMAL));
-	register_item(BG_FindItemForWeapon(WP_ROCKET_LAUNCHER));
-	register_item(BG_FindItemForWeapon(WP_BOWCASTER));
-	register_item(BG_FindItemForWeapon(WP_REPEATER));
-	register_item(BG_FindItemForWeapon(WP_DISRUPTOR));
-	register_item(BG_FindItemForWeapon(WP_CONCUSSION));
+	RegisterItem(BG_FindItemForWeapon(WP_BLASTER));
+	RegisterItem(BG_FindItemForWeapon(WP_THERMAL));
+	RegisterItem(BG_FindItemForWeapon(WP_ROCKET_LAUNCHER));
+	RegisterItem(BG_FindItemForWeapon(WP_BOWCASTER));
+	RegisterItem(BG_FindItemForWeapon(WP_REPEATER));
+	RegisterItem(BG_FindItemForWeapon(WP_DISRUPTOR));
+	RegisterItem(BG_FindItemForWeapon(WP_CONCUSSION));
 
 	if (level.gametype == GT_SIEGE)
 	{//kind of cheesy, maybe check if siege class with disp's is gonna be on this map too
@@ -3889,11 +3889,11 @@ RegisterItem
 The item will be added to the precache list
 ===============
 */
-void register_item(const gitem_t* item)
+void RegisterItem(const gitem_t* item)
 {
 	if (!item)
 	{
-		trap->Error(ERR_DROP, "register_item: NULL");
+		trap->Error(ERR_DROP, "RegisterItem: NULL");
 	}
 	itemRegistered[item - bg_itemlist] = qtrue;
 }
@@ -4065,7 +4065,7 @@ void G_SpawnItem(gentity_t* ent, gitem_t* item)
 		}
 	}
 
-	register_item(item);
+	RegisterItem(item);
 	if (G_ItemDisabled(item))
 		return;
 

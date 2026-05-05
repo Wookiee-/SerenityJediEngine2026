@@ -241,7 +241,7 @@ void Boba_Precache()
 	BobaActive = true;
 	BobaFootStepCount = 0;
 
-	register_item(FindItemForWeapon(WP_EMPLACED_GUN)); //precache the weapon
+	RegisterItem(FindItemForWeapon(WP_EMPLACED_GUN)); //precache the weapon
 	Saber_SithSwordPrecache();
 }
 
@@ -267,7 +267,7 @@ void Mando_Precache()
 	BobaActive = true;
 	BobaFootStepCount = 0;
 
-	register_item(FindItemForWeapon(WP_EMPLACED_GUN)); //precache the weapon
+	RegisterItem(FindItemForWeapon(WP_EMPLACED_GUN)); //precache the weapon
 	Saber_SithSwordPrecache();
 }
 

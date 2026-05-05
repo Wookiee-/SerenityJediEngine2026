@@ -47,7 +47,7 @@ extern void G_StartMatrixEffect(const gentity_t* ent, int me_flags = 0, int leng
 	int spin_time = 0);
 extern void ItemUse_Bacta(gentity_t* ent);
 extern gentity_t* G_GetSelfForPlayerCmd();
-extern void force_stasis(gentity_t* self);
+extern void ForceStasis(gentity_t* self);
 extern void ForceDestruction(gentity_t* self);
 extern void ItemUse_UseCloak(gentity_t* ent);
 extern void ItemUse_Barrier(gentity_t* ent);
@@ -2419,12 +2419,12 @@ static void Cmd_SaberDrop_f(gentity_t* ent, const int saberNum)
 		return;
 	}
 
-	if (ent->client->ps.saber_move != LS_READY
-		&& ent->client->ps.saber_move != LS_PUTAWAY
-		&& ent->client->ps.saber_move != LS_DRAW
-		&& ent->client->ps.saber_move != LS_DRAW2
-		&& ent->client->ps.saber_move != LS_DRAW3
-		&& ent->client->ps.saber_move != LS_NONE)
+	if (ent->client->ps.saberMove != LS_READY
+		&& ent->client->ps.saberMove != LS_PUTAWAY
+		&& ent->client->ps.saberMove != LS_DRAW
+		&& ent->client->ps.saberMove != LS_DRAW2
+		&& ent->client->ps.saberMove != LS_DRAW3
+		&& ent->client->ps.saberMove != LS_NONE)
 	{
 		return;
 	}
@@ -2589,10 +2589,10 @@ void ClientCommand(const int clientNum)
 		ent = G_GetSelfForPlayerCmd();
 		ForceSeeing(ent);
 	}
-	else if (Q_stricmp(cmd, "force_stasis") == 0)
+	else if (Q_stricmp(cmd, "ForceStasis") == 0)
 	{
 		ent = G_GetSelfForPlayerCmd();
-		force_stasis(ent);
+		ForceStasis(ent);
 	}
 	else if (Q_stricmp(cmd, "force_deadlysight") == 0)
 	{

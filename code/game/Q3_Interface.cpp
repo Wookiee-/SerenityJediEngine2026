@@ -3330,7 +3330,7 @@ void G_SetWeapon(gentity_t* self, int wp)
 	}
 
 	const gitem_t* item = FindItemForWeapon(static_cast<weapon_t>(wp));
-	register_item(item); //make sure the weapon is cached in case this runs at startup
+	RegisterItem(item); //make sure the weapon is cached in case this runs at startup
 
 	if (self->client->ps.stats[STAT_WEAPONS] & 1 << wp)
 	{
@@ -3440,7 +3440,7 @@ static void Q3_SetItem(const int entID, const char* item_name)
 	const int inv = GetIDForString(INVTable, item_name);
 
 	const gitem_t* item = FindItemForInventory(inv);
-	register_item(item); //make sure the item is cached in case this runs at startup
+	RegisterItem(item); //make sure the item is cached in case this runs at startup
 
 	self->client->ps.stats[STAT_ITEMS] |= 1 << item->giTag;
 
@@ -6494,7 +6494,7 @@ static void Q3_SetSaberActive(const int entID, const qboolean active)
 			else
 			{
 				const gitem_t* item = FindItemForWeapon(WP_SABER);
-				register_item(item); //make sure the weapon is cached in case this runs at startup
+				RegisterItem(item); //make sure the weapon is cached in case this runs at startup
 				G_AddEvent(ent, EV_ITEM_PICKUP, item - bg_itemlist);
 				CG_ChangeWeapon(WP_SABER);
 			}
@@ -6561,7 +6561,7 @@ static void Q3_SetSaberBladeActive(const int entID, const int iSaber, const int 
 			else
 			{
 				const gitem_t* item = FindItemForWeapon(WP_SABER);
-				register_item(item); //make sure the weapon is cached in case this runs at startup
+				RegisterItem(item); //make sure the weapon is cached in case this runs at startup
 				G_AddEvent(ent, EV_ITEM_PICKUP, item - bg_itemlist);
 				CG_ChangeWeapon(WP_SABER);
 			}
@@ -11611,7 +11611,7 @@ void CQuake3GameInterface::PrecacheFromSet(const char* setname, const char* file
 		if (wp > 0)
 		{
 			const gitem_t* item = FindItemForWeapon(static_cast<weapon_t>(wp));
-			register_item(item); //make sure the weapon is cached in case this runs at startup
+			RegisterItem(item); //make sure the weapon is cached in case this runs at startup
 		}
 	}
 	break;

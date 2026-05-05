@@ -77,7 +77,7 @@ extern saber_moveName_t PM_SaberBounceForAttack(int move);
 extern void WP_SaberDrop(const gentity_t* self, gentity_t* saber);
 extern qboolean pm_saber_innonblockable_attack(int anim);
 extern qboolean pm_saber_in_special_attack(int anim);
-extern qboolean PM_SaberInKata(saber_moveName_t saber_move);
+extern qboolean PM_SaberInKata(saber_moveName_t saberMove);
 extern void wp_saber_clear_damage_for_ent_num(gentity_t* attacker, int entityNum, int saberNum, int blade_num);
 extern cvar_t* d_slowmoaction;
 extern void G_StartStasisEffect(const gentity_t* ent, int me_flags = 0, int length = 1000, float time_scale = 0.0f,
@@ -165,7 +165,7 @@ qboolean g_accurate_blocking(const gentity_t* blocker, const gentity_t* attacker
 		return qfalse;
 
 	// Already in knockaway → allow continued parry
-	if (PM_SaberInKnockaway(blocker->client->ps.saber_move))
+	if (PM_SaberInKnockaway(blocker->client->ps.saberMove))
 		return qtrue;
 
 	// Cannot parry while kicking
@@ -174,7 +174,7 @@ qboolean g_accurate_blocking(const gentity_t* blocker, const gentity_t* attacker
 
 	// Cannot parry while transitioning or bouncing
 	if (BG_SaberInNonIdleDamageMove(&blocker->client->ps)
-		|| PM_SaberInBounce(blocker->client->ps.saber_move)
+		|| PM_SaberInBounce(blocker->client->ps.saberMove)
 		|| BG_InSlowBounce(&blocker->client->ps))
 		return qfalse;
 
@@ -458,7 +458,7 @@ static void sab_beh_animate_small_bounce(gentity_t* attacker)
 	else
 	{
 		attacker->client->ps.userInt3 |= 1 << FLAG_SLOWBOUNCE;
-		attacker->client->ps.saberBounceMove = LS_D1_BR + (saber_moveData[attacker->client->ps.saber_move].startQuad - Q_BR);
+		attacker->client->ps.saberBounceMove = LS_D1_BR + (saber_moveData[attacker->client->ps.saberMove].startQuad - Q_BR);
 		attacker->client->ps.saberBlocked = BLOCKED_ATK_BOUNCE;
 	}
 }
@@ -683,7 +683,7 @@ static qboolean sab_beh_attack_vs_attack(gentity_t* attacker, gentity_t* blocker
 		//set otherOwner
 		sab_beh_add_balance(blocker, MPCOST_PARRIED);
 	}
-	else if (PM_SaberInKata(static_cast<saber_moveName_t>(attacker->client->ps.saber_move)))
+	else if (PM_SaberInKata(static_cast<saber_moveName_t>(attacker->client->ps.saberMove)))
 	{
 		sab_beh_add_balance(attacker, MPCOST_PARRIED);
 		//set otherOwner
@@ -702,7 +702,7 @@ static qboolean sab_beh_attack_vs_attack(gentity_t* attacker, gentity_t* blocker
 			PM_AddBlockFatigue(&blocker->client->ps, BLOCKPOINTS_TEN);
 		}
 	}
-	else if (PM_SaberInKata(static_cast<saber_moveName_t>(blocker->client->ps.saber_move)))
+	else if (PM_SaberInKata(static_cast<saber_moveName_t>(blocker->client->ps.saberMove)))
 	{
 		sab_beh_add_balance(attacker, -MPCOST_PARRIED);
 		//set otherOwner

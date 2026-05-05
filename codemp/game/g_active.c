@@ -1321,7 +1321,7 @@ static void ClientTimerActions(gentity_t* ent, const int msec)
 		   PASSIVE HEALING / ARMOR REGEN (non-bots only)
 		--------------------------------------------------------- */
 		if (!(ent->r.svFlags & SVF_BOT) &&
-			!PM_SaberInAttack(ent->client->ps.saber_move) &&
+			!PM_SaberInAttack(ent->client->ps.saberMove) &&
 			!(ent->client->ps.ManualBlockingFlags & (1 << HOLDINGBLOCK)) &&
 			!ent->client->poisonTime &&
 			!ent->client->stunTime &&
@@ -1380,10 +1380,10 @@ static void ClientTimerActions(gentity_t* ent, const int msec)
 		if (ent->client->ps.saberFatigueChainCount > MISHAPLEVEL_NONE &&
 			(ent->s.number < MAX_CLIENTS || G_ControlledByPlayer(ent)) &&
 			!BG_InSlowBounce(&ent->client->ps) &&
-			!PM_SaberInBrokenParry(ent->client->ps.saber_move) &&
-			!PM_SaberInAttackPure(ent->client->ps.saber_move) &&
-			!PM_SaberInAttack(ent->client->ps.saber_move) &&
-			!PM_SaberInTransitionAny(ent->client->ps.saber_move) &&
+			!PM_SaberInBrokenParry(ent->client->ps.saberMove) &&
+			!PM_SaberInAttackPure(ent->client->ps.saberMove) &&
+			!PM_SaberInAttack(ent->client->ps.saberMove) &&
+			!PM_SaberInTransitionAny(ent->client->ps.saberMove) &&
 			!PM_InKnockDown(&ent->client->ps) &&
 			ent->client->ps.saberLockTime < level.time &&
 			ent->client->ps.saberBlockingTime < level.time &&
@@ -1407,10 +1407,10 @@ static void ClientTimerActions(gentity_t* ent, const int msec)
 		else if (ent->client->ps.saberFatigueChainCount > MISHAPLEVEL_NONE &&
 			(ent->r.svFlags & SVF_BOT) &&
 			!BG_InSlowBounce(&ent->client->ps) &&
-			!PM_SaberInBrokenParry(ent->client->ps.saber_move) &&
-			!PM_SaberInAttackPure(ent->client->ps.saber_move) &&
-			!PM_SaberInAttack(ent->client->ps.saber_move) &&
-			!PM_SaberInTransitionAny(ent->client->ps.saber_move) &&
+			!PM_SaberInBrokenParry(ent->client->ps.saberMove) &&
+			!PM_SaberInAttackPure(ent->client->ps.saberMove) &&
+			!PM_SaberInAttack(ent->client->ps.saberMove) &&
+			!PM_SaberInTransitionAny(ent->client->ps.saberMove) &&
 			!PM_InKnockDown(&ent->client->ps) &&
 			ent->client->ps.saberLockTime < level.time &&
 			ent->client->ps.saberBlockingTime < level.time &&
@@ -4379,7 +4379,7 @@ static void CG_BreathPuffsVader(gentity_t* ent)
 		}
 	}
 
-	if (PM_SaberInAttack(client->ps.saber_move))
+	if (PM_SaberInAttack(client->ps.saberMove))
 	{
 		client->VaderBreathTime = level.time + 4000; // every 4 seconds.
 	}
@@ -5368,7 +5368,7 @@ static void ClientThink_real(gentity_t* ent)
 		client->ps.weapon == WP_SABER &&
 		!PM_SaberInMassiveBounce(client->ps.torsoAnim) &&
 		!PM_SaberInBashedAnim(client->ps.torsoAnim) &&
-		!PM_Saberinstab(client->ps.saber_move))
+		!PM_Saberinstab(client->ps.saberMove))
 	{
 		if (manual_running_and_saberblocking(ent))
 		{
@@ -5652,7 +5652,7 @@ static void ClientThink_real(gentity_t* ent)
 		!BG_SabersOff(&client->ps) &&
 		!PM_SaberInMassiveBounce(client->ps.torsoAnim) &&
 		!PM_SaberInBashedAnim(client->ps.torsoAnim) &&
-		!PM_Saberinstab(client->ps.saber_move))
+		!PM_Saberinstab(client->ps.saberMove))
 	{
 		if (manual_npc_saberblocking(ent))
 		{
@@ -6714,7 +6714,7 @@ static void ClientThink_real(gentity_t* ent)
 						if (ent->health > 0
 							&& ent->painDebounceTime < level.time
 							&& !ent->client->ps.saberInFlight
-							&& !PM_SaberInAttack(ent->client->ps.saber_move)
+							&& !PM_SaberInAttack(ent->client->ps.saberMove)
 							&& ent->client->ps.fd.forceGripBeingGripped <= level.time
 							&& !(ent->client->ps.communicatingflags & 1 << CLOAK_CHARGE_RESTRICTION))
 						{
@@ -7062,10 +7062,10 @@ static void ClientThink_real(gentity_t* ent)
 
 				if (face_kicked->client->ps.weapon != WP_SABER ||
 					face_kicked->client->ps.fd.saberAnimLevel != FORCE_LEVEL_3 ||
-					!PM_SaberInAttack(face_kicked->client->ps.saber_move) && !
-					PM_SaberInStart(face_kicked->client->ps.saber_move) && !
-					PM_SaberInReturn(face_kicked->client->ps.saber_move) && !PM_SaberInTransition(
-						face_kicked->client->ps.saber_move))
+					!PM_SaberInAttack(face_kicked->client->ps.saberMove) && !
+					PM_SaberInStart(face_kicked->client->ps.saberMove) && !
+					PM_SaberInReturn(face_kicked->client->ps.saberMove) && !PM_SaberInTransition(
+						face_kicked->client->ps.saberMove))
 				{
 					if (face_kicked->health > 0 &&
 						face_kicked->client->ps.stats[STAT_HEALTH] > 0 &&

@@ -6168,7 +6168,7 @@ void SP_emplaced_gun(gentity_t* ent)
 	trace_t tr;
 
 	//make sure our assets are precached
-	register_item(BG_FindItemForWeapon(WP_EMPLACED_GUN));
+	RegisterItem(BG_FindItemForWeapon(WP_EMPLACED_GUN));
 
 	ent->r.contents = CONTENTS_SOLID;
 	ent->s.solid = SOLID_BBOX;
@@ -6253,7 +6253,7 @@ void SP_emplaced_eweb(gentity_t* ent)
 	trace_t tr;
 
 	//make sure our assets are precached
-	register_item(BG_FindItemForWeapon(WP_EMPLACED_GUN));
+	RegisterItem(BG_FindItemForWeapon(WP_EMPLACED_GUN));
 
 	ent->r.contents = CONTENTS_SOLID;
 	ent->s.solid = SOLID_BBOX;

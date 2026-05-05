@@ -174,12 +174,12 @@ void SP_info_player_deathmatch(gentity_t* ent)
 
 	if (ent->spawnflags & 32) // STUN_BATON
 	{
-		register_item(FindItemForWeapon(WP_MELEE));
-		//register_item( FindItemForWeapon( WP_STUN_BATON ));
+		RegisterItem(FindItemForWeapon(WP_MELEE));
+		//RegisterItem( FindItemForWeapon( WP_STUN_BATON ));
 	}
 	else
 	{
-		register_item(FindItemForWeapon(WP_SABER));
+		RegisterItem(FindItemForWeapon(WP_SABER));
 		//these are given in ClientSpawn(), but we register them now before cgame starts
 		saberInfo_t saber;
 		WP_SaberParseParms(g_saber->string, &saber); //get saber sounds and models cached before client begins
@@ -832,7 +832,7 @@ void player_cache_from_prev_level()
 		{
 			if (bits & 1 << i)
 			{
-				register_item(FindItemForWeapon(static_cast<weapon_t>(i)));
+				RegisterItem(FindItemForWeapon(static_cast<weapon_t>(i)));
 			}
 		}
 
@@ -840,7 +840,7 @@ void player_cache_from_prev_level()
 		{
 			if (ibits & 1 << i)
 			{
-				register_item(FindItemForInventory(i));
+				RegisterItem(FindItemForInventory(i));
 			}
 		}
 	}
@@ -2334,7 +2334,7 @@ void G_PilotXWing(gentity_t* ent)
 		ent->client->ps.stats[STAT_WEAPONS] |= 1 << WP_ATST_SIDE;
 		ent->client->ps.ammo[weaponData[WP_ATST_SIDE].ammoIndex] = ammoData[weaponData[WP_ATST_SIDE].ammoIndex].max;
 		const gitem_t* item = FindItemForWeapon(WP_ATST_SIDE);
-		register_item(item); //make sure the weapon is cached in case this runs at startup
+		RegisterItem(item); //make sure the weapon is cached in case this runs at startup
 		G_AddEvent(ent, EV_ITEM_PICKUP, item - bg_itemlist);
 		CG_ChangeWeapon(WP_ATST_SIDE);
 

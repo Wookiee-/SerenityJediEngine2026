@@ -626,6 +626,7 @@ static void UI_DoSaber(vec3_t origin, vec3_t dir, float length, float lengthMax,
 	saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
 	saber.radius = (radiusStart + Q_flrand(-1.0f, 1.0f) * radiusRange) * radiusmult;
 	trap->R_AddRefEntityToScene(&saber);
+	trap->R_AddRefEntityToScene(&saber);
 }
 
 static void UI_DobattlefrontSaber(vec3_t origin, vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color, int snum)
@@ -780,6 +781,7 @@ static void UI_DobattlefrontSaber(vec3_t origin, vec3_t dir, float length, float
 		saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
 
 		trap->R_AddRefEntityToScene(&saber);
+		trap->R_AddRefEntityToScene(&saber);
 	}
 }
 
@@ -932,6 +934,7 @@ static void UI_DoSFXSaber(vec3_t origin, vec3_t dir, float length, float lengthM
 		saber.shaderTexCoord[0] = saber.shaderTexCoord[1] = 1.0f;
 		saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
 
+		trap->R_AddRefEntityToScene(&saber);
 		trap->R_AddRefEntityToScene(&saber);
 	}
 }
@@ -1087,6 +1090,7 @@ static void UI_DoEp1Saber(vec3_t origin, vec3_t dir, float length, float lengthM
 		saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
 
 		trap->R_AddRefEntityToScene(&saber);
+		trap->R_AddRefEntityToScene(&saber);
 	}
 }
 
@@ -1240,6 +1244,7 @@ static void UI_DoEp2Saber(vec3_t origin, vec3_t dir, float length, float lengthM
 		saber.shaderTexCoord[0] = saber.shaderTexCoord[1] = 1.0f;
 		saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
 
+		trap->R_AddRefEntityToScene(&saber);
 		trap->R_AddRefEntityToScene(&saber);
 	}
 }
@@ -1395,6 +1400,7 @@ static void UI_DoEp3Saber(vec3_t origin, vec3_t dir, float length, float lengthM
 		saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
 
 		trap->R_AddRefEntityToScene(&saber);
+		trap->R_AddRefEntityToScene(&saber);
 	}
 }
 
@@ -1547,6 +1553,7 @@ static void UI_DoOTSaber(vec3_t origin, vec3_t dir, float length, float lengthMa
 		saber.shaderTexCoord[0] = saber.shaderTexCoord[1] = 1.0f;
 		saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
 
+		trap->R_AddRefEntityToScene(&saber);
 		trap->R_AddRefEntityToScene(&saber);
 	}
 }
@@ -1702,6 +1709,7 @@ static void UI_DoTFASaber(vec3_t origin, vec3_t dir, float length, float lengthM
 		saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
 
 		trap->R_AddRefEntityToScene(&saber);
+		trap->R_AddRefEntityToScene(&saber);
 	}
 }
 
@@ -1856,6 +1864,7 @@ static void UI_DoSaberUnstable(vec3_t origin, vec3_t dir, float length, float le
 		saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
 
 		trap->R_AddRefEntityToScene(&saber);
+		trap->R_AddRefEntityToScene(&saber);
 	}
 }
 
@@ -2009,6 +2018,7 @@ static void UI_DoCustomSaber(vec3_t origin, vec3_t dir, float length, float leng
 		saber.shaderTexCoord[0] = saber.shaderTexCoord[1] = 1.0f;
 		saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
 
+		trap->R_AddRefEntityToScene(&saber);
 		trap->R_AddRefEntityToScene(&saber);
 	}
 }

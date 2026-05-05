@@ -2059,7 +2059,7 @@ public:
 	};
 #endif // !JK2_MODE
 
-	short saber_move;
+	short saberMove;
 
 #ifndef JK2_MODE
 	short saberMoveNext;
@@ -2344,7 +2344,7 @@ public:
 #endif // !JK2_MODE
 		saved_game.write<int32_t>(muzzleOverheatTime);
 
-		saved_game.write<int16_t>(saber_move);
+		saved_game.write<int16_t>(saberMove);
 
 #ifndef JK2_MODE
 		saved_game.write<int16_t>(saberMoveNext);
@@ -2605,7 +2605,7 @@ public:
 #endif // !JK2_MODE
 		saved_game.read<int32_t>(muzzleOverheatTime);
 
-		saved_game.read<int16_t>(saber_move);
+		saved_game.read<int16_t>(saberMove);
 
 #ifndef JK2_MODE
 		saved_game.read<int16_t>(saberMoveNext);
@@ -3057,7 +3057,7 @@ using entityState_t = struct entityState_s
 
 	int generic1;
 
-	int saber_move;
+	int saberMove;
 
 	int genericenemyindex;
 

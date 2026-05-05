@@ -283,17 +283,13 @@ extern int killPlayerTimer;
 
 static void G_DynamicMusicUpdate()
 {
-	gentity_t* entity_list[MAX_GENTITIES];
+	static gentity_t* entity_list[MAX_GENTITIES];
 	vec3_t mins{}, maxs{};
 	vec3_t center;
 	int danger = 0;
 	int battle = 0;
 	int entTeam;
-	qboolean clear_los;
-
-	//FIXME: intro and/or other cues? (one-shot music sounds)
-
-	//loops
+	qboolean clearLOS;
 
 	//player-based
 	if (!player)
@@ -410,10 +406,9 @@ static void G_DynamicMusicUpdate()
 			continue;
 		}
 
-		qboolean lo_scalced = clear_los = qfalse;
-		if (ent->enemy == player && (!ent->NPC || ent->NPC->confusionTime < level.time && ent->NPC->insanityTime <
-			level.time) || ent->client && ent->client->ps.weaponTime || !ent->client && ent->attackDebounceTime >
-			level.time)
+		qboolean LOScalced = clearLOS = qfalse;
+		if (ent->enemy == player && (!ent->NPC || ent->NPC->confusionTime < level.time) || ent->client && ent->client
+			->ps.weaponTime || !ent->client && ent->attackDebounceTime > level.time)
 		{
 			//mad
 			if (ent->health > 0)
@@ -453,9 +448,9 @@ static void G_DynamicMusicUpdate()
 					if (distSq > 1048576/*1024*1024*/)
 					{
 						//> 1024 away
-						clear_los = G_ClearLOS(player, player->client->renderInfo.eyePoint, ent);
-						lo_scalced = qtrue;
-						if (clear_los == qfalse)
+						clearLOS = G_ClearLOS(player, player->client->renderInfo.eyePoint, ent);
+						LOScalced = qtrue;
+						if (clearLOS == qfalse)
 						{
 							//No LOS
 							continue;
@@ -475,11 +470,11 @@ static void G_DynamicMusicUpdate()
 				continue;
 			}
 
-			if (!lo_scalced)
+			if (!LOScalced)
 			{
-				clear_los = G_ClearLOS(player, player->client->renderInfo.eyePoint, ent);
+				clearLOS = G_ClearLOS(player, player->client->renderInfo.eyePoint, ent);
 			}
-			if (!clear_los)
+			if (!clearLOS)
 			{
 				//can't see them directly
 				continue;
@@ -561,41 +556,14 @@ static void G_DynamicMusicUpdate()
 			//not ready to switch yet
 			return;
 		}
-		//at least 1 second (for beats)
-		//level.dmDebounceTime = level.time + 1000;//FIXME: define beat time?
-		/*
-		if ( danger || dangerNear )
-		{//danger
-			//stay on whatever we were on, action or exploration
-			if ( !danger )
-			{//minimum
-				danger = 1;
-			}
-			if ( danger > 3 )
-			{
-				level.dmDebounceTime = level.time + 5000;
-			}
-			else
-			{
-				level.dmDebounceTime = level.time + 2000 + 1000*danger;
-			}
-		}
-		else
-		*/
+
+		if (level.dmState != DM_EXPLORE)
 		{
-			//still nothing dangerous going on
-			if (level.dmState != DM_EXPLORE)
-			{
-				//just went to explore, hold it for a couple seconds at least
-				//level.dmDebounceTime = level.time + 2000;
-				gi.SetConfigstring(CS_DYNAMIC_MUSIC_STATE, "explore");
-			}
-			level.dmState = DM_EXPLORE;
-			//FIXME: look for interest points and play "mysterious" music instead of exploration?
-			//FIXME: suspicious and distraction sounds should play some cue or change music in a subtle way?
-			//play exploration
+			//just went to explore, hold it for a couple seconds at least
+			//level.dmDebounceTime = level.time + 2000;
+			gi.SetConfigstring(CS_DYNAMIC_MUSIC_STATE, "explore");
 		}
-		//FIXME: when do we go to silence?
+		level.dmState = DM_EXPLORE;
 	}
 }
 

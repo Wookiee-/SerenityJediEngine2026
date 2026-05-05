@@ -54,8 +54,8 @@ void NPC_Probe_Precache()
 	G_EffectIndex("explosions/probeexplosion1");
 	G_EffectIndex("bryar_old/muzzle_flash");
 
-	register_item(FindItemForAmmo(AMMO_BLASTER));
-	register_item(FindItemForWeapon(WP_BRYAR_PISTOL));
+	RegisterItem(FindItemForAmmo(AMMO_BLASTER));
+	RegisterItem(FindItemForWeapon(WP_BRYAR_PISTOL));
 }
 
 /*

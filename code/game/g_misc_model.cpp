@@ -507,37 +507,37 @@ void SP_misc_model_ammo_rack(gentity_t* ent)
 	{
 		if (ent->spawnflags & RACK_WEAPONS)
 		{
-			register_item(FindItemForWeapon(WP_BLASTER));
+			RegisterItem(FindItemForWeapon(WP_BLASTER));
 		}
-		register_item(FindItemForAmmo(AMMO_BLASTER));
+		RegisterItem(FindItemForAmmo(AMMO_BLASTER));
 	}
 
 	if (ent->spawnflags & RACK_METAL_BOLTS)
 	{
 		if (ent->spawnflags & RACK_WEAPONS)
 		{
-			register_item(FindItemForWeapon(WP_REPEATER));
+			RegisterItem(FindItemForWeapon(WP_REPEATER));
 		}
-		register_item(FindItemForAmmo(AMMO_METAL_BOLTS));
+		RegisterItem(FindItemForAmmo(AMMO_METAL_BOLTS));
 	}
 
 	if (ent->spawnflags & RACK_ROCKETS)
 	{
 		if (ent->spawnflags & RACK_WEAPONS)
 		{
-			register_item(FindItemForWeapon(WP_ROCKET_LAUNCHER));
+			RegisterItem(FindItemForWeapon(WP_ROCKET_LAUNCHER));
 		}
-		register_item(FindItemForAmmo(AMMO_ROCKETS));
+		RegisterItem(FindItemForAmmo(AMMO_ROCKETS));
 	}
 
 	if (ent->spawnflags & RACK_PWR_CELL)
 	{
-		register_item(FindItemForAmmo(AMMO_POWERCELL));
+		RegisterItem(FindItemForAmmo(AMMO_POWERCELL));
 	}
 
 	if (ent->spawnflags & RACK_HEALTH)
 	{
-		register_item(FindItem("item_medpak_instant"));
+		RegisterItem(FindItem("item_medpak_instant"));
 	}
 
 	ent->e_ThinkFunc = thinkF_spawn_rack_goods;
@@ -604,7 +604,7 @@ void spawn_rack_goods(gentity_t* ent)
 	if (ent->spawnflags & RACK_HEALTH)
 	{
 		health = FindItem("item_medpak_instant");
-		register_item(health);
+		RegisterItem(health);
 	}
 
 	//---------Ammo types
@@ -857,37 +857,37 @@ void SP_misc_model_cargo_small(gentity_t* ent)
 
 	if (ent->spawnflags & DROP_MEDPACK)
 	{
-		register_item(FindItem("item_medpak_instant"));
+		RegisterItem(FindItem("item_medpak_instant"));
 	}
 
 	if (ent->spawnflags & DROP_SHIELDS)
 	{
-		register_item(FindItem("item_shield_sm_instant"));
+		RegisterItem(FindItem("item_shield_sm_instant"));
 	}
 
 	if (ent->spawnflags & DROP_BACTA)
 	{
-		register_item(FindItem("item_bacta"));
+		RegisterItem(FindItem("item_bacta"));
 	}
 
 	if (ent->spawnflags & DROP_CLOAK)
 	{
-		register_item(FindItem("item_cloak"));
+		RegisterItem(FindItem("item_cloak"));
 	}
 
 	if (ent->spawnflags & DROP_JETPACK)
 	{
-		register_item(FindItem("item_jetpack"));
+		RegisterItem(FindItem("item_jetpack"));
 	}
 
 	if (ent->spawnflags & DROP_BATTERIES)
 	{
-		register_item(FindItem("item_battery"));
+		RegisterItem(FindItem("item_battery"));
 	}
 
 	if (ent->spawnflags & DROP_BARRIER)
 	{
-		register_item(FindItem("item_Barrier"));
+		RegisterItem(FindItem("item_Barrier"));
 	}
 
 	G_SpawnInt("health", "25", &ent->health);

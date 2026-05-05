@@ -79,10 +79,10 @@ void NPC_Mark1_Precache()
 	G_EffectIndex("bryar_old/muzzle_flash");
 	G_EffectIndex("explosions/droidexplosion1");
 
-	register_item(FindItemForAmmo(AMMO_METAL_BOLTS));
-	register_item(FindItemForAmmo(AMMO_BLASTER));
-	register_item(FindItemForWeapon(WP_BOWCASTER));
-	register_item(FindItemForWeapon(WP_BRYAR_PISTOL));
+	RegisterItem(FindItemForAmmo(AMMO_METAL_BOLTS));
+	RegisterItem(FindItemForAmmo(AMMO_BLASTER));
+	RegisterItem(FindItemForWeapon(WP_BOWCASTER));
+	RegisterItem(FindItemForWeapon(WP_BRYAR_PISTOL));
 }
 
 /*

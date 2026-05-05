@@ -708,7 +708,7 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 
 		if (ent->client->NPC_class == CLASS_SHADOWTROOPER && Q_stricmpn("shadowtrooper", ent->NPC_type, 13) == 0)
 		{
-			if (!PM_SaberInAttack(ent->client->ps.saber_move))
+			if (!PM_SaberInAttack(ent->client->ps.saberMove))
 			{
 				Jedi_Cloak(ent);
 			}
@@ -1194,7 +1194,7 @@ static void NPC_SetWeapons(const gentity_t* ent)
 		if (weapons & 1 << curWeap)
 		{
 			ent->client->ps.stats[STAT_WEAPONS] |= 1 << curWeap;
-			register_item(FindItemForWeapon(static_cast<weapon_t>(curWeap))); //precache the weapon
+			RegisterItem(FindItemForWeapon(static_cast<weapon_t>(curWeap))); //precache the weapon
 			ent->NPC->currentAmmo = ent->client->ps.ammo[weaponData[curWeap].ammoIndex] = 100; //FIXME: max ammo
 
 			if (bestWeap == WP_SABER)
@@ -2244,11 +2244,11 @@ void SP_NPC_spawner(gentity_t* self)
 		G_SoundIndex("sound/weapons/key_pkup.wav");
 		if (!Q_stricmp("goodie", self->message))
 		{
-			register_item(FindItemForInventory(INV_GOODIE_KEY));
+			RegisterItem(FindItemForInventory(INV_GOODIE_KEY));
 		}
 		else
 		{
-			register_item(FindItemForInventory(INV_SECURITY_KEY));
+			RegisterItem(FindItemForInventory(INV_SECURITY_KEY));
 		}
 	}
 }

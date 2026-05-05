@@ -59,10 +59,10 @@ void NPC_Mark2_Precache()
 	G_EffectIndex("blaster/smoke_bolton");
 	G_EffectIndex("bryar_old/muzzle_flash");
 
-	register_item(FindItemForWeapon(WP_BRYAR_PISTOL));
-	register_item(FindItemForAmmo(AMMO_METAL_BOLTS));
-	register_item(FindItemForAmmo(AMMO_POWERCELL));
-	register_item(FindItemForAmmo(AMMO_BLASTER));
+	RegisterItem(FindItemForWeapon(WP_BRYAR_PISTOL));
+	RegisterItem(FindItemForAmmo(AMMO_METAL_BOLTS));
+	RegisterItem(FindItemForAmmo(AMMO_POWERCELL));
+	RegisterItem(FindItemForAmmo(AMMO_BLASTER));
 }
 
 /*

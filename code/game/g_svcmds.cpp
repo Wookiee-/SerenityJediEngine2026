@@ -698,7 +698,7 @@ static void Svcmd_SaberAttackCycle_f()
 
 		if (!self->client->ps.saberInFlight)
 		{
-			if (!(self->client->ps.ManualBlockingFlags & 1 << HOLDINGBLOCK) && !PM_SaberInAttack(self->client->ps.saber_move) && self->client->ps.saberLockTime < level.time) // lets do a movement when changing styles // need better anims for this
+			if (!(self->client->ps.ManualBlockingFlags & 1 << HOLDINGBLOCK) && !PM_SaberInAttack(self->client->ps.saberMove) && self->client->ps.saberLockTime < level.time) // lets do a movement when changing styles // need better anims for this
 			{
 				if (saberAnimLevel == SS_DUAL)
 				{

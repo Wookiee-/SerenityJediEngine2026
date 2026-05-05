@@ -28,12 +28,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "../cgame/cg_local.h"
 
 extern qboolean WP_DoingForcedAnimationForForcePowers(const gentity_t* self);
-extern int wp_saber_must_block(gentity_t* self, const gentity_t* atk, qboolean check_b_box_block, vec3_t point,
-	int rSaberNum, int rBladeNum);
+extern int wp_saber_must_block(gentity_t* self, const gentity_t* atk, qboolean check_b_box_block, vec3_t point, int rSaberNum, int rBladeNum);
 extern qboolean WP_SaberBlockBolt(gentity_t* self, vec3_t hitloc, qboolean missileBlock);
 extern void g_missile_reflect_effect(const gentity_t* ent, vec3_t dir);
 extern void WP_ForcePowerDrain(const gentity_t* self, forcePowers_t force_power, int override_amt);
 extern int WP_SaberBlockCost(gentity_t* defender, const gentity_t* attacker, vec3_t hitLocs);
+extern qboolean G_ControlledByPlayer(const gentity_t* self);
 
 static void WP_FireConcussionAlt(gentity_t* ent)
 {
@@ -155,7 +155,14 @@ static void WP_FireConcussionAlt(gentity_t* ent)
 			}
 			else
 			{
-				hitDodged = jedi_disruptor_dodge_evasion(traceEnt, ent, &tr, HL_NONE);
+				if (traceEnt->s.number < MAX_CLIENTS || G_ControlledByPlayer(traceEnt))
+				{
+					hitDodged = jedi_disruptor_dodge_evasion(traceEnt, ent, &tr, HL_NONE);
+				}
+				else
+				{
+					hitDodged = jedi_npc_disruptor_dodge_evasion(traceEnt, ent, &tr, HL_NONE);
+				}
 				//acts like we didn't even hit him
 			}
 		}

@@ -1983,7 +1983,7 @@ void CG_NPC_Precache(gentity_t* spawner)
 			{
 				if (weap > WP_NONE)
 				{
-					register_item(FindItemForWeapon(static_cast<weapon_t>(weap))); //precache the weapon
+					RegisterItem(FindItemForWeapon(static_cast<weapon_t>(weap))); //precache the weapon
 				}
 			}
 			continue;
@@ -3826,7 +3826,7 @@ qboolean NPC_ParseParms(const char* npc_name, gentity_t* npc)
 					npc->client->ps.stats[STAT_WEAPONS] |= 1 << weap;
 					if (weap > WP_NONE)
 					{
-						register_item(FindItemForWeapon(static_cast<weapon_t>(weap))); //precache the weapon
+						RegisterItem(FindItemForWeapon(static_cast<weapon_t>(weap))); //precache the weapon
 						npc->client->ps.ammo[weaponData[weap].ammoIndex] = ammoData[weaponData[weap].ammoIndex].max;
 					}
 				}

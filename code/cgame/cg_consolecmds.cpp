@@ -296,7 +296,7 @@ static const char* gcmds[] =
 	"force_rage",
 	"force_sight",
 	"force_speed",
-	"force_stasis",
+	"ForceStasis",
 	"force_destruction",
 	"force_grasp",
 	"force_repulse",

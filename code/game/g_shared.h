@@ -1538,20 +1538,12 @@ struct gentity_s
 	int reloadCooldown;
 	int TimeOfWeaponDrop;
 
-	int npc_attack_time;
-	int npc_counter_time;
-	//gentity_t				*padawan;
-	int longTermGoal;
-
-	int next_enemy_check_time;
-	int next_weapon_switch;
-	int next_rifle_butt_time;
-	int next_flamer_time;
 	int next_kick_time;
 
 	int npc_roll_time;
 	qboolean npc_roll_start;
 	int npc_roll_direction;
+
 	int saberPowerTime;
 	qboolean saberPower;
 	int lastKataTime; // timestamp (level.time) when kata is next allowed; 0 = allowed now
@@ -1760,6 +1752,12 @@ struct gentity_s
 		saved_game.write<int32_t>(reloadTime);
 		saved_game.write<int32_t>(reloadCooldown);
 		saved_game.write<int32_t>(TimeOfWeaponDrop);
+
+		saved_game.write<int32_t>(next_kick_time);
+		saved_game.write<int32_t>(npc_roll_time);
+		saved_game.write<int32_t>(npc_roll_start);
+		saved_game.write<int32_t>(npc_roll_direction);
+
 		saved_game.write<int32_t>(saberPowerTime);
 		saved_game.write<int32_t>(saberPower);
 		saved_game.write<int32_t>(lastKataTime);
@@ -1969,6 +1967,12 @@ struct gentity_s
 		saved_game.read<int32_t>(reloadTime);
 		saved_game.read<int32_t>(reloadCooldown);
 		saved_game.read<int32_t>(TimeOfWeaponDrop);
+
+		saved_game.read<int32_t>(next_kick_time);
+		saved_game.read<int32_t>(npc_roll_time);
+		saved_game.read<int32_t>(npc_roll_start);
+		saved_game.read<int32_t>(npc_roll_direction);
+
 		saved_game.read<int32_t>(saberPowerTime);
 		saved_game.read<int32_t>(saberPower);
 		saved_game.read<int32_t>(lastKataTime);

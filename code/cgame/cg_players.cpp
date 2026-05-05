@@ -12694,8 +12694,8 @@ static void CG_AddSaberBladeGo(const centity_t* cent, centity_t* scent, const in
 		{
 			//do no effects when idle
 			if (!cent->gent->client->ps.saberInFlight
-				&& !PM_SaberInAttack(cent->gent->client->ps.saber_move)
-				&& !PM_SaberInTransitionAny(cent->gent->client->ps.saber_move)
+				&& !PM_SaberInAttack(cent->gent->client->ps.saberMove)
+				&& !PM_SaberInTransitionAny(cent->gent->client->ps.saberMove)
 				&& !pm_saber_in_special_attack(cent->gent->client->ps.torsoAnim))
 			{
 				//idle, do no marks
@@ -12705,7 +12705,7 @@ static void CG_AddSaberBladeGo(const centity_t* cent, centity_t* scent, const in
 		if (cg_saberEntMarks.integer)
 		{
 			if (cent->gent->client->ps.saberInFlight
-				|| PM_SaberInAttack(cent->gent->client->ps.saber_move)
+				|| PM_SaberInAttack(cent->gent->client->ps.saberMove)
 				|| pm_saber_in_special_attack(cent->gent->client->ps.torsoAnim))
 			{
 				trace_mask |= CONTENTS_BODY | CONTENTS_CORPSE;
@@ -12792,7 +12792,7 @@ static void CG_AddSaberBladeGo(const centity_t* cent, centity_t* scent, const in
 										{
 											//ugh, need to have a real sound debouncer... or do this game-side
 											cent->gent->client->ps.saberHitWallSoundDebounceTime = cg.time;
-											if (PM_SaberInAttack(cent->gent->client->ps.saber_move)
+											if (PM_SaberInAttack(cent->gent->client->ps.saberMove)
 												|| pm_saber_in_special_attack(cent->gent->client->ps.torsoAnim))
 											{
 												cgi_S_StartSound(cent->lerpOrigin, cent->currentState.clientNum,
@@ -13177,7 +13177,7 @@ static void CG_AddSaberBladeGo(const centity_t* cent, centity_t* scent, const in
 			float dirlen1 = VectorLength(dir1);
 			const float dirlen2 = VectorLength(dir2);
 
-			if (saber_moveData[client->ps.saber_move].trailLength == 0)
+			if (saber_moveData[client->ps.saberMove].trailLength == 0)
 			{
 				dirlen0 *= 0.5f;
 				dirlen1 *= 0.3f;

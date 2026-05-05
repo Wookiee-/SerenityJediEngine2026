@@ -146,7 +146,7 @@ void npc_cultist_destroyer_precache(void)
 
 void npc_shadow_trooper_precache(void)
 {
-	register_item(BG_FindItemForAmmo(AMMO_FORCE));
+	RegisterItem(BG_FindItemForAmmo(AMMO_FORCE));
 	G_SoundIndex("sound/chars/shadowtrooper/cloak.wav");
 	G_SoundIndex("sound/chars/shadowtrooper/decloak.wav");
 }
@@ -2040,7 +2040,7 @@ static void Jedi_CheckCloak(void)
 			if (NPCS.NPC->r.svFlags & SVF_BOT && !(NPCS.NPC->client->ps.communicatingflags & 1 <<
 				CLOAK_CHARGE_RESTRICTION))
 			{
-				if (!PM_SaberInAttack(NPCS.NPC->client->ps.saber_move))
+				if (!PM_SaberInAttack(NPCS.NPC->client->ps.saberMove))
 				{
 					//using cloak, drain force
 					Jedi_Cloak(NPCS.NPC);
@@ -3065,7 +3065,7 @@ void Kyle_TryGrab(void)
 	NPC_SetAnim(NPCS.NPC, SETANIM_BOTH, BOTH_KYLE_GRAB, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 	NPCS.NPC->client->ps.torsoTimer += 200;
 	NPCS.NPC->client->ps.weaponTime = NPCS.NPC->client->ps.torsoTimer;
-	NPCS.NPC->client->ps.saber_move = LS_READY;
+	NPCS.NPC->client->ps.saberMove = LS_READY;
 	VectorClear(NPCS.NPC->client->ps.velocity);
 	VectorClear(NPCS.NPC->client->ps.moveDir);
 	NPCS.ucmd.rightmove = NPCS.ucmd.forwardmove = NPCS.ucmd.upmove = 0;
@@ -3187,9 +3187,9 @@ static void Jedi_CombatDistance(const int enemy_dist)
 	}
 
 	if (TIMER_Done(NPCS.NPC, "blocking")
-		&& (!PM_SaberInAttack(NPCS.NPC->client->ps.saber_move)
-			&& !PM_SaberInStart(NPCS.NPC->client->ps.saber_move)
-			&& !PM_SaberInBrokenParry(NPCS.NPC->client->ps.saber_move)
+		&& (!PM_SaberInAttack(NPCS.NPC->client->ps.saberMove)
+			&& !PM_SaberInStart(NPCS.NPC->client->ps.saberMove)
+			&& !PM_SaberInBrokenParry(NPCS.NPC->client->ps.saberMove)
 			&& !PM_InRoll(&NPCS.NPC->client->ps)
 			&& !PM_InKnockDown(&NPCS.NPC->client->ps)
 			&& !pm_saber_in_special_attack(NPCS.NPC->client->ps.torsoAnim)
@@ -3598,7 +3598,7 @@ static void Jedi_CombatDistance(const int enemy_dist)
 		return;
 	}
 	else if (NPCS.NPC->client->ps.saberInFlight &&
-		!PM_SaberInBrokenParry(NPCS.NPC->client->ps.saber_move)
+		!PM_SaberInBrokenParry(NPCS.NPC->client->ps.saberMove)
 		&& NPCS.NPC->client->ps.saberBlocked != BLOCKED_PARRY_BROKEN)
 	{
 		//maintain distance
@@ -4458,8 +4458,8 @@ evasionType_t Jedi_CheckFlipEvasions(gentity_t* self, const float rightdot, floa
 
 		int parts = SETANIM_BOTH;
 
-		if (PM_SaberInAttack(self->client->ps.saber_move)
-			|| PM_SaberInStart(self->client->ps.saber_move))
+		if (PM_SaberInAttack(self->client->ps.saberMove)
+			|| PM_SaberInStart(self->client->ps.saberMove))
 		{
 			parts = SETANIM_LEGS;
 		}
@@ -4822,10 +4822,10 @@ qboolean Jedi_QuickReactions(gentity_t* self)
 qboolean Jedi_SaberBusy(const gentity_t* self)
 {
 	if (self->client->ps.torsoTimer > 300
-		&& (PM_SaberInAttack(self->client->ps.saber_move) && self->client->ps.fd.saberAnimLevel == FORCE_LEVEL_3
+		&& (PM_SaberInAttack(self->client->ps.saberMove) && self->client->ps.fd.saberAnimLevel == FORCE_LEVEL_3
 			|| PM_SpinningSaberAnim(self->client->ps.torsoAnim)
 			|| pm_saber_in_special_attack(self->client->ps.torsoAnim)
-			|| PM_SaberInBrokenParry(self->client->ps.saber_move)
+			|| PM_SaberInBrokenParry(self->client->ps.saberMove)
 			|| PM_FlippingAnim(self->client->ps.torsoAnim)
 			|| PM_RollingAnim(self->client->ps.torsoAnim)))
 	{
@@ -4860,7 +4860,7 @@ qboolean Jedi_InNoAIAnim(const gentity_t* self)
 		|| BG_StabDownAnim(self->client->ps.legsAnim)
 		|| PM_InAirKickingAnim(self->client->ps.legsAnim)
 		|| PM_InRollIgnoreTimer(&self->client->ps)
-		|| PM_SaberInKata(self->client->ps.saber_move)
+		|| PM_SaberInKata(self->client->ps.saberMove)
 		|| PM_SuperBreakWinAnim(self->client->ps.torsoAnim)
 		|| PM_SuperBreakLoseAnim(self->client->ps.torsoAnim))
 	{
@@ -5075,8 +5075,8 @@ evasionType_t jedi_saber_block_go(gentity_t* self, usercmd_t* cmd, vec3_t p_hitl
 					|| self->client->pers.botclass == BCLASS_BOBAFETT
 					|| self->client->pers.botclass == BCLASS_MANDOLORIAN1
 					|| self->client->pers.botclass == BCLASS_MANDOLORIAN2 ||
-					!PM_SaberInAttack(self->client->ps.saber_move) //not attacking
-					&& !PM_SaberInStart(self->client->ps.saber_move) //not starting an attack
+					!PM_SaberInAttack(self->client->ps.saberMove) //not attacking
+					&& !PM_SaberInStart(self->client->ps.saberMove) //not starting an attack
 					&& !PM_SpinningSaberAnim(self->client->ps.torsoAnim) //not in a saber spin
 					&& !pm_saber_in_special_attack(self->client->ps.torsoAnim)))
 			{
@@ -5487,8 +5487,8 @@ evasionType_t jedi_saber_block_go(gentity_t* self, usercmd_t* cmd, vec3_t p_hitl
 							&& self->client->ps.groundEntityNum < ENTITYNUM_NONE
 							&& !Q_irand(0, 2))
 						{
-							if (!PM_SaberInAttack(self->client->ps.saber_move)
-								&& !PM_SaberInStart(self->client->ps.saber_move)
+							if (!PM_SaberInAttack(self->client->ps.saberMove)
+								&& !PM_SaberInStart(self->client->ps.saberMove)
 								&& !BG_InRoll(&self->client->ps, self->client->ps.legsAnim)
 								&& !PM_InKnockDown(&self->client->ps)
 								&& !pm_saber_in_special_attack(self->client->ps.torsoAnim))
@@ -5833,7 +5833,7 @@ static evasionType_t Jedi_CheckEvadeSpecialAttacks(void)
 										NPC_SetAnim(NPCS.NPC, SETANIM_BOTH, BOTH_ROLL_L,
 											SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 										G_AddEvent(NPCS.NPC, EV_ROLL, 0);
-										NPCS.NPC->client->ps.saber_move = LS_NONE;
+										NPCS.NPC->client->ps.saberMove = LS_NONE;
 									}
 								}
 							}
@@ -5861,7 +5861,7 @@ static evasionType_t Jedi_CheckEvadeSpecialAttacks(void)
 										NPC_SetAnim(NPCS.NPC, SETANIM_BOTH, BOTH_ROLL_R,
 											SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 										G_AddEvent(NPCS.NPC, EV_ROLL, 0);
-										NPCS.NPC->client->ps.saber_move = LS_NONE;
+										NPCS.NPC->client->ps.saberMove = LS_NONE;
 									}
 								}
 							}
@@ -7346,7 +7346,7 @@ static void Jedi_CombatTimersUpdate(const int enemy_dist)
 			//parried
 			TIMER_Set(NPCS.NPC, "parryTime", -1);
 			if (NPCS.NPC->enemy && (!NPCS.NPC->enemy->client || PM_SaberInKnockaway(
-				NPCS.NPC->enemy->client->ps.saber_move)))
+				NPCS.NPC->enemy->client->ps.saberMove)))
 			{
 				//advance!
 				Jedi_Aggression(NPCS.NPC, 1); //get closer
@@ -7409,7 +7409,7 @@ static void Jedi_CombatTimersUpdate(const int enemy_dist)
 		if (NPCS.NPC->client->ps.saberEventFlags & SEF_BLOCKED)
 		{
 			//was blocked whilst attacking
-			if (PM_SaberInBrokenParry(NPCS.NPC->client->ps.saber_move)
+			if (PM_SaberInBrokenParry(NPCS.NPC->client->ps.saberMove)
 				|| NPCS.NPC->client->ps.saberBlocked == BLOCKED_PARRY_BROKEN)
 			{
 				//Com_Printf( "(%d) drop agg - we were knock-blocked\n", level.time );
@@ -7644,7 +7644,7 @@ static qboolean Jedi_AttackDecide(const int enemy_dist)
 		NPCS.NPC->client->NPC_class == CLASS_JEDI)
 	{
 		//tavion, fencers, jedi trainer are all good at following up a parry with an attack
-		if ((PM_SaberInParry(NPCS.NPC->client->ps.saber_move) || PM_SaberInKnockaway(NPCS.NPC->client->ps.saber_move))
+		if ((PM_SaberInParry(NPCS.NPC->client->ps.saberMove) || PM_SaberInKnockaway(NPCS.NPC->client->ps.saberMove))
 			&& NPCS.NPC->client->ps.saberBlocked != BLOCKED_PARRY_BROKEN)
 		{
 			//try to attack straight from a parry
@@ -7684,7 +7684,7 @@ static qboolean Jedi_AttackDecide(const int enemy_dist)
 				//Try to attack
 				NPC_FaceEnemy(qtrue);
 
-				if (!PM_SaberInAttack(NPCS.NPC->client->ps.saber_move) && !Jedi_SaberBusy(NPCS.NPC))
+				if (!PM_SaberInAttack(NPCS.NPC->client->ps.saberMove) && !Jedi_SaberBusy(NPCS.NPC))
 				{
 					if (NPCS.NPC->client->ps.fd.blockPoints < BLOCKPOINTS_HALF)
 					{
@@ -9783,7 +9783,7 @@ static void Jedi_Attack(void)
 		|| NPCS.NPC->client->pers.botclass != BCLASS_MANDOLORIAN1
 		|| NPCS.NPC->client->pers.botclass != BCLASS_MANDOLORIAN2)
 	{
-		if (PM_SaberInBrokenParry(NPCS.NPC->client->ps.saber_move) || NPCS.NPC->client->ps.saberBlocked ==
+		if (PM_SaberInBrokenParry(NPCS.NPC->client->ps.saberMove) || NPCS.NPC->client->ps.saberBlocked ==
 			BLOCKED_PARRY_BROKEN)
 		{
 			//just make sure they don't pull their saber to them if they're being blocked
@@ -9897,7 +9897,7 @@ static void Jedi_Attack(void)
 				&& fabs(NPCS.ucmd.rightmove) < 32
 				&& !(NPCS.ucmd.buttons & BUTTON_WALKING)
 				&& !(NPCS.ucmd.buttons & BUTTON_ATTACK)
-				&& NPCS.NPC->client->ps.saber_move == LS_READY
+				&& NPCS.NPC->client->ps.saberMove == LS_READY
 				&& NPCS.NPC->client->ps.legsAnim == BOTH_RUN_DUAL)
 			{
 				//running at us, not attacking
@@ -10471,7 +10471,7 @@ qboolean Jedi_InSpecialMove(void)
 							}
 						}
 						NPCS.NPC->client->ps.saberBlocked = BLOCKED_NONE;
-						NPCS.NPC->client->ps.saber_move /* not sure what this is = NPC->client->ps.saberMoveNext*/ =
+						NPCS.NPC->client->ps.saberMove /* not sure what this is = NPC->client->ps.saberMoveNext*/ =
 							LS_NONE;
 						NPCS.NPC->painDebounceTime = level.time + 500;
 						NPCS.NPC->client->ps.pm_time = 500;

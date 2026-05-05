@@ -105,7 +105,7 @@ static void RegisterAssets(Vehicle_t* p_veh)
 {
 	//atst uses turret weapon
 #ifdef _JK2MP
-	register_item(BG_FindItemForWeapon(WP_TURRET));
+	RegisterItem(BG_FindItemForWeapon(WP_TURRET));
 #else
 	// PUT SOMETHING HERE...
 #endif

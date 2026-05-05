@@ -5352,7 +5352,7 @@ static const char* g_bindCommands[] =
 #endif
 	"force_speed",
 #ifndef JK2_MODE
-	"force_stasis",
+	"ForceStasis",
 	"force_destruction",
 	"force_grasp",
 	"force_repulse",

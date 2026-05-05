@@ -123,7 +123,7 @@ using saberLockResult_t = enum
 	LOCK_DRAW //both people fall back
 };
 
-using saberslock_mode_t = enum
+using sabersLockMode_t = enum
 {
 	LOCK_FIRST = 0,
 	LOCK_TOP = LOCK_FIRST,
@@ -316,6 +316,7 @@ using evasionType_t = enum
 	EVASION_FJUMP,
 	EVASION_CARTWHEEL,
 	EVASION_OTHER,
+	EVASION_DASH,
 	NUM_EVASION_TYPES
 };
 

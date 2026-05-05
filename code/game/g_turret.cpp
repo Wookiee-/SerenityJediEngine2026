@@ -1085,7 +1085,7 @@ void finish_spawning_turret(gentity_t* base)
 		//FIXME: Turbo Laser Cannon sounds!
 		G_SoundIndex("sound/vehicles/weapons/turbolaser/turn.wav");
 		G_EffectIndex("explosions/fighter_explosion2");
-		register_item(FindItemForWeapon(WP_TIE_FIGHTER));
+		RegisterItem(FindItemForWeapon(WP_TIE_FIGHTER));
 	}
 	else
 	{
@@ -1103,14 +1103,14 @@ void finish_spawning_turret(gentity_t* base)
 
 	if (base->spawnflags & SPF_TURRETG2_TURBO)
 	{
-		register_item(FindItemForWeapon(WP_TURRET));
+		RegisterItem(FindItemForWeapon(WP_TURRET));
 
 		base->svFlags |= SVF_NO_TELEPORT | SVF_SELF_ANIMATING;
 	}
 	else
 	{
 		// Register this so that we can use it for the missile effect
-		register_item(FindItemForWeapon(WP_BLASTER));
+		RegisterItem(FindItemForWeapon(WP_BLASTER));
 
 		base->svFlags |= SVF_NO_TELEPORT | SVF_NONNPC_ENEMY | SVF_SELF_ANIMATING;
 	}
@@ -1902,7 +1902,7 @@ void SP_PAS(gentity_t* base)
 	base->spawnflags |= 2;
 
 	// Use this for our missile effect
-	register_item(FindItemForWeapon(WP_TURRET));
+	RegisterItem(FindItemForWeapon(WP_TURRET));
 	base->s.weapon = WP_TURRET;
 
 	base->svFlags |= SVF_NONNPC_ENEMY;
@@ -2590,7 +2590,7 @@ void SP_misc_panel_turret(gentity_t* self)
 
 	self->s.weapon = WP_TURRET;
 
-	register_item(FindItemForWeapon(WP_EMPLACED_GUN));
+	RegisterItem(FindItemForWeapon(WP_EMPLACED_GUN));
 	gi.linkentity(self);
 
 	self->e_UseFunc = useF_panel_turret_use;

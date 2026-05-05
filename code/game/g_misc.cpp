@@ -977,7 +977,7 @@ static void InitShooter(gentity_t* ent, int weapon)
 	ent->e_UseFunc = useF_Use_Shooter;
 	ent->s.weapon = weapon;
 
-	register_item(FindItemForWeapon(static_cast<weapon_t>(weapon)));
+	RegisterItem(FindItemForWeapon(static_cast<weapon_t>(weapon)));
 
 	G_SetMovedir(ent->s.angles, ent->movedir);
 
@@ -1864,7 +1864,7 @@ void SP_misc_trip_mine(gentity_t* self)
 		Com_Error(ERR_DROP, "misc_trip_mine at %s pointed at no surface\n", vtos(self->s.origin));
 	}
 
-	register_item(FindItemForWeapon(WP_TRIP_MINE)); //precache the weapon
+	RegisterItem(FindItemForWeapon(WP_TRIP_MINE)); //precache the weapon
 
 	self->count = 2/*TRIPWIRE_STYLE*/;
 
@@ -3169,10 +3169,10 @@ void SP_misc_atst_drivable(gentity_t* ent)
 	VectorSet(ent->s.modelScale, 1.0f, 1.0f, 1.0f);
 
 	//register my weapons, sounds and model
-	register_item(FindItemForWeapon(WP_ATST_MAIN)); //precache the weapon
-	register_item(FindItemForWeapon(WP_ATST_SIDE)); //precache the weapon
+	RegisterItem(FindItemForWeapon(WP_ATST_MAIN)); //precache the weapon
+	RegisterItem(FindItemForWeapon(WP_ATST_SIDE)); //precache the weapon
 	//HACKHACKHACKTEMP - until ATST gets real weapons of it's own?
-	register_item(FindItemForWeapon(WP_EMPLACED_GUN)); //precache the weapon
+	RegisterItem(FindItemForWeapon(WP_EMPLACED_GUN)); //precache the weapon
 
 	G_SoundIndex("sound/chars/atst/atst_hatch_open");
 	G_SoundIndex("sound/chars/atst/atst_hatch_close");

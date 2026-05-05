@@ -1648,34 +1648,34 @@ void clear_registered_items()
 
 	if (com_outcast->integer == 0) //playing academy
 	{
-		register_item(FindItemForWeapon(WP_MELEE)); //has no item
+		RegisterItem(FindItemForWeapon(WP_MELEE)); //has no item
 
-		register_item(FindItemForInventory(INV_BACTA_CANISTER));
-		register_item(FindItemForInventory(INV_CLOAK));
-		register_item(FindItemForInventory(INV_SEEKER));
+		RegisterItem(FindItemForInventory(INV_BACTA_CANISTER));
+		RegisterItem(FindItemForInventory(INV_CLOAK));
+		RegisterItem(FindItemForInventory(INV_SEEKER));
 	}
 	else if (com_outcast->integer == 1 || com_outcast->integer == 4) //playing outcast
 	{
-		register_item(FindItemForWeapon(WP_MELEE)); //has no item
-		register_item(FindItemForWeapon(WP_BRYAR_PISTOL));
-		register_item(FindItemForWeapon(WP_STUN_BATON));
+		RegisterItem(FindItemForWeapon(WP_MELEE)); //has no item
+		RegisterItem(FindItemForWeapon(WP_BRYAR_PISTOL));
+		RegisterItem(FindItemForWeapon(WP_STUN_BATON));
 
-		register_item(FindItemForInventory(INV_ELECTROBINOCULARS));
-		register_item(FindItemForInventory(INV_BACTA_CANISTER));
-		register_item(FindItemForInventory(INV_SENTRY));
-		register_item(FindItemForInventory(INV_BARRIER));
-		register_item(FindItemForInventory(INV_CLOAK));
+		RegisterItem(FindItemForInventory(INV_ELECTROBINOCULARS));
+		RegisterItem(FindItemForInventory(INV_BACTA_CANISTER));
+		RegisterItem(FindItemForInventory(INV_SENTRY));
+		RegisterItem(FindItemForInventory(INV_BARRIER));
+		RegisterItem(FindItemForInventory(INV_CLOAK));
 	}
 	else
 	{
-		register_item(FindItemForWeapon(WP_MELEE)); //has no item
+		RegisterItem(FindItemForWeapon(WP_MELEE)); //has no item
 
-		register_item(FindItemForInventory(INV_ELECTROBINOCULARS));
-		register_item(FindItemForInventory(INV_BACTA_CANISTER));
-		register_item(FindItemForInventory(INV_SEEKER));
-		register_item(FindItemForInventory(INV_SENTRY));
-		register_item(FindItemForInventory(INV_CLOAK));
-		register_item(FindItemForInventory(INV_BARRIER));
+		RegisterItem(FindItemForInventory(INV_ELECTROBINOCULARS));
+		RegisterItem(FindItemForInventory(INV_BACTA_CANISTER));
+		RegisterItem(FindItemForInventory(INV_SEEKER));
+		RegisterItem(FindItemForInventory(INV_SENTRY));
+		RegisterItem(FindItemForInventory(INV_CLOAK));
+		RegisterItem(FindItemForInventory(INV_BARRIER));
 	}
 
 	player_cache_from_prev_level(); //reads from transition carry-over;
@@ -1688,11 +1688,11 @@ RegisterItem
 The item will be added to the precache list
 ===============
 */
-void register_item(const gitem_t* item)
+void RegisterItem(const gitem_t* item)
 {
 	if (!item)
 	{
-		G_Error("register_item: NULL");
+		G_Error("RegisterItem: NULL");
 	}
 	itemRegistered[item - bg_itemlist] = '1';
 	gi.SetConfigstring(CS_ITEMS, itemRegistered); //Write the needed items to a config string
@@ -1742,7 +1742,7 @@ void G_SpawnItem(gentity_t* ent, gitem_t* item)
 	G_SpawnFloat("random", "0", &ent->random);
 	G_SpawnFloat("wait", "0", &ent->wait);
 
-	register_item(item);
+	RegisterItem(item);
 	ent->item = item;
 
 	// targetname indicates they want to spawn it later
@@ -2583,7 +2583,7 @@ extern void G_KnockOver(gentity_t* self, gentity_t* attacker, const vec3_t push_
 static void barrier_push_ent(gentity_t* ent, gentity_t* pushed, vec3_t smack_dir)
 {
 	G_Damage(pushed, ent, ent, smack_dir, ent->currentOrigin, (g_spskill->integer + 1) * Q_irand(5, 10), DAMAGE_EXTRA_KNOCKBACK, MOD_ELECTROCUTE);
-	//G_Throw(pushed, smack_dir, 10);
+	//g_throw(pushed, smack_dir, 10);
 	G_KnockOver(pushed, ent, smack_dir, 25, qfalse);
 
 	// Make Em Electric

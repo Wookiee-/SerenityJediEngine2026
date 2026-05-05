@@ -385,7 +385,7 @@ static void NPC_ChoosePainAnimation(gentity_t* self, const gentity_t* other, con
 			{
 				self->client->ps.saberAnimLevel = SS_STAFF;
 			}
-			self->client->ps.saber_move = LS_READY; //don't finish whatever saber move you may have been in
+			self->client->ps.saberMove = LS_READY; //don't finish whatever saber move you may have been in
 			int parts = SETANIM_BOTH;
 			if (PM_CrouchAnim(self->client->ps.legsAnim) || PM_InCartwheel(self->client->ps.legsAnim))
 			{
