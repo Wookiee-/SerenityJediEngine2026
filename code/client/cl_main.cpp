@@ -456,6 +456,7 @@ The cgame and game must also be forced to restart because
 handles will be invalid
 =================
 */
+extern void S_ReloadAllUsedSounds();
 void CL_Snd_Restart_f()
 {
 	S_Shutdown();
@@ -468,8 +469,6 @@ void CL_Snd_Restart_f()
 	s_soundMuted = qfalse; // we can play again
 
 	S_RestartMusic();
-
-	extern void S_ReloadAllUsedSounds();
 	S_ReloadAllUsedSounds();
 
 	extern void AS_ParseSets();
@@ -1348,8 +1347,8 @@ void CL_Init()
 
 	Com_Printf("-----------------------------------------------------------------\n");
 	Com_Printf("---------- Genuine SerenityJediEngine-(Solaris Edition)----------\n");
-	Com_Printf("---------------------Build date 05/05/2026-----------------------\n"); // build date
-	Com_Printf("---------------------------Build 02------------------------------\n");
+	Com_Printf("---------------------Build date 06/05/2026-----------------------\n"); // build date
+	Com_Printf("---------------------------Build 03------------------------------\n");
 	Com_Printf("-----------------------------------------------------------------\n");
 	Com_Printf("------------------------LightSaber-------------------------------\n");
 	Com_Printf("-----------An elegant weapon for a more civilized age------------\n");

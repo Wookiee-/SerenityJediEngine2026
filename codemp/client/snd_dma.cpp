@@ -889,7 +889,7 @@ sfx_t* S_FindName(const char* name)
 S_DefaultSound
 =================
 */
-void S_DefaultSound(sfx_t* sfx)
+static void S_DefaultSound(sfx_t* sfx)
 {
 	sfx->iSoundLengthInSamples = 512; // #samples, ie shorts
 	sfx->pSoundData = (short*)SND_malloc(512 * 2, sfx); // ... so *2 for alloc bytes
@@ -1366,7 +1366,7 @@ S_SpatializeOrigin
 Used for spatializing s_channels
 =================
 */
-void S_SpatializeOrigin(const vec3_t origin, const float master_vol, int* left_vol, int* right_vol, const int channel)
+static void S_SpatializeOrigin(const vec3_t origin, const float master_vol, int* left_vol, int* right_vol, const int channel)
 {
 	float lscale, rscale;
 	vec3_t source_vec;
@@ -2084,7 +2084,7 @@ All sounds are on the same cycle, so any duplicates can just
 sum up the channel multipliers.
 ==================
 */
-void S_AddLoopSounds(void)
+static void S_AddLoopSounds(void)
 {
 	int left, right, right_total;
 	static int loopFrame;
@@ -2158,7 +2158,7 @@ If raw data has been loaded in little endian binary form, this must be done.
 If raw data was calculated, as with ADPCM, this should not be called.
 =================
 */
-void S_ByteSwapRawSamples(int samples, const int width, int s_channels, const byte* data)
+static void S_ByteSwapRawSamples(int samples, const int width, int s_channels, const byte* data)
 {
 	if (width != 2)
 	{
@@ -2704,7 +2704,7 @@ S_ScanChannelStarts
 Returns qtrue if any new sounds were started since the last mix
 ========================
 */
-qboolean S_ScanChannelStarts(void)
+static qboolean S_ScanChannelStarts(void)
 {
 	qboolean newSamples = qfalse;
 	channel_t* ch = s_channels;
@@ -2742,7 +2742,7 @@ qboolean S_ScanChannelStarts(void)
 // this is now called AFTER the DMA painting, since it's only the painter calls that cause the MP3s to be unpacked,
 //	and therefore to have data readable by the lip-sync volume calc code.
 //
-void S_DoLipSynchs(const unsigned s_oldpaintedtime)
+static void S_DoLipSynchs(const unsigned s_oldpaintedtime)
 {
 	// clear out the lip synching override array for this frame
 	memset(s_entityWavVol, 0, MAX_GENTITIES * 4);
@@ -2831,7 +2831,7 @@ void S_Update(void)
 	S_Update_();
 }
 
-void S_GetSoundtime(void)
+static void S_GetSoundtime(void)
 {
 	static int buffers;
 	static int oldsamplepos;
@@ -4016,7 +4016,7 @@ background music functions
 ===============================================================================
 */
 
-int FGetLittleLong(const fileHandle_t f)
+static int FGetLittleLong(const fileHandle_t f)
 {
 	int v;
 
@@ -4025,7 +4025,7 @@ int FGetLittleLong(const fileHandle_t f)
 	return LittleLong v;
 }
 
-int FGetLittleShort(const fileHandle_t f)
+static int FGetLittleShort(const fileHandle_t f)
 {
 	short v;
 
@@ -4035,7 +4035,7 @@ int FGetLittleShort(const fileHandle_t f)
 }
 
 // returns the length of the data in the chunk, or 0 if not found
-int S_FindWavChunk(const fileHandle_t f, const char* chunk)
+static int S_FindWavChunk(const fileHandle_t f, const char* chunk)
 {
 	char name[5]{};
 

@@ -4624,7 +4624,7 @@ qboolean PM_Can_Do_Kill_Lunge(void)
 	}
 
 	const int clientNum = pm->ps->clientNum;
-	const int killLungeCooldownMs = 60000; // 1 minute
+	const int killLungeCooldownMs = 30000; // 30 seconds
 
 	// If this is an NPC (entity numbers >= MAX_CLIENTS), check NPC cooldown field.
 	if (clientNum >= MAX_CLIENTS && clientNum < ENTITYNUM_MAX_NORMAL)
@@ -4696,7 +4696,7 @@ qboolean PM_Can_Do_Kill_Lunge_back(void)
 	}
 
 	const int clientNum = pm->ps->clientNum;
-	const int killLungeCooldownMs = 60000; // 1 minute
+	const int killLungeCooldownMs = 30000; // 30 seconds
 
 	// NPC cooldown check
 	if (clientNum >= MAX_CLIENTS && clientNum < ENTITYNUM_MAX_NORMAL)

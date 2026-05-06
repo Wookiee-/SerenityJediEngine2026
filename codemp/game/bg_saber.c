@@ -771,7 +771,7 @@ static saber_moveName_t PM_NPCSaberAttackFromQuad(const int quad)
 
 #ifdef _GAME
 	if (bot_thinklevel.integer >= 1 &&
-		BG_EnoughForcePowerForMove(SABER_KATA_ATTACK_POWER, qtrue) &&
+		BG_EnoughForcePowerForMove(SABER_ALT_ATTACK_POWER, qtrue) &&
 		!pm->ps->fd.forcePowersActive &&
 		!in_camera)
 	{
@@ -3604,10 +3604,9 @@ static saber_moveName_t PM_SaberAttackForMovement(const saber_moveName_t curmove
 			else if (PM_SaberInKnockaway(curmove))
 			{//bounces should go to their default attack if you don't specify a direction but are attacking
 #ifdef _GAME
-				qboolean  bot = (g_entities[pm->ps->clientNum].r.svFlags & SVF_BOT);
-				qboolean  npc = (pm_entSelf->s.eType == ET_NPC);
-
-				if (bot || npc && Q_irand(0, 3)) // 75% chance to do a follow up attack from a bounce if it's an NPC, 100% for bots
+				if ((g_entities[pm->ps->clientNum].r.svFlags & SVF_BOT ||
+					pm_entSelf->s.eType == ET_NPC) &&
+					Q_irand(0, 3))// randomly use NPC random or chain attack for knockaways
 				{
 					newmove = PM_NPCSaberAttackFromQuad(saber_moveData[curmove].endQuad);
 				}
@@ -6263,10 +6262,8 @@ weapChecks:
 		if (curmove >= LS_PARRY_UP && curmove <= LS_REFLECT_LL)
 		{//from a parry or reflection, can go directly into an attack
 #ifdef _GAME
-			qboolean  bot = (g_entities[pm->ps->clientNum].r.svFlags & SVF_BOT);
-			qboolean  npc = (pm_entSelf->s.eType == ET_NPC);
 
-			if (bot || npc)
+			if (g_entities[pm->ps->clientNum].r.svFlags & SVF_BOT || pm_entSelf->s.eType == ET_NPC)
 			{
 				newmove = PM_NPCSaberAttackFromBlock(saber_moveData[curmove].endQuad);//from a parry or reflection, can go directly into an attack
 			}
@@ -6329,12 +6326,9 @@ weapChecks:
 			{
 				// 5. Determine attack from movement or NPC logic
 #ifdef _GAME
-				const qboolean bot = (g_entities[pm->ps->clientNum].r.svFlags & SVF_BOT);
-				const qboolean npc = (pm_entSelf->s.eType == ET_NPC);
-
-				// Corrected precedence: bot OR (npc AND 50% chance)
-				if ((bot || npc) && Q_irand(0, 3)) //75% chance for bots to use the NPC logic,
-					//which is more direct and less likely to cause them to get stuck in attack fakes or weird transitions
+				if ((g_entities[pm->ps->clientNum].r.svFlags & SVF_BOT ||
+					pm_entSelf->s.eType == ET_NPC) && 
+					Q_irand(0, 1))// randomly use NPC random or chain attack for knockaways
 				{
 					newmove = PM_NPCSaberAttackFromQuad(saber_moveData[curmove].endQuad);
 				}
