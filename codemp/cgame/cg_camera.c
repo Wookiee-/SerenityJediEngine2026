@@ -1337,7 +1337,7 @@ void CGCam_DrawWideScreen(void)
 		}
 		else
 		{
-			vec4_t modulate;
+			vec4_t modulate = { 0 };
 			modulate[0] = modulate[1] = modulate[2] = 0.0f;
 			modulate[3] = client_camera.bar_alpha;
 
@@ -1414,7 +1414,7 @@ This doesn't actually affect the camera's info, but passed information instead
 void CGCam_UpdateShake(vec3_t origin, vec3_t angles)
 {
 	int i;
-	vec3_t moveDir;
+	vec3_t moveDir = { 0.0f, 0.0f, 0.0f };
 
 	if (client_camera.shake_duration <= 0)
 		return;
@@ -1753,8 +1753,8 @@ static void CGCam_NotetrackProcessFovAccel(const char* addlArg)
 static void CG_RoffNotetrackCallback(const char* notetrack)
 {
 	int i = 0;
-	char type[256];
-	char addlArg[512];
+	char type[256] = { 0 };
+	char addlArg[512] = { 0 };
 	int addlArgs = 0;
 
 	if (!notetrack)
@@ -2001,40 +2001,73 @@ void CMD_CGCam_Disable(void)
 
 void CG_CameraParse(void)
 {
-	int int_data;
-	vec3_t vector_data;
-	float float_data, float2_data;
+	int   int_data = 0;
+	vec3_t vector_data = { 0 };
+	float float_data = 0.0f, float2_data = 0.0f;
 
 	const char* o = CG_ConfigString(CS_CAMERA);
+	if (!o || !o[0])
+	{
+		Com_Printf("CG_CameraParse WARNING: empty CS_CAMERA string\n");
+		return;
+	}
+
 	if (strncmp("enable", o, 6) == 0)
 	{
 		CGCam_Enable();
 	}
 	else if (strncmp("move", o, 4) == 0)
 	{
-		sscanf(o, "%*s %f %f %f %f", &vector_data[0], &vector_data[1], &vector_data[2], &float_data);
-		CGCam_Move(vector_data, float_data);
+		if (sscanf(o, "%*s %f %f %f %f",
+			&vector_data[0], &vector_data[1], &vector_data[2], &float_data) == 4)
+		{
+			CGCam_Move(vector_data, float_data);
+		}
+		else
+		{
+			Com_Printf("CG_CameraParse WARNING: bad 'move' format\n");
+		}
 	}
 	else if (strncmp("pan", o, 3) == 0)
 	{
-		vec3_t vector2_data;
-		sscanf(o, "%*s %f %f %f %f %f %f %f", &vector_data[0], &vector_data[1],
-			&vector_data[2], &vector2_data[0], &vector2_data[1], &vector2_data[2], &float_data);
-		CGCam_Pan(vector_data, vector2_data, float_data);
+		vec3_t vector2_data = { 0 };
+		if (sscanf(o, "%*s %f %f %f %f %f %f %f",
+			&vector_data[0], &vector_data[1], &vector_data[2],
+			&vector2_data[0], &vector2_data[1], &vector2_data[2],
+			&float_data) == 7)
+		{
+			CGCam_Pan(vector_data, vector2_data, float_data);
+		}
+		else
+		{
+			Com_Printf("CG_CameraParse WARNING: bad 'pan' format\n");
+		}
 	}
 	else if (strncmp("fade", o, 4) == 0)
 	{
-		vec4_t color2;
-		vec4_t color;
-		sscanf(o, "%*s %f %f %f %f %f %f %f %f %f", &color[0],
-			&color[1], &color[2], &color[3], &color2[0], &color2[1], &color2[2], &color2[3],
-			&float_data);
-		CGCam_Fade(color, color2, float_data);
+		vec4_t color = { 0 }, color2 = { 0 };
+		if (sscanf(o, "%*s %f %f %f %f %f %f %f %f %f",
+			&color[0], &color[1], &color[2], &color[3],
+			&color2[0], &color2[1], &color2[2], &color2[3],
+			&float_data) == 9)
+		{
+			CGCam_Fade(color, color2, float_data);
+		}
+		else
+		{
+			Com_Printf("CG_CameraParse WARNING: bad 'fade' format\n");
+		}
 	}
 	else if (strncmp("zoom", o, 4) == 0)
 	{
-		sscanf(o, "%*s %f %f", &float_data, &float2_data);
-		CGCam_Zoom(float_data, float2_data);
+		if (sscanf(o, "%*s %f %f", &float_data, &float2_data) == 2)
+		{
+			CGCam_Zoom(float_data, float2_data);
+		}
+		else
+		{
+			Com_Printf("CG_CameraParse WARNING: bad 'zoom' format\n");
+		}
 	}
 	else if (strncmp("disable", o, 7) == 0)
 	{
@@ -2042,17 +2075,32 @@ void CG_CameraParse(void)
 	}
 	else if (strncmp("shake", o, 5) == 0)
 	{
-		sscanf(o, "%*s %f %i", &float_data, &int_data);
-		CGCam_Shake(float_data, int_data);
+		if (sscanf(o, "%*s %f %i", &float_data, &int_data) == 2)
+		{
+			CGCam_Shake(float_data, int_data);
+		}
+		else
+		{
+			Com_Printf("CG_CameraParse WARNING: bad 'shake' format\n");
+		}
 	}
 	else if (strncmp("follow", o, 6) == 0)
 	{
-		int CGroup[16];
-		sscanf(o, "%*s %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %f %f", &CGroup[0],
-			&CGroup[1], &CGroup[2], &CGroup[3], &CGroup[4], &CGroup[5], &CGroup[6],
-			&CGroup[7], &CGroup[8], &CGroup[9], &CGroup[10], &CGroup[11], &CGroup[12], &CGroup[13],
-			&CGroup[14], &CGroup[15], &float_data, &float2_data);
-		CGCam_Follow(CGroup, float_data, float2_data);
+		int CGroup[16] = { 0 };
+		if (sscanf(o,
+			"%*s %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %f %f",
+			&CGroup[0], &CGroup[1], &CGroup[2], &CGroup[3],
+			&CGroup[4], &CGroup[5], &CGroup[6], &CGroup[7],
+			&CGroup[8], &CGroup[9], &CGroup[10], &CGroup[11],
+			&CGroup[12], &CGroup[13], &CGroup[14], &CGroup[15],
+			&float_data, &float2_data) == 18)
+		{
+			CGCam_Follow(CGroup, float_data, float2_data);
+		}
+		else
+		{
+			Com_Printf("CG_CameraParse WARNING: bad 'follow' format\n");
+		}
 	}
 	else
 	{

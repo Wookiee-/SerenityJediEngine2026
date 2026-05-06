@@ -55,7 +55,7 @@ void CG_InitLocalEntities(void)
 CG_FreeLocalEntity
 ==================
 */
-void CG_FreeLocalEntity(localEntity_t* le)
+static void CG_FreeLocalEntity(localEntity_t* le)
 {
 	if (!le->prev)
 	{
@@ -81,25 +81,34 @@ Will allways succeed, even if it requires freeing an old active entity
 */
 localEntity_t* CG_AllocLocalEntity(void)
 {
+	// If no free entities, free the oldest active one.
 	if (!cg_freeLocalEntities)
 	{
-		// no free entities, so free the one at the end of the chain
-		// remove the oldest active entity
 		CG_FreeLocalEntity(cg_activeLocalEntities.prev);
+	}
+
+	// Safety: cg_freeLocalEntities can still be NULL if the free list is corrupted.
+	if (!cg_freeLocalEntities)
+	{
+		Com_Printf("CG_AllocLocalEntity WARNING: cg_freeLocalEntities is NULL\n");
+		return NULL;
 	}
 
 	localEntity_t* le = cg_freeLocalEntities;
 	cg_freeLocalEntities = cg_freeLocalEntities->next;
 
-	memset(le, 0, sizeof * le);
+	// Safe: le is guaranteed non‑NULL here.
+	memset(le, 0, sizeof(*le));
 
-	// link into the active list
+	// Link into the active list
 	le->next = cg_activeLocalEntities.next;
 	le->prev = &cg_activeLocalEntities;
 	cg_activeLocalEntities.next->prev = le;
 	cg_activeLocalEntities.next = le;
+
 	return le;
 }
+
 
 /*
 ====================================================================================
@@ -119,7 +128,7 @@ CG_BloodTrail
 Leave expanding blood puffs behind gibs
 ================
 */
-void CG_BloodTrail(const localEntity_t* le)
+static void CG_BloodTrail(const localEntity_t* le)
 {
 	const int step = 150;
 	int t = step * ((cg.time - cg.frametime + step) / step);
@@ -150,7 +159,7 @@ void CG_BloodTrail(const localEntity_t* le)
 CG_FragmentBounceMark
 ================
 */
-void CG_FragmentBounceMark(localEntity_t* le)
+static void CG_FragmentBounceMark(localEntity_t* le)
 {
 	//	int radius;
 
@@ -174,7 +183,7 @@ void CG_FragmentBounceMark(localEntity_t* le)
 CG_FragmentBounceSound
 ================
 */
-void CG_FragmentBounceSound(localEntity_t* le, const trace_t* trace)
+static void CG_FragmentBounceSound(localEntity_t* le, const trace_t* trace)
 {
 	// half the fragments will make a bounce sounds
 	if (rand() & 1)
@@ -216,7 +225,7 @@ void CG_FragmentBounceSound(localEntity_t* le, const trace_t* trace)
 CG_ReflectVelocity
 ================
 */
-void CG_ReflectVelocity(localEntity_t* le, const trace_t* trace)
+static void CG_ReflectVelocity(localEntity_t* le, const trace_t* trace)
 {
 	vec3_t velocity;
 
@@ -248,7 +257,7 @@ void CG_ReflectVelocity(localEntity_t* le, const trace_t* trace)
 CG_AddFragment
 ================
 */
-void CG_AddFragment(localEntity_t* le)
+static void CG_AddFragment(localEntity_t* le)
 {
 	vec3_t new_origin;
 	trace_t trace;
@@ -368,7 +377,7 @@ These only do simple scaling or modulation before passing to the renderer
 CG_AddFadeRGB
 ====================
 */
-void CG_AddFadeRGB(localEntity_t* le)
+static void CG_AddFadeRGB(localEntity_t* le)
 {
 	refEntity_t* re = &le->refEntity;
 
@@ -647,7 +656,7 @@ static void CG_AddSpriteExplosion(localEntity_t* le)
 CG_AddRefEntity
 ===================
 */
-void CG_AddRefEntity(localEntity_t* le)
+static void CG_AddRefEntity(localEntity_t* le)
 {
 	if (le->endTime < cg.time)
 	{
@@ -664,11 +673,11 @@ CG_AddScorePlum
 */
 #define NUMBER_SIZE		8
 
-void CG_AddScorePlum(localEntity_t* le)
+static void CG_AddScorePlum(localEntity_t* le)
 {
 	vec3_t origin, delta, dir, vec;
 	const vec3_t up = { 0, 0, 1 };
-	int digits[10], numdigits;
+	int digits[10] = {0}, numdigits;
 
 	refEntity_t* re = &le->refEntity;
 
@@ -805,7 +814,7 @@ CG_AddLine
 for beams and the like.
 ===================
 */
-void CG_AddLine(localEntity_t* le)
+static void CG_AddLine(localEntity_t* le)
 {
 	refEntity_t* re = &le->refEntity;
 

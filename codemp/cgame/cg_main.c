@@ -1927,6 +1927,7 @@ const char* CG_ConfigString(const int index)
 		trap->Error(ERR_DROP, "CG_ConfigString: bad index: %i", index);
 	}
 
+	// Now MSVC can prove the index is safe
 	const int offset = cgs.gameState.stringOffsets[index];
 
 	// Validate offset (do NOT drop client)

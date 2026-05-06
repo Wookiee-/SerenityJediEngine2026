@@ -948,7 +948,7 @@ static void UI_SetActiveMenu(uiMenuCommand_t menu)
 	if (Menu_Count() > 0)
 	{
 		char buf[256];
-		vec3_t v;
+		vec3_t v = { 0 };
 		v[0] = v[1] = v[2] = 0;
 		switch (menu)
 		{
@@ -5885,13 +5885,15 @@ static void UI_UpdateSaberHilt(qboolean second_saber)
 static void UI_UpdateSaberColor(qboolean second_saber)
 {
 	char str[32];
-	str[0] = '\0';
 
-	strncat(str, va("%i,%i,%i", ui_sab1_r.integer, ui_sab1_g.integer, ui_sab1_b.integer), sizeof str);
+	// Saber 1
+	Com_sprintf(str, sizeof(str), "%i,%i,%i",
+		ui_sab1_r.integer, ui_sab1_g.integer, ui_sab1_b.integer);
 	trap->Cvar_Set("rgb_saber1", str);
-	str[0] = '\0';
 
-	strncat(str, va("%i,%i,%i", ui_sab2_r.integer, ui_sab2_g.integer, ui_sab2_b.integer), sizeof str);
+	// Saber 2
+	Com_sprintf(str, sizeof(str), "%i,%i,%i",
+		ui_sab2_r.integer, ui_sab2_g.integer, ui_sab2_b.integer);
 	trap->Cvar_Set("rgb_saber2", str);
 }
 

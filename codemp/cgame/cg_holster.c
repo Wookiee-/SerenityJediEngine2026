@@ -37,7 +37,7 @@ stringID_table_t holsterBoneTable[] =
 	ENUM2STRING(HOLSTER_RIGHTHIP)
 };
 
-void InitHolsterData(clientInfo_t* ci)
+static void InitHolsterData(clientInfo_t* ci)
 {
 	//initialize holster data with the premade defaults.
 	for (int i = 0; i < MAX_HOLSTER; i++)
@@ -52,110 +52,127 @@ extern char* BG_GetNextValueGroup(char* inbuf, char* outbuf);
 
 void CG_LoadHolsterData(clientInfo_t* ci)
 {
-	//adjusts the manual holster positional data based on the holster.cfg file associated with the model or simply
-	//use the default values
+    // Adjusts the manual holster positional data based on the holster.cfg file
+    // associated with the model or simply use the default values.
 
-	fileHandle_t f;
-	int f_len;
-	char file_buffer[MAX_HOLSTER_INFO_SIZE];
-	char holster_type_group[MAX_HOLSTER_INFO_SIZE];
+    fileHandle_t f;
+    int f_len;
 
-	InitHolsterData(ci);
+    // These buffers are large — make them static to avoid 16 KB+ stack usage.
+    static char file_buffer[MAX_HOLSTER_INFO_SIZE];
+    static char holster_type_group[MAX_HOLSTER_INFO_SIZE];
 
-	if (!ci->skinName || !Q_stricmp("default", ci->skinName))
-	{
-		//try default holster.cfg first
-		f_len = trap->FS_Open(va("models/players/%s/holster.cfg", ci->modelName), &f, FS_READ);
+    InitHolsterData(ci);
 
-		if (!f)
-		{
-			//no file, use kyle's then.
-			f_len = trap->FS_Open("models/players/kyle/holster.cfg", &f, FS_READ);
-		}
-	}
-	else
-	{
-		//use the holster.cfg associated with this skin
-		f_len = trap->FS_Open(va("models/players/%s/holster_%s.cfg", ci->modelName, ci->skinName), &f, FS_READ);
-		if (!f)
-		{
-			//fall back to default holster.cfg
-			f_len = trap->FS_Open(va("models/players/%s/holster.cfg", ci->modelName), &f, FS_READ);
-		}
+    // Determine which holster.cfg to load
+    if (!ci->skinName || !Q_stricmp("default", ci->skinName))
+    {
+        f_len = trap->FS_Open(va("models/players/%s/holster.cfg", ci->modelName), &f, FS_READ);
 
-		if (!f)
-		{
-			//still no dice, use kyle's then.
-			f_len = trap->FS_Open("models/players/kyle/holster.cfg", &f, FS_READ);
-		}
-	}
+        if (!f)
+        {
+            f_len = trap->FS_Open("models/players/kyle/holster.cfg", &f, FS_READ);
+        }
+    }
+    else
+    {
+        f_len = trap->FS_Open(va("models/players/%s/holster_%s.cfg",
+            ci->modelName, ci->skinName), &f, FS_READ);
 
-	if (!f || !f_len)
-	{
-		//couldn't open file or it was empty, just use the defaults
-		return;
-	}
+        if (!f)
+        {
+            f_len = trap->FS_Open(va("models/players/%s/holster.cfg", ci->modelName), &f, FS_READ);
+        }
 
-	if (f_len >= MAX_HOLSTER_INFO_SIZE)
-	{
-		trap->FS_Close(f);
-		return;
-	}
+        if (!f)
+        {
+            f_len = trap->FS_Open("models/players/kyle/holster.cfg", &f, FS_READ);
+        }
+    }
 
-	trap->FS_Read(file_buffer, f_len, f);
+    // Could not open file or empty file
+    if (!f || !f_len)
+    {
+        return;
+    }
 
-	trap->FS_Close(f);
+    // Prevent overflow
+    if (f_len >= MAX_HOLSTER_INFO_SIZE)
+    {
+        trap->FS_Close(f);
+        return;
+    }
 
-	char* s = file_buffer;
+    // Read file into static buffer
+    trap->FS_Read(file_buffer, f_len, f);
+    trap->FS_Close(f);
 
-	//parse file
-	while ((s = BG_GetNextValueGroup(s, holster_type_group)) != NULL)
-	{
-		vec3_t vector_data;
-		char holster_type_value[MAX_QPATH];
-		if (!BG_SiegeGetPairedValue(holster_type_group, "holsterType", holster_type_value))
-		{
-			//couldn't find holster type in group
-			continue;
-		}
+    // Parse file
+    char* s = file_buffer;
 
-		const int i = GetIDForString(holsterTypeTable, holster_type_value);
+    while ((s = BG_GetNextValueGroup(s, holster_type_group)) != NULL)
+    {
+        vec3_t vector_data = { 0, 0, 0 };
+        char holster_type_value[MAX_QPATH];
 
-		if (i == -1)
-		{
-			//bad holster type
-			continue;
-		}
+        if (!BG_SiegeGetPairedValue(holster_type_group, "holsterType", holster_type_value))
+        {
+            continue;
+        }
 
-		if (BG_SiegeGetPairedValue(holster_type_group, "boneIndex", holster_type_value))
-		{
-			//have bone index data for this holster type, use it
-			if (!Q_stricmp(holster_type_value, "disabled"))
-			{
-				//disable the rendering of this holster type on this model
-				ci->holsterData[i].boneIndex = HOLSTER_NONE;
-			}
-			else
-			{
-				ci->holsterData[i].boneIndex = GetIDForString(holsterBoneTable, holster_type_value);
-			}
-		}
+        const int i = GetIDForString(holsterTypeTable, holster_type_value);
+        if (i == -1)
+        {
+            continue;
+        }
 
-		if (BG_SiegeGetPairedValue(holster_type_group, "posOffset", holster_type_value))
-		{
-			//parsing positional offset data
-			sscanf(holster_type_value, "%f, %f, %f", &vector_data[0], &vector_data[1], &vector_data[2]);
-			VectorCopy(vector_data, ci->holsterData[i].posOffset);
-		}
+        // Bone index
+        if (BG_SiegeGetPairedValue(holster_type_group, "boneIndex", holster_type_value))
+        {
+            if (!Q_stricmp(holster_type_value, "disabled"))
+            {
+                ci->holsterData[i].boneIndex = HOLSTER_NONE;
+            }
+            else
+            {
+                ci->holsterData[i].boneIndex = GetIDForString(holsterBoneTable, holster_type_value);
+            }
+        }
 
-		if (BG_SiegeGetPairedValue(holster_type_group, "angOffset", holster_type_value))
-		{
-			//parsing angular offset
-			sscanf(holster_type_value, "%f, %f, %f", &vector_data[0], &vector_data[1], &vector_data[2]);
-			VectorCopy(vector_data, ci->holsterData[i].angOffset);
-		}
-	}
+        // Positional offset
+        if (BG_SiegeGetPairedValue(holster_type_group, "posOffset", holster_type_value))
+        {
+            const int count = sscanf(holster_type_value, "%f, %f, %f",
+                &vector_data[0], &vector_data[1], &vector_data[2]);
+
+            if (count == 3)
+            {
+                VectorCopy(vector_data, ci->holsterData[i].posOffset);
+            }
+            else
+            {
+                Com_Printf("CG_LoadHolsterData WARNING: bad posOffset '%s'\n", holster_type_value);
+            }
+        }
+
+        // Angular offset
+        if (BG_SiegeGetPairedValue(holster_type_group, "angOffset", holster_type_value))
+        {
+            const int count = sscanf(holster_type_value, "%f, %f, %f",
+                &vector_data[0], &vector_data[1], &vector_data[2]);
+
+            if (count == 3)
+            {
+                VectorCopy(vector_data, ci->holsterData[i].angOffset);
+            }
+            else
+            {
+                Com_Printf("CG_LoadHolsterData WARNING: bad angOffset '%s'\n", holster_type_value);
+            }
+        }
+    }
+
 #ifdef _DEBUG
-	Com_Printf("Holstered Weapon Data Loaded for %s.\n", ci->modelName);
+    Com_Printf("Holstered Weapon Data Loaded for %s.\n", ci->modelName);
 #endif
 }

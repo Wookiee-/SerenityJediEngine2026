@@ -80,37 +80,43 @@ static qboolean Board(Vehicle_t* p_veh, bgEntity_t* pEnt)
 static void ProcessMoveCommands(Vehicle_t* p_veh)
 {
 	/************************************************************************************/
-	/*	BEGIN	Here is where we move the vehicle (forward or back or whatever). BEGIN	*/
+	/*  BEGIN   Here is where we move the vehicle (forward or back or whatever). BEGIN  */
 	/************************************************************************************/
 
-	//Client sets ucmds and such for speed alterations
-	float speedInc;
+	if (!p_veh || !p_veh->m_pParentEntity || !p_veh->m_pParentEntity->playerState)
+	{
+		Com_Printf("ProcessMoveCommands WARNING: invalid vehicle or parent playerState\n");
+		return;
+	}
+
 	const bgEntity_t* parent = p_veh->m_pParentEntity;
 	playerState_t* parent_ps = parent->playerState;
 
-	const float speedIdleDec = p_veh->m_pVehicleInfo->decelIdle * p_veh->m_fTimeModifier;
-	float speedMax = p_veh->m_pVehicleInfo->speedMax;
-
+	float       speedInc;
 	const float speedIdle = p_veh->m_pVehicleInfo->speedIdle;
 	const float speedMin = p_veh->m_pVehicleInfo->speedMin;
+	const float speedIdleDec = p_veh->m_pVehicleInfo->decelIdle * p_veh->m_fTimeModifier;
+	float       speedMax = p_veh->m_pVehicleInfo->speedMax;
 
 	if (!parent_ps->m_iVehicleNum)
 	{
-		//drifts to a stop
+		// Drifts to a stop
 		speedInc = speedIdle * p_veh->m_fTimeModifier;
 		VectorClear(parent_ps->moveDir);
-		//m_ucmd.forwardmove = 127;
-		parent_ps->speed = 0;
+		// m_ucmd.forwardmove = 127;
+		parent_ps->speed = 0.0f;
 	}
 	else
 	{
 		speedInc = p_veh->m_pVehicleInfo->acceleration * p_veh->m_fTimeModifier;
 	}
 
-	if (parent_ps->speed || parent_ps->groundEntityNum == ENTITYNUM_NONE ||
-		p_veh->m_ucmd.forwardmove || p_veh->m_ucmd.upmove > 0)
+	if (parent_ps->speed ||
+		parent_ps->groundEntityNum == ENTITYNUM_NONE ||
+		p_veh->m_ucmd.forwardmove ||
+		p_veh->m_ucmd.upmove > 0)
 	{
-		if (p_veh->m_ucmd.forwardmove > 0 && speedInc)
+		if (p_veh->m_ucmd.forwardmove > 0 && speedInc > 0.0f)
 		{
 			parent_ps->speed += speedInc;
 		}
@@ -155,26 +161,22 @@ static void ProcessMoveCommands(Vehicle_t* p_veh)
 		}
 
 		p_veh->m_ucmd.rightmove = 0;
-
-		/*if ( !p_veh->m_pVehicleInfo->strafePerc
-			|| (!g_speederControlScheme->value && !parent->s.number) )
+		/* if ( !p_veh->m_pVehicleInfo->strafePerc
+			 || (!g_speederControlScheme->value && !parent->s.number) )
 		{//if in a strafe-capable vehicle, clear strafing unless using alternate control scheme
 			p_veh->m_ucmd.rightmove = 0;
-		}*/
+		} */
 	}
 
-	if (parent_ps && parent_ps
-
-		->
-		electrifyTime > pm->cmd.serverTime
-		)
+	// Electrified: reduce max speed
+	if (parent_ps->electrifyTime > pm->cmd.serverTime)
 	{
 		speedMax *= 0.5f;
 	}
 
 	const float fWalkSpeedMax = speedMax * 0.275f;
 
-	if (p_veh->m_ucmd.buttons & BUTTON_WALKING && parent_ps->speed > fWalkSpeedMax)
+	if ((p_veh->m_ucmd.buttons & BUTTON_WALKING) && parent_ps->speed > fWalkSpeedMax)
 	{
 		parent_ps->speed = fWalkSpeedMax;
 	}
@@ -189,12 +191,12 @@ static void ProcessMoveCommands(Vehicle_t* p_veh)
 
 	if (parent_ps->stats[STAT_HEALTH] <= 0)
 	{
-		//don't keep moving while you're dying!
-		parent_ps->speed = 0;
+		// Don't keep moving while you're dying
+		parent_ps->speed = 0.0f;
 	}
 
 	/********************************************************************************/
-	/*	END Here is where we move the vehicle (forward or back or whatever). END	*/
+	/*  END Here is where we move the vehicle (forward or back or whatever). END    */
 	/********************************************************************************/
 }
 

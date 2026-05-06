@@ -65,19 +65,22 @@ CG_FreeMarkPoly
 */
 static void CG_FreeMarkPoly(markPoly_t* le)
 {
-	if (!le->prevMark)
+	// Safety: prevMark must exist for a valid active markPoly
+	if (!le || !le->prevMark)
 	{
-		trap->Error(ERR_DROP, "CG_FreeLocalEntity: not active");
+		Com_Printf("CG_FreeMarkPoly WARNING: attempt to free invalid or inactive markPoly\n");
+		return;
 	}
 
-	// remove from the doubly linked active list
+	// Remove from the doubly linked active list
 	le->prevMark->nextMark = le->nextMark;
 	le->nextMark->prevMark = le->prevMark;
 
-	// the free list is only singly linked
+	// Add to free list (singly linked)
 	le->nextMark = cg_freeMarkPolys;
 	cg_freeMarkPolys = le;
 }
+
 
 /*
 ===================
@@ -88,27 +91,42 @@ Will allways succeed, even if it requires freeing an old active mark
 */
 markPoly_t* CG_AllocMark(void)
 {
+	// If no free marks, free the oldest active ones (same timestamp).
 	if (!cg_freeMarkPolys)
 	{
-		// no free entities, so free the one at the end of the chain
-		// remove the oldest active entity
+		if (!cg_activeMarkPolys.prevMark)
+		{
+			Com_Printf("CG_AllocMark WARNING: cg_activeMarkPolys.prevMark is NULL\n");
+			return NULL;
+		}
+
 		const int time = cg_activeMarkPolys.prevMark->time;
+
 		while (cg_activeMarkPolys.prevMark && time == cg_activeMarkPolys.prevMark->time)
 		{
 			CG_FreeMarkPoly(cg_activeMarkPolys.prevMark);
 		}
 	}
 
+	// Safety: free list might still be empty/corrupted.
+	if (!cg_freeMarkPolys)
+	{
+		Com_Printf("CG_AllocMark WARNING: cg_freeMarkPolys is NULL\n");
+		return NULL;
+	}
+
 	markPoly_t* le = cg_freeMarkPolys;
 	cg_freeMarkPolys = cg_freeMarkPolys->nextMark;
 
-	memset(le, 0, sizeof * le);
+	// Safe: le is guaranteed non-NULL here.
+	memset(le, 0, sizeof(*le));
 
-	// link into the active list
+	// Link into the active list
 	le->nextMark = cg_activeMarkPolys.nextMark;
 	le->prevMark = &cg_activeMarkPolys;
 	cg_activeMarkPolys.nextMark->prevMark = le;
 	cg_activeMarkPolys.nextMark = le;
+
 	return le;
 }
 
@@ -130,12 +148,12 @@ void CG_ImpactMark(const qhandle_t mark_shader, const vec3_t origin, const vec3_
 	const float orientation, const float red, const float green, const float blue, const float alpha,
 	const qboolean alphaFade, const float radius, const qboolean temporary)
 {
-	matrix3_t axis;
-	vec3_t original_points[4];
-	byte colors[4];
+	matrix3_t axis = { 0 };
+	vec3_t original_points[4]= { {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0} };
+	byte colors[4] = { 0 };
 	int i, j;
 	markFragment_t markFragments[MAX_MARK_FRAGMENTS], * mf;
-	vec3_t markPoints[MAX_MARK_POINTS];
+	vec3_t markPoints[MAX_MARK_POINTS] = { {0,0,0} };
 	vec3_t projection;
 
 	if (!cg_marks.integer)
@@ -183,7 +201,7 @@ void CG_ImpactMark(const qhandle_t mark_shader, const vec3_t origin, const vec3_
 	for (i = 0, mf = markFragments; i < numFragments; i++, mf++)
 	{
 		polyVert_t* v;
-		polyVert_t verts[MAX_VERTS_ON_POLY];
+		polyVert_t verts[MAX_VERTS_ON_POLY] = { {0,0,0,0,0,0,0,0} };
 
 		// we have an upper limit on the complexity of polygons
 		// that we store persistantly
@@ -241,7 +259,7 @@ CG_AddMarks
 void CG_AddMarks(void)
 {
 	int j;
-	markPoly_t* next;
+	markPoly_t* next = NULL;
 
 	if (!cg_marks.integer)
 	{

@@ -271,7 +271,7 @@ CG_DrawZoomMask
 */
 static void CG_DrawZoomMask(void)
 {
-	vec4_t color1;
+	vec4_t color1 = { 0 };
 	float level;
 	static qboolean flip = qtrue;
 
@@ -566,7 +566,7 @@ void CG_DrawFlagModel(float x, float y, float w, float h, const int team, const 
 		vec3_t maxs;
 		vec3_t mins;
 		vec3_t angles;
-		vec3_t origin;
+		vec3_t origin = { 0 };
 		x *= cgs.screenXScale;
 		y *= cgs.screenYScale;
 		w *= cgs.screenXScale;
@@ -1075,8 +1075,8 @@ static void CG_DrawJK2Armor(const centity_t* cent, const int x, const int y)
 		armor = ps->stats[STAT_MAX_HEALTH];
 	}
 
-	const float hold = armor - ps->stats[STAT_MAX_HEALTH] / 2;
-	float armor_percent = hold / (ps->stats[STAT_MAX_HEALTH] / 2);
+	const float hold = armor - (ps->stats[STAT_MAX_HEALTH] / 2.0f);
+	float armor_percent = hold / (ps->stats[STAT_MAX_HEALTH] / 2.0f);
 	if (armor_percent < 0)
 	{
 		armor_percent = 0;
@@ -1094,7 +1094,7 @@ static void CG_DrawJK2Armor(const centity_t* cent, const int x, const int y)
 	}
 	else
 	{
-		armor_percent = (float)ps->stats[STAT_ARMOR] / (ps->stats[STAT_MAX_HEALTH] / 2);
+		armor_percent = (float)ps->stats[STAT_ARMOR] / (ps->stats[STAT_MAX_HEALTH] / 2.0f);
 	}
 	memcpy(calc_color, colorTable[CT_HUD_GREEN], sizeof(vec4_t));
 	calc_color[0] *= armor_percent;
@@ -1159,8 +1159,8 @@ static void CG_DrawJK2CusArmor(const centity_t* cent, const int x, const int y)
 		armor = ps->stats[STAT_MAX_HEALTH];
 	}
 
-	const float hold = armor - ps->stats[STAT_MAX_HEALTH] / 2;
-	float armor_percent = hold / (ps->stats[STAT_MAX_HEALTH] / 2);
+	const float hold = armor - (ps->stats[STAT_MAX_HEALTH] / 2.0f);
+	float armor_percent = hold / (ps->stats[STAT_MAX_HEALTH] / 2.0f);
 	if (armor_percent < 0)
 	{
 		armor_percent = 0;
@@ -1178,7 +1178,7 @@ static void CG_DrawJK2CusArmor(const centity_t* cent, const int x, const int y)
 	}
 	else
 	{
-		armor_percent = (float)ps->stats[STAT_ARMOR] / (ps->stats[STAT_MAX_HEALTH] / 2);
+		armor_percent = (float)ps->stats[STAT_ARMOR] / (ps->stats[STAT_MAX_HEALTH] / 2.0f);
 	}
 	memcpy(calc_color, colorTable[CT_HUD_GREEN], sizeof(vec4_t));
 	calc_color[0] *= armor_percent;
@@ -1894,9 +1894,9 @@ static void CG_DrawCussaberfatigue(const menuDef_t* menu_hud)
 
 static void CG_DrawoldblockPoints(void)
 {
-	vec4_t aColor;
-	vec4_t b_color;
-	vec4_t cColor;
+	vec4_t aColor = { 0 };
+	vec4_t b_color = { 0 };
+	vec4_t cColor = { 0 };
 	float x = BPFUELBAR_X;
 	const float y = BPFUELBAR_Y;
 	float percent = (float)cg.snap->ps.fd.blockPoints / 100.0f * BPFUELBAR_H;
@@ -3822,7 +3822,7 @@ void CG_DrawForceSelect(void)
 		// Current Center Icon
 		if (cgs.media.forcePowerIcons[cg.forceSelect])
 		{
-			CG_DrawPic(x - big_icon_size / 2, y - (big_icon_size - small_icon_size) / 2 + y_offset, big_icon_size,
+			CG_DrawPic(x - big_icon_size / 2.0f, y - (big_icon_size - small_icon_size) / 2.0f + y_offset, big_icon_size,
 				big_icon_size,
 				cgs.media.forcePowerIcons[cg.forceSelect]); //only cache the icon for display
 		}
@@ -3991,7 +3991,7 @@ void cg_draw_inventory_select(void)
 	if (cgs.media.invenIcons[cg.itemSelect] && BG_IsItemSelectable(cg.itemSelect))
 	{
 		trap->R_SetColor(NULL);
-		CG_DrawPic(x - big_icon_size / 2, y - (big_icon_size - small_icon_size) / 2 + 10, big_icon_size, big_icon_size,
+		CG_DrawPic(x - big_icon_size / 2.0f, y - (big_icon_size - small_icon_size) / 2.0f + 10, big_icon_size, big_icon_size,
 			cgs.media.invenIcons[cg.itemSelect]);
 		trap->R_SetColor(colorTable[CT_ICON_BLUE]);
 
@@ -4730,7 +4730,7 @@ static void CG_DrawVehicleDamageHUD(const centity_t* veh, const int broken_limbs
 	const char* menu_name,
 	const float alpha)
 {
-	vec4_t color;
+	vec4_t color = { 0 };
 
 	const menuDef_t* menu_hud = Menus_FindByName(menu_name);
 
@@ -4963,7 +4963,7 @@ CG_DrawTeamBackground
 */
 void CG_DrawTeamBackground(const int x, const int y, const int w, const int h, const float alpha, const int team)
 {
-	vec4_t hcolor;
+	vec4_t hcolor = { 0 };
 
 	hcolor[3] = alpha;
 	if (team == TEAM_RED)
@@ -5269,8 +5269,8 @@ static void CG_DrawHealthBarRough(const float x, const float y, const int width,
 	color3[0] = color1[0] * 0.5f;
 
 	assert(!(height % 4)); //this won't line up otherwise.
-	CG_DrawRect(x + 1, y + height / 2 - 1, midpoint, 1, height / 4 + 1, color1); // creme-y filling.
-	CG_DrawRect(x + midpoint, y + height / 2 - 1, remainder, 1, height / 4 + 1, color3); // used-up-ness.
+	CG_DrawRect(x + 1, y + height / 2.0f - 1, midpoint, 1, height / 4.0f + 1, color1); // creme-y filling.
+	CG_DrawRect(x + midpoint, y + height / 2.0f - 1, remainder, 1, height / 4.0f + 1, color3); // used-up-ness.
 	CG_DrawRect(x, y, width, height, 1, color2); // hard crispy shell
 }
 
@@ -5321,8 +5321,8 @@ static int impactSoundDebounceTime = 0;
 
 static float cg_draw_radar(float y)
 {
-	vec4_t color;
-	vec4_t team_color;
+	vec4_t color = { 0 };
+	vec4_t team_color = { 0 };
 	float arrow_w;
 	float arrow_h;
 	clientInfo_t* cl;
@@ -6033,7 +6033,7 @@ static float CG_DrawTeamOverlay(float y, const qboolean right, const qboolean up
 	int x;
 	int i, len;
 	const char* p;
-	vec4_t hcolor;
+	vec4_t hcolor = { 0 };
 	clientInfo_t* ci;
 	int ret_y;
 	const int x_offset = 0;
@@ -6269,7 +6269,7 @@ static void CG_DrawPowerupIcons(int y)
 
 				if (j != PW_REDFLAG && j != PW_BLUEFLAG && secondsleft < 999)
 				{
-					CG_DrawProportionalString(640 - ico_size * 1.1 + ico_size / 2 + x_offset, y - 8,
+					CG_DrawProportionalString(640 - ico_size * 1.1 + ico_size / 2.0f + x_offset, y - 8,
 						va("%i", secondsleft), UI_CENTER | UI_BIGFONT | UI_DROPSHADOW,
 						colorTable[CT_WHITE]);
 				}
@@ -6717,7 +6717,6 @@ static void CG_DrawCenterString(void)
 	}
 
 	float* color = CG_FadeColor(cg.centerPrintTime, 1000 * cg_centerTime.value);
-
 	if (!color)
 	{
 		return;
@@ -6726,14 +6725,14 @@ static void CG_DrawCenterString(void)
 	trap->R_SetColor(color);
 
 	char* start = cg.centerPrint;
-
 	int y = cg.centerPrintY - cg.centerPrintLines * BIGCHAR_HEIGHT / 2;
 
 	while (1)
 	{
 		const float scale = Q_max(cg_textprintscale.value, 0.0f);
-		char linebuffer[1024];
+		char linebuffer[1024] = { 0 };
 
+		// Copy up to 50 chars or until newline
 		for (l = 0; l < 50; l++)
 		{
 			if (!start[l] || start[l] == '\n')
@@ -6744,9 +6743,12 @@ static void CG_DrawCenterString(void)
 		}
 		linebuffer[l] = 0;
 
-		if (!BG_IsWhiteSpace(start[l]) && !BG_IsWhiteSpace(linebuffer[l - 1]))
+		// Prevent out‑of‑bounds read when l == 0
+		if (l > 0 &&
+			!BG_IsWhiteSpace(start[l]) &&
+			!BG_IsWhiteSpace(linebuffer[l - 1]))
 		{
-			//we might have cut a word off, attempt to find a spot where we won't cut words off at.
+			// We might have cut a word off, attempt to find a safe break
 			const int saved_l = l;
 			int counter = l - 2;
 
@@ -6754,15 +6756,15 @@ static void CG_DrawCenterString(void)
 			{
 				if (BG_IsWhiteSpace(start[counter]))
 				{
-					//this location is whitespace, line break from this position
 					linebuffer[counter] = 0;
 					l = counter + 1;
 					break;
 				}
 			}
+
 			if (counter < 0)
 			{
-				//couldn't find a break in the text, just go ahead and cut off the word mid-word.
+				// No whitespace found, cut mid‑word
 				l = saved_l;
 			}
 		}
@@ -6770,24 +6772,23 @@ static void CG_DrawCenterString(void)
 		const int w = CG_Text_Width(linebuffer, scale, FONT_MEDIUM);
 		const int h = CG_Text_Height(linebuffer, scale, FONT_MEDIUM);
 		const int x = (SCREEN_WIDTH - w) / 2;
-		CG_Text_Paint(x, y + h, scale, color, linebuffer, 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE, FONT_MEDIUM);
+
+		CG_Text_Paint(x, y + h, scale, color, linebuffer, 0, 0,
+			ITEM_TEXTSTYLE_SHADOWEDMORE, FONT_MEDIUM);
+
 		y += h + 6;
 
-		//this method of advancing to new line from the start of the array was causing long lines without
-		//new lines to be totally truncated.
-		if (start[l] && start[l] == '\n')
+		// Advance past newline if present
+		if (start[l] == '\n')
 		{
-			//next char is a newline, advance past
 			l++;
 		}
 
 		if (!start[l])
 		{
-			//end of string, we're done.
-			break;
+			break; // End of string
 		}
 
-		//advance pointer to the last character that we didn't read in.
 		start = &start[l];
 	}
 
@@ -6809,8 +6810,8 @@ CROSSHAIR
 static void CG_DrawSiegeInfo(const centity_t* cent, const float chX, const float chY, const float ch_w, const float ch_h)
 {
 	const siegeExtended_t* se = &cg_siegeExtendedData[cent->currentState.number];
-	vec4_t aColor;
-	vec4_t cColor;
+	vec4_t aColor = { 0 };
+	vec4_t cColor = { 0 };
 
 	assert(cent->currentState.number < MAX_CLIENTS);
 
@@ -6939,8 +6940,8 @@ static void CG_DrawSiegeInfo(const centity_t* cent, const float chX, const float
 //draw the health bar based on current "health" and maxhealth
 static void CG_DrawHealthBar(const centity_t* cent, const float chX, const float chY, const float ch_w, const float ch_h)
 {
-	vec4_t aColor;
-	vec4_t cColor;
+	vec4_t aColor = { 0 };
+	vec4_t cColor = { 0 };
 	const float x = chX + (ch_w / 2 - HEALTH_WIDTH / 2);
 	const float y = chY + ch_h + 8.0f;
 	const float percent = (float)cent->currentState.health / (float)cent->currentState.maxhealth * HEALTH_WIDTH;
@@ -6997,8 +6998,8 @@ static void CG_DrawHealthBar(const centity_t* cent, const float chX, const float
 //same routine (at least for now), draw progress of a "hack" or whatever
 static void CG_DrawHaqrBar(const float chX, const float chY, const float chW, const float chH)
 {
-	vec4_t aColor;
-	vec4_t cColor;
+	vec4_t aColor = { 0 };
+	vec4_t cColor = { 0 };
 	const float x = chX + (chW / 2 - HACK_WIDTH / 2);
 	const float y = chY + chH + 8.0f;
 	const float percent = ((float)cg.predictedPlayerState.hackingTime - (float)cg.time) / (float)cg.predictedPlayerState.hackingBaseTime * HACK_WIDTH;
@@ -7045,8 +7046,8 @@ vec4_t cg_genericTimerColor;
 
 static void CG_DrawGenericTimerBar(void)
 {
-	vec4_t aColor;
-	vec4_t cColor;
+	vec4_t aColor = { 0 };
+	vec4_t cColor = { 0 };
 	const float x = CGTIMERBAR_X;
 	const float y = CGTIMERBAR_Y;
 	float percent = (float)(cg_genericTimerBar - cg.time) / (float)cg_genericTimerDur * CGTIMERBAR_H;
@@ -8510,6 +8511,14 @@ void CG_TraceItem(trace_t* result, const vec3_t start, const vec3_t mins, const 
 
 static void CG_ScanForCrosshairEntity(void)
 {
+	// cg.snap can legitimately be NULL during loads / intermissions / prediction gaps.
+	// Bail out safely instead of risking a NULL dereference.
+	if (!cg.snap)
+	{
+		Com_Printf("CG_ScanForCrosshairEntity WARNING: cg.snap is NULL\n");
+		return;
+	}
+
 	trace_t trace;
 	vec3_t start, end;
 	qboolean b_veh_check_trace_from_cam_pos = qfalse;
@@ -8519,49 +8528,47 @@ static void CG_ScanForCrosshairEntity(void)
 	if (cg_dynamicCrosshair.integer)
 	{
 		vec3_t d_f, d_rt, d_up;
-		//For now we still want to draw the crosshair in relation to the player's world coordinates
-		//even if we have a melee weapon/no weapon.
-		if (cg.predictedPlayerState.m_iVehicleNum && cg.predictedPlayerState.eFlags & EF_NODRAW)
-		{
-			//we're *inside* a vehicle
-			//do the vehicle's crosshair instead
-			const centity_t* veh = &cg_entities[cg.predictedPlayerState.m_iVehicleNum];
-			qboolean gunner;
 
-			//if (veh->currentState.owner == cg.predictedPlayerState.clientNum)
+		// For now we still want to draw the crosshair in relation to the player's world coordinates
+		// even if we have a melee weapon/no weapon.
+		if (cg.predictedPlayerState.m_iVehicleNum &&
+			(cg.predictedPlayerState.eFlags & EF_NODRAW))
+		{
+			// We're *inside* a vehicle: do the vehicle's crosshair instead.
+			const centity_t* veh = &cg_entities[cg.predictedPlayerState.m_iVehicleNum];
+			qboolean gunner = qfalse;
+
+			// Pilot: ignore the vehicle entity itself for tracing.
+			ignore = cg.predictedPlayerState.m_iVehicleNum;
+			gunner = CG_CalcVehiclemuzzlePoint(cg.predictedPlayerState.m_iVehicleNum, start, d_f, d_rt, d_up);
+
+			if (veh->m_pVehicle &&
+				veh->m_pVehicle->m_pVehicleInfo &&
+				veh->m_pVehicle->m_pVehicleInfo->type == VH_FIGHTER &&
+				cg.distanceCull > MAX_XHAIR_DIST_ACCURACY &&
+				!gunner)
 			{
-				//the pilot
-				ignore = cg.predictedPlayerState.m_iVehicleNum;
-				gunner = CG_CalcVehiclemuzzlePoint(cg.predictedPlayerState.m_iVehicleNum, start, d_f, d_rt, d_up);
-			}
-			if (veh->m_pVehicle
-				&& veh->m_pVehicle->m_pVehicleInfo
-				&& veh->m_pVehicle->m_pVehicleInfo->type == VH_FIGHTER
-				&& cg.distanceCull > MAX_XHAIR_DIST_ACCURACY
-				&& !gunner)
-			{
-				//NOTE: on huge maps, the crosshair gets inaccurate at close range,
-				//		so we'll do an extra G2 trace from the cg.refdef.vieworg
-				//		to see if we hit anything closer and auto-aim at it if so
+				// On huge maps, the crosshair gets inaccurate at close range,
+				// so we'll do an extra G2 trace from the camera position to see if we hit
+				// anything closer and auto-aim at it if so.
 				b_veh_check_trace_from_cam_pos = qtrue;
 			}
 		}
-		else if (cg.snap && cg.snap->ps.weapon == WP_EMPLACED_GUN && cg.snap->ps.emplacedIndex &&
-			cg_entities[cg.snap->ps.emplacedIndex].ghoul2 && cg_entities[cg.snap->ps.emplacedIndex].currentState.weapon
-			== WP_NONE)
+		else if (cg.snap->ps.weapon == WP_EMPLACED_GUN &&
+			cg.snap->ps.emplacedIndex &&
+			cg_entities[cg.snap->ps.emplacedIndex].ghoul2 &&
+			cg_entities[cg.snap->ps.emplacedIndex].currentState.weapon == WP_NONE)
 		{
-			//locked into our e-web, calc the muzzle from it
+			// Locked into our e-web, calc the muzzle from it.
 			CG_CalcEWebmuzzlePoint(&cg_entities[cg.snap->ps.emplacedIndex], start, d_f, d_rt, d_up);
 		}
 		else
 		{
-			if (cg.snap && cg.snap->ps.weapon == WP_EMPLACED_GUN && cg.snap->ps.emplacedIndex)
+			if (cg.snap->ps.weapon == WP_EMPLACED_GUN && cg.snap->ps.emplacedIndex)
 			{
 				vec3_t pitch_constraint;
 
 				ignore = cg.snap->ps.emplacedIndex;
-
-				VectorCopy(cg.refdef.viewangles, pitch_constraint);
 
 				if (cg.renderingThirdPerson)
 				{
@@ -8572,9 +8579,9 @@ static void CG_ScanForCrosshairEntity(void)
 					VectorCopy(cg.refdef.viewangles, pitch_constraint);
 				}
 
-				if (pitch_constraint[PITCH] > 40)
+				if (pitch_constraint[PITCH] > 40.0f)
 				{
-					pitch_constraint[PITCH] = 40;
+					pitch_constraint[PITCH] = 40.0f;
 				}
 
 				AngleVectors(pitch_constraint, d_f, d_rt, d_up);
@@ -8594,6 +8601,7 @@ static void CG_ScanForCrosshairEntity(void)
 
 				AngleVectors(pitchConstraint, d_f, d_rt, d_up);
 			}
+
 			CG_CalcmuzzlePoint(cg.snap->ps.clientNum, start);
 		}
 
@@ -8602,40 +8610,45 @@ static void CG_ScanForCrosshairEntity(void)
 	else
 	{
 		VectorCopy(cg.refdef.vieworg, start);
-		VectorMA(start, 131072, cg.refdef.viewaxis[0], end);
+		VectorMA(start, 131072.0f, cg.refdef.viewaxis[0], end);
 	}
 
 	if (cg_dynamicCrosshair.integer && cg_dynamicCrosshairPrecision.integer)
 	{
-		//then do a trace with ghoul2 models in mind
+		// Do a trace with ghoul2 models in mind.
 		CG_G2Trace(&trace, start, vec3_origin, vec3_origin, end, ignore, CONTENTS_SOLID | CONTENTS_BODY);
+
 		if (b_veh_check_trace_from_cam_pos)
 		{
-			//NOTE: this MUST stay up to date with the method used in WP_VehCheckTraceFromCamPos
+			// This MUST stay up to date with the method used in WP_VehCheckTraceFromCamPos.
 			const centity_t* veh = &cg_entities[cg.predictedPlayerState.m_iVehicleNum];
 			trace_t extra_trace;
 			vec3_t view_dir2_end, extra_end;
-			const float min_auto_aim_dist = Distance(veh->lerpOrigin, cg.refdef.vieworg) + veh->m_pVehicle->
-				m_pVehicleInfo
-				->length / 2.0f + 200.0f;
+			const float min_auto_aim_dist =
+				Distance(veh->lerpOrigin, cg.refdef.vieworg) +
+				veh->m_pVehicle->m_pVehicleInfo->length / 2.0f +
+				200.0f;
 
 			VectorSubtract(end, cg.refdef.vieworg, view_dir2_end);
 			VectorNormalize(view_dir2_end);
 			VectorMA(cg.refdef.vieworg, MAX_XHAIR_DIST_ACCURACY, view_dir2_end, extra_end);
+
 			CG_G2Trace(&extra_trace, cg.refdef.vieworg, vec3_origin, vec3_origin, extra_end,
 				ignore, CONTENTS_SOLID | CONTENTS_BODY);
-			if (!extra_trace.allsolid
-				&& !extra_trace.startsolid)
+
+			if (!extra_trace.allsolid && !extra_trace.startsolid)
 			{
 				if (extra_trace.fraction < 1.0f)
 				{
-					if (extra_trace.fraction * MAX_XHAIR_DIST_ACCURACY > min_auto_aim_dist)
+					const float extra_dist = extra_trace.fraction * MAX_XHAIR_DIST_ACCURACY;
+					const float main_dist = trace.fraction * cg.distanceCull;
+
+					if (extra_dist > min_auto_aim_dist)
 					{
-						if (extra_trace.fraction * MAX_XHAIR_DIST_ACCURACY - Distance(
-							veh->lerpOrigin, cg.refdef.vieworg)
-							< trace.fraction * cg.distanceCull)
+						if (extra_dist - Distance(veh->lerpOrigin, cg.refdef.vieworg) < main_dist)
 						{
-							//this trace hit *something* that's closer than the thing the main trace hit, so use this result instead
+							// This trace hit *something* that's closer than the thing the main trace hit,
+							// so use this result instead.
 							memcpy(&trace, &extra_trace, sizeof(trace_t));
 						}
 					}
@@ -8664,15 +8677,17 @@ static void CG_ScanForCrosshairEntity(void)
 
 			CG_DrawCrosshair(trace.endpos, 0);
 
-			return; //this entity is mind-tricking the current client, so don't render it
+			// This entity is mind-tricking the current client, so don't render it as a target.
+			return;
 		}
 	}
 
 	if (cg.snap->ps.persistant[PERS_TEAM] != TEAM_SPECTATOR)
 	{
-		if (trace.entityNum < /*MAX_CLIENTS*/ENTITYNUM_WORLD)
+		if (trace.entityNum < ENTITYNUM_WORLD)
 		{
 			const centity_t* veh = &cg_entities[trace.entityNum];
+
 			cg.crosshairclientNum = trace.entityNum;
 			cg.crosshairClientTime = cg.time;
 
@@ -8680,7 +8695,7 @@ static void CG_ScanForCrosshairEntity(void)
 				veh->currentState.NPC_class == CLASS_VEHICLE &&
 				veh->currentState.owner < MAX_CLIENTS)
 			{
-				//draw the name of the pilot then
+				// Draw the name of the pilot instead.
 				cg.crosshairclientNum = veh->currentState.owner;
 				cg.crosshairVehNum = veh->currentState.number;
 				cg.crosshairVehTime = cg.time;
@@ -8699,14 +8714,14 @@ static void CG_ScanForCrosshairEntity(void)
 		return;
 	}
 
-	// if the player is in fog, don't show it
+	// If the player is in fog, don't show it.
 	const int content = CG_PointContents(trace.endpos, 0);
 	if (content & CONTENTS_FOG)
 	{
 		return;
 	}
 
-	// update the fade timer
+	// Update the fade timer.
 	cg.crosshairclientNum = trace.entityNum;
 	cg.crosshairClientTime = cg.time;
 }
