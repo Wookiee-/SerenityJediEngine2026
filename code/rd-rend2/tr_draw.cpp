@@ -40,7 +40,7 @@ void RE_GetScreenShot(byte* data, const int w, const int h)
 	allsource = RB_ReadPixels(0, 0, glConfig.vidWidth, glConfig.vidHeight, &offset, &padlen);
 	source = allsource + offset;
 
-	memcount = (glConfig.vidWidth * 3 + padlen) * glConfig.vidHeight;
+	memcount = (static_cast<size_t>(glConfig.vidWidth) * 3 + padlen) * glConfig.vidHeight;
 
 	// resample from source
 	xScale = glConfig.vidWidth / (4.0 * w);
@@ -262,7 +262,7 @@ static int PowerOf2(int iArg)
 }
 
 Dissolve_t Dissolve = { 0 };
-#define fDISSOLVE_SECONDS 0.75f
+constexpr auto fDISSOLVE_SECONDS = 0.75f;
 
 static void RE_Blit(const float fX0, const float fY0, const float fX1, const float fY1, const float fX2, const float fY2, const float fX3, const float fY3, image_t* pImage, const int iGLState, const bool atest)
 {
@@ -313,7 +313,7 @@ static void RE_KillDissolve(void)
 //
 // return = qtrue while still processing, for those interested...
 //
-#define iSAFETY_SPRITE_OVERLAP 2	// #pixels to overlap blit region by, in case some drivers leave onscreen seams
+constexpr auto iSAFETY_SPRITE_OVERLAP = 2;	// #pixels to overlap blit region by, in case some drivers leave onscreen seams
 qboolean RE_ProcessDissolve(void)
 {
 	if (Dissolve.iStartTime)

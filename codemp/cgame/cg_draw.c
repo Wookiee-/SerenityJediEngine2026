@@ -5818,8 +5818,8 @@ static float cg_draw_radar(float y)
 				{
 					//I'm in a vehicle
 					//if it's targetting me, then play an alarm sound if I'm in a vehicle
-					if (cent->currentState.otherentity_num == cg.predictedPlayerState.clientNum || cent->currentState.
-						otherentity_num == cg.predictedPlayerState.m_iVehicleNum)
+					if (cent->currentState.otherentityNum == cg.predictedPlayerState.clientNum || cent->currentState.
+						otherentityNum == cg.predictedPlayerState.m_iVehicleNum)
 					{
 						if (radarLockSoundDebounceTime < cg.time)
 						{

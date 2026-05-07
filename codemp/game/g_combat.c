@@ -405,7 +405,7 @@ static void ScorePlum(const gentity_t* ent, vec3_t origin, const int score)
 	plum->r.svFlags |= SVF_SINGLECLIENT;
 	plum->r.singleClient = ent->s.number;
 	//
-	plum->s.otherentity_num = ent->s.number;
+	plum->s.otherentityNum = ent->s.number;
 	plum->s.time = score;
 }
 
@@ -2609,15 +2609,15 @@ static void G_BroadcastObit(gentity_t* self, const gentity_t* inflictor, const g
 	{
 		gentity_t* ent = G_TempEntity(self->r.currentOrigin, EV_OBITUARY);
 		ent->s.eventParm = means_of_death;
-		ent->s.otherentity_num = self->s.number;
+		ent->s.otherentityNum = self->s.number;
 		if (attacker)
 		{
-			ent->s.otherentity_num2 = attacker->s.number;
+			ent->s.otherentityNum2 = attacker->s.number;
 		}
 		else
 		{
 			//???
-			ent->s.otherentity_num2 = killer;
+			ent->s.otherentityNum2 = killer;
 		}
 		if (inflictor
 			&& !Q_stricmp("vehicle_proj", inflictor->classname))
@@ -2625,7 +2625,7 @@ static void G_BroadcastObit(gentity_t* self, const gentity_t* inflictor, const g
 			//a vehicle missile
 			ent->s.eventParm = MOD_VEHICLE;
 			//store index into g_vehWeaponInfo
-			ent->s.weapon = inflictor->s.otherentity_num2 + 1;
+			ent->s.weapon = inflictor->s.otherentityNum2 + 1;
 			//store generic rocket or blaster type of missile
 			ent->s.generic1 = inflictor->s.weapon;
 		}
@@ -3200,8 +3200,8 @@ void player_die(gentity_t* self, const gentity_t* inflictor, gentity_t* attacker
 	{
 		gentity_t* ent = G_TempEntity(self->r.currentOrigin, EV_OBITUARY);
 		ent->s.eventParm = means_of_death;
-		ent->s.otherentity_num = self->s.number;
-		ent->s.otherentity_num2 = killer;
+		ent->s.otherentityNum = self->s.number;
+		ent->s.otherentityNum2 = killer;
 		ent->r.svFlags = SVF_BROADCAST; // send to everyone
 		ent->s.isJediMaster = was_jedi_master;
 	}
@@ -4523,8 +4523,8 @@ static void G_GetDismemberBolt(gentity_t* self, vec3_t bolt_point, const int lim
 		boltAngles[2] = -boltMatrix.matrix[2][1];
 
 		gentity_t* te = G_TempEntity(bolt_point, EV_SABER_BODY_HIT);
-		te->s.otherentity_num = self->s.number;
-		te->s.otherentity_num2 = ENTITYNUM_NONE;
+		te->s.otherentityNum = self->s.number;
+		te->s.otherentityNum2 = ENTITYNUM_NONE;
 		te->s.weapon = 0; //saberNum
 		te->s.legsAnim = 0; //blade_num
 
@@ -4727,7 +4727,7 @@ void G_Dismember(const gentity_t* ent, const gentity_t* enemy, vec3_t point, con
 	if (ent->client == NULL)
 	{
 		limb->s.modelIndex = -1;
-		limb->s.otherentity_num2 = ent->s.number;
+		limb->s.otherentityNum2 = ent->s.number;
 	}
 
 	VectorClear(limb->s.apos.trDelta);
@@ -6228,7 +6228,7 @@ static void G_ApplyVehicleOtherKiller(const gentity_t* targ, const gentity_t* in
 		targ->client->otherKillerMOD = mod;
 		if (inflictor && !Q_stricmp("vehicle_proj", inflictor->classname))
 		{
-			targ->client->otherKillerVehWeapon = inflictor->s.otherentity_num2 + 1;
+			targ->client->otherKillerVehWeapon = inflictor->s.otherentityNum2 + 1;
 			targ->client->otherKillerWeaponType = inflictor->s.weapon;
 		}
 		else
@@ -7628,7 +7628,7 @@ void G_Damage(gentity_t* targ, gentity_t* inflictor, gentity_t* attacker, vec3_t
 			gentity_t* ev_ent;
 			// Send off an event to show a shield shell on the player, pointing in the right direction.
 			ev_ent = G_TempEntity(targ->r.currentOrigin, EV_SHIELD_HIT);
-			ev_ent->s.otherentity_num = targ->s.number;
+			ev_ent->s.otherentityNum = targ->s.number;
 			ev_ent->s.eventParm = DirToByte(dir);
 			ev_ent->s.time2 = shield_absorbed;
 		}
@@ -7904,7 +7904,7 @@ void G_DamageFromKiller(gentity_t* pEnt, const gentity_t* p_veh_ent, gentity_t* 
 					//fake up the inflictor
 					temp_inflictor = qtrue;
 					inflictor->classname = "vehicle_proj";
-					inflictor->s.otherentity_num2 = p_veh_ent->client->otherKillerVehWeapon - 1;
+					inflictor->s.otherentityNum2 = p_veh_ent->client->otherKillerVehWeapon - 1;
 					inflictor->s.weapon = p_veh_ent->client->otherKillerWeaponType;
 				}
 			}

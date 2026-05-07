@@ -4327,8 +4327,8 @@ static void wp_saber_specific_do_hit(const gentity_t* self, const int saberNum, 
 
 	if (te)
 	{
-		te->s.otherentity_num = victim->s.number;
-		te->s.otherentity_num2 = self->s.number;
+		te->s.otherentityNum = victim->s.number;
+		te->s.otherentityNum2 = self->s.number;
 		te->s.weapon = saberNum;
 		te->s.legsAnim = blade_num;
 
@@ -4399,7 +4399,7 @@ static void WP_SaberDoClash(const gentity_t* self, const int saberNum, const int
 		VectorCopy(saberClashPos, te->s.origin);
 		VectorCopy(saberClashNorm, te->s.angles);
 		te->s.eventParm = saberClashEventParm;
-		te->s.otherentity_num2 = self->s.number;
+		te->s.otherentityNum2 = self->s.number;
 		te->s.weapon = saberNum;
 		te->s.legsAnim = blade_num;
 
@@ -7695,8 +7695,8 @@ static QINLINE qboolean WP_CheckThrownSaberDamaged(gentity_t* saberent,
 					G_Damage(ent, saber_owner, saber_owner, dir, tr.endpos, dmg, dflags, MOD_SABER);
 
 					te = G_TempEntity(tr.endpos, EV_SABER_HIT);
-					te->s.otherentity_num = ent->s.number;
-					te->s.otherentity_num2 = saber_owner->s.number;
+					te->s.otherentityNum = ent->s.number;
+					te->s.otherentityNum2 = saber_owner->s.number;
 					te->s.weapon = 0; // saberNum
 					te->s.legsAnim = 0; // blade_num
 					VectorCopy(tr.endpos, te->s.origin);
@@ -7786,8 +7786,8 @@ static QINLINE qboolean WP_CheckThrownSaberDamaged(gentity_t* saberent,
 				G_Damage(ent, saber_owner, saber_owner, dir, tr.endpos, dmg, dflags, MOD_SABER);
 
 				te = G_TempEntity(tr.endpos, EV_SABER_HIT);
-				te->s.otherentity_num = ENTITYNUM_NONE; // no throw damage link
-				te->s.otherentity_num2 = saber_owner->s.number;
+				te->s.otherentityNum = ENTITYNUM_NONE; // no throw damage link
+				te->s.otherentityNum2 = saber_owner->s.number;
 				te->s.weapon = 0; // saberNum
 				te->s.legsAnim = 0; // blade_num
 				VectorCopy(tr.endpos, te->s.origin);

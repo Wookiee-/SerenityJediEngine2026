@@ -92,7 +92,7 @@ public:
 		mOverride[index] = mCurrentTouch;
 		mAt[index] = pos;
 	}
-	int Test(int index)
+	int Test(int index) const
 	{
 		assert(index >= 0 && index < 512);
 		return (mOverride[index] == mCurrentTouch)
@@ -414,7 +414,7 @@ static void G2_FindRecursiveSurface(const model_t* currentModel, int surfaceNum,
 	}
 }
 
-void G2_RemoveRedundantGeneratedSurfaces(surfaceInfo_v& slist, int* activeSurfaces)
+static void G2_RemoveRedundantGeneratedSurfaces(surfaceInfo_v& slist, int* activeSurfaces)
 {
 	// walk the surface list, removing surface overrides or generated surfaces that are pointing at surfaces that aren't active anymore
 	for (size_t i = 0; i < slist.size(); i++)

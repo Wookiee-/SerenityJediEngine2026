@@ -3690,100 +3690,77 @@ a single large text block that can be scanned for shader names.
 */
 constexpr auto MAX_SHADER_FILES = 8192;
 
-// Static so this large array lives in .bss, not on the stack
-static char* s_shaderBuffers[MAX_SHADER_FILES] = { nullptr };
-
-static void ScanAndLoadShaderFiles(void)
+static void ScanAndLoadShaderFiles()
 {
-	int  numShaderFiles;
-	int  i;
+	// These arrays are huge — make them static to avoid 32 KB+ stack usage.
+	static char* buffers[MAX_SHADER_FILES];
+	int num_shader_files = 0;
 	long sum = 0;
 
-	/*
-	==========================================================
-		SCAN FOR SHADER FILES
-	==========================================================
-	*/
-	char** shaderFiles = ri.FS_ListFiles("shaders", ".shader", &numShaderFiles);
+	// Clear static buffer list
+	memset(buffers, 0, sizeof(buffers));
 
-	if (shaderFiles == nullptr || numShaderFiles == 0)
+	// scan for shader files
+	char** shader_files = ri.FS_ListFiles("shaders", ".shader", &num_shader_files);
+
+	if (!shader_files || !num_shader_files)
 	{
-		// Non-fatal: just warn and bail
-		ri.Printf(PRINT_WARNING, "WARNING: no shader files found\n");
+		ri.Error(ERR_FATAL, "WARNING: no shader files found\n");
 		return;
 	}
 
-	if (numShaderFiles > MAX_SHADER_FILES)
+	if (num_shader_files > MAX_SHADER_FILES)
 	{
-		numShaderFiles = MAX_SHADER_FILES;
+		num_shader_files = MAX_SHADER_FILES;
 	}
 
-	// Ensure the static buffer array is clean
-	for (i = 0; i < MAX_SHADER_FILES; i++)
-	{
-		s_shaderBuffers[i] = nullptr;
-	}
-
-	/*
-	==========================================================
-		LOAD AND STORE SHADER FILES
-	==========================================================
-	*/
-	for (i = 0; i < numShaderFiles; i++)
+	// load and store shader files
+	for (int i = 0; i < num_shader_files; i++)
 	{
 		char filename[MAX_QPATH];
 
-		Com_sprintf(filename, sizeof(filename), "shaders/%s", shaderFiles[i]);
+		Com_sprintf(filename, sizeof(filename), "shaders/%s", shader_files[i]);
 
-		const long summand = ri.FS_ReadFile(filename, reinterpret_cast<void**>(&s_shaderBuffers[i]));
-
-		if (s_shaderBuffers[i] == nullptr)
+		const long summand = ri.FS_ReadFile(filename, reinterpret_cast<void**>(&buffers[i]));
+		if (!buffers[i])
 		{
 			ri.Error(ERR_DROP, "Couldn't load %s", filename);
 		}
 
-		if (s_shaderBuffers[i] != nullptr)
+		if (buffers[i])
 		{
 			sum += summand;
 		}
 	}
 
-	/*
-	==========================================================
-		BUILD SINGLE LARGE SHADER TEXT BUFFER
-	==========================================================
-	*/
-	s_shaderText = static_cast<char*>(R_Hunk_Alloc(sum + numShaderFiles * 2, qtrue));
+	// build single large buffer
+	s_shaderText = static_cast<char*>(R_Hunk_Alloc(sum + num_shader_files * 2, qtrue));
 	s_shaderText[0] = '\0';
-	char* textEnd = s_shaderText;
 
-	// Free in reverse order so temp files are dumped predictably
-	for (i = numShaderFiles - 1; i >= 0; i--)
+	char* text_end = s_shaderText;
+
+	// free in reverse order, so the temp files are all dumped
+	for (int i = num_shader_files - 1; i >= 0; i--)
 	{
-		if (s_shaderBuffers[i] == nullptr)
+		if (!buffers[i])
 		{
 			continue;
 		}
 
-		strcat(textEnd, s_shaderBuffers[i]);
-		strcat(textEnd, "\n");
-		textEnd += strlen(textEnd);
+		strcat(text_end, buffers[i]);
+		strcat(text_end, "\n");
+		text_end += strlen(text_end);
 
-		ri.FS_FreeFile(s_shaderBuffers[i]);
-		s_shaderBuffers[i] = nullptr;
+		ri.FS_FreeFile(buffers[i]);
+		buffers[i] = nullptr;
 	}
 
 	COM_Compress(s_shaderText);
 
-	// Free file list
-	ri.FS_FreeFileList(shaderFiles);
+	// free up memory
+	ri.FS_FreeFileList(shader_files);
 
 #ifdef USE_STL_FOR_SHADER_LOOKUPS
-	/*
-	==========================================================
-		OPTIONAL: BUILD STL-BASED LOOKUP STRUCTURES
-	==========================================================
-	*/
 	SetupShaderEntryPtrs();
 #endif
 }

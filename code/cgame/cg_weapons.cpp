@@ -70,10 +70,10 @@ void CG_GrappleTrail(centity_t* ent, const weaponInfo_t* wi)
 	memset(&beam, 0, sizeof beam);
 
 	//FIXME adjust for muzzle position
-	VectorCopy(cg_entities[ent->currentState.otherentity_num].lerpOrigin, beam.origin);
+	VectorCopy(cg_entities[ent->currentState.otherentityNum].lerpOrigin, beam.origin);
 	beam.origin[2] += 26;
 
-	AngleVectors(cg_entities[ent->currentState.otherentity_num].lerpAngles, forward, nullptr, up);
+	AngleVectors(cg_entities[ent->currentState.otherentityNum].lerpAngles, forward, nullptr, up);
 	VectorMA(beam.origin, -6, up, beam.origin);
 	VectorCopy(origin, beam.oldorigin);
 
@@ -105,10 +105,10 @@ static void CG_StunTrail(centity_t* ent, const weaponInfo_t* wi)
 	memset(&beam, 0, sizeof beam);
 
 	//FIXME adjust for muzzle position
-	VectorCopy(cg_entities[ent->currentState.otherentity_num].lerpOrigin, beam.origin);
+	VectorCopy(cg_entities[ent->currentState.otherentityNum].lerpOrigin, beam.origin);
 	beam.origin[2] += 26;
 
-	AngleVectors(cg_entities[ent->currentState.otherentity_num].lerpAngles, forward, nullptr, up);
+	AngleVectors(cg_entities[ent->currentState.otherentityNum].lerpAngles, forward, nullptr, up);
 	VectorMA(beam.origin, -6, up, beam.origin);
 	VectorCopy(origin, beam.oldorigin);
 
@@ -4383,11 +4383,11 @@ void CG_MissileStick(const centity_t* cent, const int weapon)
 qboolean CG_VehicleWeaponImpact(centity_t* cent)
 {
 	//see if this is a missile entity that's owned by a vehicle and should do a special, overridden impact effect
-	if (cent->currentState.otherentity_num2
-		&& g_vehWeaponInfo[cent->currentState.otherentity_num2].iImpactFX)
+	if (cent->currentState.otherentityNum2
+		&& g_vehWeaponInfo[cent->currentState.otherentityNum2].iImpactFX)
 	{
 		//missile is from a special vehWeapon
-		CG_PlayEffectID(g_vehWeaponInfo[cent->currentState.otherentity_num2].iImpactFX, cent->lerpOrigin,
+		CG_PlayEffectID(g_vehWeaponInfo[cent->currentState.otherentityNum2].iImpactFX, cent->lerpOrigin,
 			cent->gent->pos1);
 		return qtrue;
 	}
@@ -4576,7 +4576,7 @@ void cg_missile_hit_player(const centity_t* cent, const int weapon, vec3_t origi
 
 	if (cent->gent)
 	{
-		other = &g_entities[cent->gent->s.otherentity_num];
+		other = &g_entities[cent->gent->s.otherentityNum];
 
 		if (other->client)
 		{

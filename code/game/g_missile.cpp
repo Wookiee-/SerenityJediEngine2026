@@ -101,7 +101,7 @@ extern qboolean PM_PainAnim(int anim);
 extern qboolean PM_InKnockDown(const playerState_t* ps);
 
 //-------------------------------------------------------------------------
-static void g_missile_bounce_effect(const gentity_t* ent, vec3_t org, vec3_t dir, const qboolean hit_world)
+static void G_Missile_Bounce_Effect(const gentity_t* ent, vec3_t org, vec3_t dir, const qboolean hit_world)
 {
 	switch (ent->s.weapon)
 	{
@@ -375,37 +375,26 @@ void g_reflect_missile_auto(gentity_t* ent, gentity_t* missile, vec3_t forward)
 		}
 	}
 
-	//--------------------------------------------------------------------------
-	// APPLY FINAL REFLECTION VELOCITY
-	//--------------------------------------------------------------------------
 	VectorNormalize(bounce_dir);
 	VectorScale(bounce_dir, speed, missile->s.pos.trDelta);
-
 #ifdef _DEBUG
-	assert(!Q_isnan(missile->s.pos.trDelta[0]) &&
-		!Q_isnan(missile->s.pos.trDelta[1]) &&
-		!Q_isnan(missile->s.pos.trDelta[2]));
-#endif
-
-	missile->s.pos.trTime = level.time - 10;
+	assert(!Q_isnan(missile->s.pos.trDelta[0]) && !Q_isnan(missile->s.pos.trDelta[1]) && !Q_isnan(missile->s.pos.trDelta[2]));
+#endif// _DEBUG
+	missile->s.pos.trTime = level.time - 10; // move a bit on the very first frame
 	VectorCopy(missile->currentOrigin, missile->s.pos.trBase);
-
-	//--------------------------------------------------------------------------
-	// TRANSFER OWNERSHIP (missile now belongs to reflector)
-	//--------------------------------------------------------------------------
 	if (missile->s.weapon != WP_SABER)
 	{
-		if (!missile->lastEnemy) {
+		//you are mine, now!
+		if (!missile->lastEnemy)
+		{
+			//remember who originally shot this missile
 			missile->lastEnemy = missile->owner;
 		}
 		missile->owner = owner;
 	}
-
-	//--------------------------------------------------------------------------
-	// SPECIAL CASE: Rocket loses homing when reflected
-	//--------------------------------------------------------------------------
 	if (missile->s.weapon == WP_ROCKET_LAUNCHER)
 	{
+		//stop homing
 		missile->e_ThinkFunc = thinkF_NULL;
 	}
 }
@@ -572,38 +561,26 @@ void G_ReflectMissileNPC(gentity_t* ent, gentity_t* missile, vec3_t forward)
 		}
 	}
 
-	//--------------------------------------------------------------------------
-	// APPLY FINAL REFLECTION VELOCITY
-	//--------------------------------------------------------------------------
 	VectorNormalize(bounce_dir);
 	VectorScale(bounce_dir, speed, missile->s.pos.trDelta);
-
 #ifdef _DEBUG
-	assert(!Q_isnan(missile->s.pos.trDelta[0]) &&
-		!Q_isnan(missile->s.pos.trDelta[1]) &&
-		!Q_isnan(missile->s.pos.trDelta[2]));
-#endif
-
-	missile->s.pos.trTime = level.time - 10;
+	assert(!Q_isnan(missile->s.pos.trDelta[0]) && !Q_isnan(missile->s.pos.trDelta[1]) && !Q_isnan(missile->s.pos.trDelta[2]));
+#endif// _DEBUG
+	missile->s.pos.trTime = level.time - 10; // move a bit on the very first frame
 	VectorCopy(missile->currentOrigin, missile->s.pos.trBase);
-
-	//--------------------------------------------------------------------------
-	// TRANSFER OWNERSHIP (missile now belongs to reflector)
-	//--------------------------------------------------------------------------
 	if (missile->s.weapon != WP_SABER)
 	{
+		//you are mine, now!
 		if (!missile->lastEnemy)
 		{
+			//remember who originally shot this missile
 			missile->lastEnemy = missile->owner;
 		}
 		missile->owner = owner;
 	}
-
-	//--------------------------------------------------------------------------
-	// SPECIAL CASE: Rocket loses homing when reflected
-	//--------------------------------------------------------------------------
 	if (missile->s.weapon == WP_ROCKET_LAUNCHER)
 	{
+		//stop homing
 		missile->e_ThinkFunc = thinkF_NULL;
 	}
 }
@@ -799,33 +776,24 @@ static void g_missile_bouncedoff_saber(gentity_t* ent, gentity_t* missile, vec3_
 
 	VectorNormalize(bounce_dir);
 	VectorScale(bounce_dir, speed, missile->s.pos.trDelta);
-
 #ifdef _DEBUG
-	assert(!Q_isnan(missile->s.pos.trDelta[0]) &&
-		!Q_isnan(missile->s.pos.trDelta[1]) &&
-		!Q_isnan(missile->s.pos.trDelta[2]));
-#endif
-
-	missile->s.pos.trTime = level.time - 10;
+	assert(!Q_isnan(missile->s.pos.trDelta[0]) && !Q_isnan(missile->s.pos.trDelta[1]) && !Q_isnan(missile->s.pos.trDelta[2]));
+#endif// _DEBUG
+	missile->s.pos.trTime = level.time - 10; // move a bit on the very first frame
 	VectorCopy(missile->currentOrigin, missile->s.pos.trBase);
-
-	//--------------------------------------------------------------------------
-	// TRANSFER OWNERSHIP (missile now belongs to reflector)
-	//--------------------------------------------------------------------------
 	if (missile->s.weapon != WP_SABER)
 	{
+		//you are mine, now!
 		if (!missile->lastEnemy)
 		{
+			//remember who originally shot this missile
 			missile->lastEnemy = missile->owner;
 		}
 		missile->owner = owner;
 	}
-
-	//--------------------------------------------------------------------------
-	// SPECIAL CASE: Rocket loses homing when reflected
-	//--------------------------------------------------------------------------
 	if (missile->s.weapon == WP_ROCKET_LAUNCHER)
 	{
+		//stop homing
 		missile->e_ThinkFunc = thinkF_NULL;
 	}
 }
@@ -866,14 +834,10 @@ static void wp_handle_bolt_block(gentity_t* ent, gentity_t* missile, vec3_t forw
 	constexpr int punish = BLOCKPOINTS_TEN;
 
 	// Manual blocking flags
-	const qboolean manual_blocking =
-		(blocker->client->ps.ManualBlockingFlags & (1 << HOLDINGBLOCK)) ? qtrue : qfalse;
-	const qboolean manual_proj_blocking =
-		(blocker->client->ps.ManualBlockingFlags & (1 << HOLDINGBLOCKANDATTACK)) ? qtrue : qfalse;
-	const qboolean npc_is_blocking =
-		(blocker->client->ps.ManualBlockingFlags & (1 << MBF_NPCBLOCKING)) ? qtrue : qfalse;
-	const qboolean accurate_missile_blocking =
-		(blocker->client->ps.ManualBlockingFlags & (1 << MBF_ACCURATEMISSILEBLOCKING)) ? qtrue : qfalse;
+	const qboolean manual_blocking = (blocker->client->ps.ManualBlockingFlags & (1 << HOLDINGBLOCK)) ? qtrue : qfalse;
+	const qboolean manual_proj_blocking = (blocker->client->ps.ManualBlockingFlags & (1 << HOLDINGBLOCKANDATTACK)) ? qtrue : qfalse;
+	const qboolean npc_is_blocking = (blocker->client->ps.ManualBlockingFlags & (1 << MBF_NPCBLOCKING)) ? qtrue : qfalse;
+	const qboolean accurate_missile_blocking = (blocker->client->ps.ManualBlockingFlags & (1 << MBF_ACCURATEMISSILEBLOCKING)) ? qtrue : qfalse;
 
 	// Save original speed
 	const float speed = VectorNormalize(missile->s.pos.trDelta);
@@ -909,8 +873,7 @@ static void wp_handle_bolt_block(gentity_t* ent, gentity_t* missile, vec3_t forw
 	}
 
 	// Active NPC blocking slop factor (used for manual crosshair reflection)
-	float slop_factor = (FATIGUE_AUTOBOLTBLOCK - 6) *
-		((static_cast<float>(FORCE_LEVEL_3) - blocker->client->ps.forcePowerLevel[FP_SABER_DEFENSE]) / FORCE_LEVEL_3);
+	float slop_factor = (FATIGUE_AUTOBOLTBLOCK - 6) * ((static_cast<float>(FORCE_LEVEL_3) - blocker->client->ps.forcePowerLevel[FP_SABER_DEFENSE]) / FORCE_LEVEL_3);
 
 	//--------------------------------------------------------------------------
 	// MANUAL SABER BLOCK REFLECTION (GOES TO CROSSHAIR)
@@ -1193,40 +1156,28 @@ static void wp_handle_bolt_block(gentity_t* ent, gentity_t* missile, vec3_t forw
 		{
 			gi.Printf(S_COLOR_YELLOW "only randomly deflect away the bolt\n");
 		}
-
-		// g_missile_bouncedoff_saber already set missile velocity/owner/etc.
-		return;
 	}
 
-	//--------------------------------------------------------------------------
-	// APPLY FINAL REFLECTION VELOCITY (SUCCESSFUL REFLECTION)
-	//--------------------------------------------------------------------------
 	VectorNormalize(bounce_dir);
 	VectorScale(bounce_dir, speed, missile->s.pos.trDelta);
-
 #ifdef _DEBUG
-	assert(!Q_isnan(missile->s.pos.trDelta[0]) &&
-		!Q_isnan(missile->s.pos.trDelta[1]) &&
-		!Q_isnan(missile->s.pos.trDelta[2]));
-#endif
-
+	assert(!Q_isnan(missile->s.pos.trDelta[0]) && !Q_isnan(missile->s.pos.trDelta[1]) && !Q_isnan(missile->s.pos.trDelta[2]));
+#endif// _DEBUG
 	missile->s.pos.trTime = level.time - 10; // move a bit on the very first frame
 	VectorCopy(missile->currentOrigin, missile->s.pos.trBase);
-
 	if (missile->s.weapon != WP_SABER)
 	{
-		// You are mine, now!
+		//you are mine, now!
 		if (!missile->lastEnemy)
 		{
-			// Remember who originally shot this missile
+			//remember who originally shot this missile
 			missile->lastEnemy = missile->owner;
 		}
 		missile->owner = blocker;
 	}
-
 	if (missile->s.weapon == WP_ROCKET_LAUNCHER)
 	{
-		// Stop homing
+		//stop homing
 		missile->e_ThinkFunc = thinkF_NULL;
 	}
 }
@@ -1655,12 +1606,12 @@ void G_MissileImpacted(gentity_t* ent, gentity_t* other, vec3_t impact_pos, vec3
 	if (otherValid && other->client && other->takedamage)
 	{
 		G_AddEvent(ent, EV_MISSILE_HIT, DirToByte(normal));
-		ent->s.otherentity_num = other->s.number;
+		ent->s.otherentityNum = other->s.number;
 	}
 	else
 	{
 		G_AddEvent(ent, EV_MISSILE_MISS, DirToByte(normal));
-		ent->s.otherentity_num = otherValid ? other->s.number : ENTITYNUM_NONE;
+		ent->s.otherentityNum = otherValid ? other->s.number : ENTITYNUM_NONE;
 	}
 
 	VectorCopy(normal, ent->pos1);
@@ -1770,7 +1721,6 @@ static void g_missile_impact(gentity_t* ent, trace_t* trace, const int hit_loc =
 	//
 	qboolean beskar = G_IsBeskarDeflect(ent, other);
 	qboolean boba_fett = G_IsBobaDeflect(ent, other);
-
 
 	if (ent->dflags & DAMAGE_HEAVY_WEAP_CLASS)
 	{
@@ -1882,7 +1832,7 @@ static void g_missile_impact(gentity_t* ent, trace_t* trace, const int hit_loc =
 		{
 			g_missile_add_alerts(ent);
 		}
-		g_missile_bounce_effect(ent, trace->endpos, trace->plane.normal,
+		G_Missile_Bounce_Effect(ent, trace->endpos, trace->plane.normal,
 			static_cast<qboolean>(trace->entityNum == ENTITYNUM_WORLD));
 
 		return;
@@ -1902,7 +1852,7 @@ static void g_missile_impact(gentity_t* ent, trace_t* trace, const int hit_loc =
 				{
 					ent->s.eFlags &= ~EF_BOUNCE_SHRAPNEL;
 				}
-				g_missile_bounce_effect(ent, trace->endpos, trace->plane.normal,
+				G_Missile_Bounce_Effect(ent, trace->endpos, trace->plane.normal,
 					static_cast<qboolean>(trace->entityNum == ENTITYNUM_WORLD));
 				return;
 			}
@@ -1926,7 +1876,7 @@ static void g_missile_impact(gentity_t* ent, trace_t* trace, const int hit_loc =
 				{
 					ent->s.eFlags &= ~EF_BOUNCE_SHRAPNEL;
 				}
-				g_missile_bounce_effect(ent, trace->endpos, trace->plane.normal,
+				G_Missile_Bounce_Effect(ent, trace->endpos, trace->plane.normal,
 					static_cast<qboolean>(trace->entityNum == ENTITYNUM_WORLD));
 				return;
 			}
@@ -1982,7 +1932,7 @@ static void g_missile_impact(gentity_t* ent, trace_t* trace, const int hit_loc =
 
 				GEntity_PainFunc(other, ent, ent, other->currentOrigin, 0, MOD_IMPACT);
 			}
-			nent->s.otherentity_num2 = other->s.number;
+			nent->s.otherentityNum2 = other->s.number;
 			ent->enemy = other;
 			v[0] = other->currentOrigin[0] + (other->mins[0] + other->maxs[0]) * 0.5f;
 			v[1] = other->currentOrigin[1] + (other->mins[1] + other->maxs[1]) * 0.5f;
@@ -2028,7 +1978,7 @@ static void g_missile_impact(gentity_t* ent, trace_t* trace, const int hit_loc =
 		if (other->client || other->s.eType == ET_MOVER)
 		{
 			G_PlayEffect("stunBaton/flesh_impact", ent->currentOrigin);
-			nent->s.otherentity_num2 = other->s.number;
+			nent->s.otherentityNum2 = other->s.number;
 			ent->enemy = other;
 
 			if (other->takedamage && other->client)
@@ -2864,7 +2814,7 @@ gentity_t* fire_grapple(gentity_t* self, vec3_t start, vec3_t dir)
 	hook->targetEnt = nullptr;
 	hook->s.pos.trType = TR_LINEAR;
 	hook->s.pos.trTime = level.time - MISSILE_PRESTEP_TIME;
-	hook->s.otherentity_num = self->s.number;
+	hook->s.otherentityNum = self->s.number;
 	VectorCopy(start, hook->s.pos.trBase);
 	VectorScale(dir, 900, hook->s.pos.trDelta);
 	SnapVector(hook->s.pos.trDelta);
@@ -2892,7 +2842,7 @@ gentity_t* fire_stun(gentity_t* self, vec3_t start, vec3_t dir)
 	stun->targetEnt = nullptr;
 	stun->s.pos.trType = TR_LINEAR;
 	stun->s.pos.trTime = level.time - MISSILE_PRESTEP_TIME;
-	stun->s.otherentity_num = self->s.number;
+	stun->s.otherentityNum = self->s.number;
 	VectorCopy(start, stun->s.pos.trBase);
 	VectorScale(dir, 2000, stun->s.pos.trDelta);
 	SnapVector(stun->s.pos.trDelta);

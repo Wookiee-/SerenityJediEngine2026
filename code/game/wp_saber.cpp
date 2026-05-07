@@ -1921,7 +1921,7 @@ int wp_saber_init_blade_data(gentity_t* ent)
 			saberent->svFlags = SVF_USE_CURRENT_ORIGIN;
 			saberent->s.weapon = WP_SABER;
 			saberent->owner = ent;
-			saberent->s.otherentity_num = ent->s.number;
+			saberent->s.otherentityNum = ent->s.number;
 			//clear the enemy
 			saberent->enemy = nullptr;
 

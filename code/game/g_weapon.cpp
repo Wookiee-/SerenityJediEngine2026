@@ -156,7 +156,7 @@ gentity_t* CreateMissile(vec3_t org, vec3_t dir, const float vel, const int life
 	missile->s.eType = ET_MISSILE;
 	missile->owner = owner;
 	//lmo tag owner info into state for duel Nox
-	missile->s.otherentity_num = owner->s.number;
+	missile->s.otherentityNum = owner->s.number;
 
 	const Vehicle_t* p_veh = G_IsRidingVehicle(owner);
 
@@ -829,8 +829,8 @@ static void WP_FireVehicleWeapon(gentity_t* ent, vec3_t start, vec3_t dir, const
 		{
 			missile->owner = ent;
 		}
-		missile->s.otherentity_num = ent->s.number;
-		missile->s.otherentity_num2 = vehWeapon - &g_vehWeaponInfo[0];
+		missile->s.otherentityNum = ent->s.number;
+		missile->s.otherentityNum2 = vehWeapon - &g_vehWeaponInfo[0];
 
 		if (vehWeapon->iLifeTime)
 		{

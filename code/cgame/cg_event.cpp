@@ -754,13 +754,13 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 		DEBUGNAME("EV_KOTHOS_BEAM");
 		if (Q_irand(0, 1))
 		{
-			fx_kothos_beam(cg_entities[cent->currentState.otherentity_num].gent->client->renderInfo.handRPoint,
-				cg_entities[cent->currentState.otherentity_num2].lerpOrigin);
+			fx_kothos_beam(cg_entities[cent->currentState.otherentityNum].gent->client->renderInfo.handRPoint,
+				cg_entities[cent->currentState.otherentityNum2].lerpOrigin);
 		}
 		else
 		{
-			fx_kothos_beam(cg_entities[cent->currentState.otherentity_num].gent->client->renderInfo.handLPoint,
-				cg_entities[cent->currentState.otherentity_num2].lerpOrigin);
+			fx_kothos_beam(cg_entities[cent->currentState.otherentityNum].gent->client->renderInfo.handLPoint,
+				cg_entities[cent->currentState.otherentityNum2].lerpOrigin);
 		}
 		break;
 		//=================================================================
@@ -775,13 +775,13 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 
 	case EV_LIGHTNING_STRIKE:
 		DEBUGNAME("EV_LIGHTNING_STRIKE");
-		FX_LightningStrike(cg_entities[cent->currentState.otherentity_num].gent->client->renderInfo.handLPoint,
-			cg_entities[cent->currentState.otherentity_num2].lerpOrigin);
+		FX_LightningStrike(cg_entities[cent->currentState.otherentityNum].gent->client->renderInfo.handLPoint,
+			cg_entities[cent->currentState.otherentityNum2].lerpOrigin);
 		break;
 
 	case EV_LIGHTNING_BOLT:
 		DEBUGNAME("EV_LIGHTNING_BOLT");
-		CG_StrikeBolt(cent, cg_entities[cent->currentState.otherentity_num].gent->client->renderInfo.handLPoint);
+		CG_StrikeBolt(cent, cg_entities[cent->currentState.otherentityNum].gent->client->renderInfo.handLPoint);
 		break;
 
 	case EV_BATTERIES_CHARGED:
@@ -948,7 +948,7 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 	case EV_SHIELD_HIT:
 		DEBUGNAME("EV_SHIELD_HIT");
 		ByteToDir(es->eventParm, dir);
-		CG_PlayerShieldHit(es->otherentity_num, dir, es->time2);
+		CG_PlayerShieldHit(es->otherentityNum, dir, es->time2);
 		break;
 
 	case EV_TESTLINE:
@@ -993,9 +993,9 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 				CrossProduct(axis[0], axis[1], axis[2]);
 
 				// the entNum the effect may be attached to
-				if (es->otherentity_num)
+				if (es->otherentityNum)
 				{
-					theFxScheduler.PlayEffect(s, cent->lerpOrigin, axis, -1, es->otherentity_num, portal_ent);
+					theFxScheduler.PlayEffect(s, cent->lerpOrigin, axis, -1, es->otherentityNum, portal_ent);
 				}
 				else
 				{
@@ -1011,7 +1011,7 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 		DEBUGNAME("EV_PLAY_MUZZLE_EFFECT");
 		s = CG_ConfigString(CS_EFFECTS + es->eventParm);
 
-		theFxScheduler.PlayEffect(s, es->otherentity_num);
+		theFxScheduler.PlayEffect(s, es->otherentityNum);
 		break;
 
 	case EV_STOP_EFFECT:

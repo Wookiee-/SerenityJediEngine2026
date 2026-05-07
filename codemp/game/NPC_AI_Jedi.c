@@ -4060,11 +4060,11 @@ static void Jedi_CombatDistance(const int enemy_dist)
 			//}
 			else
 			{
-				int chanceScale = 0;
+				int chance_scale = 0;
 				if ((NPCS.NPC->client->NPC_class == CLASS_KYLE || NPCS.NPC->client->NPC_class == CLASS_YODA) && NPCS.
 					NPC->spawnflags & 1)
 				{
-					chanceScale = 4;
+					chance_scale = 4;
 				}
 				else if (NPCS.NPC->enemy
 					&& NPCS.NPC->enemy->s.number < MAX_CLIENTS
@@ -4072,27 +4072,27 @@ static void Jedi_CombatDistance(const int enemy_dist)
 						|| NPCS.NPC->client->NPC_class == CLASS_SHADOWTROOPER))
 				{
 					//hmm, bosses do this less against player
-					chanceScale = 8 - g_npcspskill.integer * 2;
+					chance_scale = 8 - g_npcspskill.integer * 2;
 				}
 
 				if (NPCS.NPC->client->NPC_class == CLASS_DESANN)
 				{
-					chanceScale = 1;
+					chance_scale = 1;
 				}
 				else if (NPCS.NPCInfo->rank == RANK_ENSIGN)
 				{
-					chanceScale = 2;
+					chance_scale = 2;
 				}
 				else if (NPCS.NPCInfo->rank >= RANK_LT_JG)
 				{
-					chanceScale = 5;
+					chance_scale = 5;
 				}
-				if (chanceScale
+				if (chance_scale
 					&& (enemy_dist > Q_irand(100, 200) || NPCS.NPCInfo->scriptFlags & SCF_DONT_FIRE || !Q_stricmp(
 						"Yoda", NPCS.NPC->NPC_type) && !Q_irand(0, 3))
 					&& enemy_dist < 500
-					&& (Q_irand(0, chanceScale * 10) < 5 || NPCS.NPC->enemy->client && NPCS.NPC->enemy->client->ps.
-						weapon != WP_SABER && !Q_irand(0, chanceScale)))
+					&& (Q_irand(0, chance_scale * 10) < 5 || NPCS.NPC->enemy->client && NPCS.NPC->enemy->client->ps.
+						weapon != WP_SABER && !Q_irand(0, chance_scale)))
 				{
 					//else, randomly try some kind of attack every now and then
 					if ((NPCS.NPCInfo->rank == RANK_ENSIGN

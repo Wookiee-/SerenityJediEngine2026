@@ -623,7 +623,7 @@ void WP_FireTurboLaserMissile(gentity_t* ent, vec3_t start, vec3_t dir)
 	gentity_t* missile = CreateMissile(start, dir, velocity, 10000, ent, qfalse);
 
 	//use a custom shot effect
-	missile->s.otherentity_num2 = ent->genericValue14;
+	missile->s.otherentityNum2 = ent->genericValue14;
 	//use a custom impact effect
 	missile->s.emplacedOwner = ent->genericValue15;
 
@@ -1231,7 +1231,7 @@ static void WP_DisruptorAltFire(gentity_t* ent)
 		{
 			if (traceEnt->takedamage && traceEnt->client)
 			{
-				tent->s.otherentity_num = traceEnt->s.number;
+				tent->s.otherentityNum = traceEnt->s.number;
 
 				// Create a simple impact type mark
 				tent = G_TempEntity(tr.endpos, EV_MISSILE_MISS);
@@ -4751,7 +4751,7 @@ gentity_t* WP_FireVehicleWeapon(gentity_t* ent, vec3_t start, vec3_t dir, const 
 			}
 			missile->nextthink = level.time + veh_weapon->iLifeTime;
 		}
-		missile->s.otherentity_num2 = veh_weapon - &g_vehWeaponInfo[0];
+		missile->s.otherentityNum2 = veh_weapon - &g_vehWeaponInfo[0];
 		missile->s.eFlags |= EF_JETPACK_ACTIVE;
 		//homing
 		if (veh_weapon->fHoming)
@@ -4810,7 +4810,7 @@ gentity_t* WP_FireVehicleWeapon(gentity_t* ent, vec3_t start, vec3_t dir, const 
 						if (missile->enemy->s.NPC_class == CLASS_VEHICLE)
 						{
 							//let vehicle know we've locked on to them
-							missile->s.otherentity_num = missile->enemy->s.number;
+							missile->s.otherentityNum = missile->enemy->s.number;
 						}
 					}
 				}

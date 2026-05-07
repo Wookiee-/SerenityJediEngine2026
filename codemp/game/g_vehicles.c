@@ -585,7 +585,7 @@ static void G_EjectDroidUnit(Vehicle_t* p_veh, const qboolean kill)
 {
 	p_veh->m_pDroidUnit->s.m_iVehicleNum = ENTITYNUM_NONE;
 	p_veh->m_pDroidUnit->s.owner = ENTITYNUM_NONE;
-	//	p_veh->m_pDroidUnit->s.otherentity_num2 = ENTITYNUM_NONE;
+	//	p_veh->m_pDroidUnit->s.otherentityNum2 = ENTITYNUM_NONE;
 #ifdef _GAME
 	{
 		gentity_t* droidEnt = (gentity_t*)p_veh->m_pDroidUnit;

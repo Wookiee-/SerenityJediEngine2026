@@ -164,7 +164,7 @@ static void turret_fire(gentity_t* ent, vec3_t start, vec3_t dir)
 	gentity_t* bolt = G_Spawn();
 
 	//use a custom shot effect
-	bolt->s.otherentity_num2 = ent->genericValue14;
+	bolt->s.otherentityNum2 = ent->genericValue14;
 	//use a custom impact effect
 	bolt->s.emplacedOwner = ent->genericValue15;
 
