@@ -4164,14 +4164,19 @@ void G_ApplyKnockback(gentity_t* targ, vec3_t new_dir, float knockback)
 	vec3_t kvel;
 	float mass;
 
-	if (targ
-		&& targ->client
-		&& (targ->client->NPC_class == CLASS_ATST
-			|| targ->client->NPC_class == CLASS_RANCOR
-			|| targ->client->NPC_class == CLASS_SAND_CREATURE
-			|| targ->client->NPC_class == CLASS_WAMPA))
+	// FIX: prevent NULL dereference warning C6011
+	if (targ == NULL)
 	{
-		//much to large to *ever* throw
+		return;
+	}
+
+	if (targ->client &&
+		(targ->client->NPC_class == CLASS_ATST ||
+			targ->client->NPC_class == CLASS_RANCOR ||
+			targ->client->NPC_class == CLASS_SAND_CREATURE ||
+			targ->client->NPC_class == CLASS_WAMPA))
+	{
+		// too large to ever throw
 		return;
 	}
 
@@ -4183,25 +4188,25 @@ void G_ApplyKnockback(gentity_t* targ, vec3_t new_dir, float knockback)
 
 	knockback *= 2.0f;
 
-	if (knockback > 120)
+	if (knockback > 120.0f)
 	{
-		knockback = 120;
+		knockback = 120.0f;
 	}
 	//--- TEMP TEST
 
-	if (targ->physicsBounce > 0) //overide the mass
+	if (targ->physicsBounce > 0.0f) // override the mass
 	{
 		mass = targ->physicsBounce;
 	}
 	else
 	{
-		mass = 200;
+		mass = 200.0f;
 	}
 
-	if (g_gravity.value > 0)
+	if (g_gravity.value > 0.0f)
 	{
-		VectorScale(new_dir, g_knockback.value * knockback / mass * 0.8, kvel);
-		kvel[2] = new_dir[2] * g_knockback.value * knockback / mass * 1.5;
+		VectorScale(new_dir, g_knockback.value * knockback / mass * 0.8f, kvel);
+		kvel[2] = new_dir[2] * g_knockback.value * knockback / mass * 1.5f;
 	}
 	else
 	{
@@ -4212,19 +4217,19 @@ void G_ApplyKnockback(gentity_t* targ, vec3_t new_dir, float knockback)
 	{
 		VectorAdd(targ->client->ps.velocity, kvel, targ->client->ps.velocity);
 	}
-	else if (targ->s.pos.trType != TR_STATIONARY && targ->s.pos.trType != TR_LINEAR_STOP && targ->s.pos.trType !=
-		TR_NONLINEAR_STOP)
+	else if (targ->s.pos.trType != TR_STATIONARY &&
+		targ->s.pos.trType != TR_LINEAR_STOP &&
+		targ->s.pos.trType != TR_NONLINEAR_STOP)
 	{
 		VectorAdd(targ->s.pos.trDelta, kvel, targ->s.pos.trDelta);
 		VectorCopy(targ->r.currentOrigin, targ->s.pos.trBase);
 		targ->s.pos.trTime = level.time;
 	}
 
-	// set the timer so that the other client can't cancel
-	// out the movement immediately
-	if (targ->client && !targ->client->ps.pm_time)
+	// set the timer so that the other client can't cancel out the movement immediately
+	if (targ->client && targ->client->ps.pm_time == 0)
 	{
-		int t = knockback * 2;
+		int t = (int)(knockback * 2.0f);
 
 		if (t < 50)
 		{
@@ -4234,6 +4239,7 @@ void G_ApplyKnockback(gentity_t* targ, vec3_t new_dir, float knockback)
 		{
 			t = 200;
 		}
+
 		targ->client->ps.pm_time = t;
 		targ->client->ps.pm_flags |= PMF_TIME_KNOCKBACK;
 	}

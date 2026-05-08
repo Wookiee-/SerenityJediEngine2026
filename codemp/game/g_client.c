@@ -1352,6 +1352,12 @@ static qboolean CopyToBodyQue(gentity_t* ent)
 		return qfalse;
 	}
 
+	// FIX: ent->client may be NULL (spectator, script entity, etc.)
+	if (ent->client == NULL)
+	{
+		return qfalse;
+	}
+
 	trap->UnlinkEntity((sharedEntity_t*)ent);
 
 	// if client is in a nodrop area, don't leave the body
@@ -1361,9 +1367,9 @@ static qboolean CopyToBodyQue(gentity_t* ent)
 		return qfalse;
 	}
 
-	if (ent->client && ent->client->ps.eFlags & EF_DISINTEGRATION)
+	if (ent->client->ps.eFlags & EF_DISINTEGRATION)
 	{
-		//for now, just don't spawn a body if you got disint'd
+		// for now, just don't spawn a body if you got disint'd
 		return qfalse;
 	}
 
@@ -1374,28 +1380,32 @@ static qboolean CopyToBodyQue(gentity_t* ent)
 	trap->UnlinkEntity((sharedEntity_t*)body);
 	body->s = ent->s;
 
-	//avoid oddly angled corpses floating around
-	body->s.angles[PITCH] = body->s.angles[ROLL] = body->s.apos.trBase[PITCH] = body->s.apos.trBase[ROLL] = 0;
+	// avoid oddly angled corpses floating around
+	body->s.angles[PITCH] = 0;
+	body->s.angles[ROLL] = 0;
+	body->s.apos.trBase[PITCH] = 0;
+	body->s.apos.trBase[ROLL] = 0;
 
 	body->s.g2radius = 100;
 
 	body->s.eType = ET_BODY;
 	body->s.eFlags = EF_DEAD; // clear EF_TALK, etc
 
-	if (ent->client && ent->client->ps.eFlags & EF_DISINTEGRATION)
+	if (ent->client->ps.eFlags & EF_DISINTEGRATION)
 	{
 		body->s.eFlags |= EF_DISINTEGRATION;
 	}
 
 	VectorCopy(ent->client->ps.lastHitLoc, body->s.origin2);
 
-	body->s.powerups = 0; // clear powerups
-	body->s.loopSound = 0; // clear lava burning
+	body->s.powerups = 0;
+	body->s.loopSound = 0;
 	body->s.loopIsSoundset = qfalse;
 	body->s.number = body - g_entities;
 	body->timestamp = level.time;
 	body->physicsObject = qtrue;
-	body->physicsBounce = 0.0f; // don't bounce
+	body->physicsBounce = 0.0f;
+
 	if (body->s.groundEntityNum == ENTITYNUM_NONE)
 	{
 		body->s.pos.trType = TR_GRAVITY;
@@ -1406,21 +1416,26 @@ static qboolean CopyToBodyQue(gentity_t* ent)
 	{
 		body->s.pos.trType = TR_STATIONARY;
 	}
+
 	body->s.event = 0;
 
 	body->s.weapon = ent->s.bolt2;
 
 	if (body->s.weapon == WP_SABER && ent->client->ps.saberInFlight)
 	{
-		body->s.weapon = WP_MELEE; //lie to keep from putting a saber on the corpse, because it was thrown at death
+		body->s.weapon = WP_MELEE; // prevent saber appearing on corpse
 	}
 
-	//Now doing this through a modified version of the rcg reliable command.
-	if (ent->client && ent->client->ps.fd.forceSide == FORCE_LIGHTSIDE)
+	// rcg reliable command
+	if (ent->client->ps.fd.forceSide == FORCE_LIGHTSIDE)
 	{
 		islight = 1;
 	}
-	trap->SendServerCommand(-1, va("ircg %i %i %i %i", ent->s.number, body->s.number, body->s.weapon, islight));
+
+	trap->SendServerCommand(
+		-1,
+		va("ircg %i %i %i %i", ent->s.number, body->s.number, body->s.weapon, islight)
+	);
 
 	body->r.svFlags = ent->r.svFlags | SVF_BROADCAST;
 	VectorCopy(ent->r.mins, body->r.mins);
@@ -1428,7 +1443,8 @@ static qboolean CopyToBodyQue(gentity_t* ent)
 	VectorCopy(ent->r.absmin, body->r.absmin);
 	VectorCopy(ent->r.absmax, body->r.absmax);
 
-	body->s.torsoAnim = body->s.legsAnim = ent->client->ps.legsAnim;
+	body->s.torsoAnim = ent->client->ps.legsAnim;
+	body->s.legsAnim = ent->client->ps.legsAnim;
 
 	body->s.customRGBA[0] = ent->client->ps.customRGBA[0];
 	body->s.customRGBA[1] = ent->client->ps.customRGBA[1];

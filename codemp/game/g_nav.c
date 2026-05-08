@@ -78,15 +78,24 @@ extern vec3_t NPCDEBUG_RED;
 NPC_Blocked
 -------------------------
 */
-
 void NPC_Blocked(gentity_t* self, gentity_t* blocker)
 {
 	if (self->NPC == NULL)
+	{
 		return;
+	}
+
+	// FIX: blocker may be NULL
+	if (blocker == NULL)
+	{
+		return;
+	}
 
 	//Don't do this too often
 	if (self->NPC->blockedSpeechDebounceTime > level.time)
+	{
 		return;
+	}
 
 	//Attempt to run any blocked scripts
 	if (G_ActivateBehavior(self, BSET_BLOCKED))
@@ -94,29 +103,29 @@ void NPC_Blocked(gentity_t* self, gentity_t* blocker)
 		return;
 	}
 
-	//If this is one of our enemies, then just attack him
-	if (blocker->client && blocker->client->playerTeam == self->client->enemyTeam)
+	// FIX: ensure blocker->client is valid before dereferencing
+	if (blocker->client &&
+		blocker->client->playerTeam == self->client->enemyTeam)
 	{
 		G_SetEnemy(self, blocker);
 		return;
 	}
 
-	//Debutrap->Print( d_npcai, DEBUG_LEVEL_WARNING, "%s: Excuse me, %s %s!\n", self->targetname, blocker->classname, blocker->targetname );
-
 	//If we're being blocked by the player, say something to them
-	if (blocker && (blocker->s.number >= 0 && blocker->s.number < MAX_CLIENTS) && blocker->client->playerTeam == self->
-		client->playerTeam)
+	if (blocker->client &&                                 // FIX: guard added
+		blocker->s.number >= 0 &&
+		blocker->s.number < MAX_CLIENTS &&
+		blocker->client->playerTeam == self->client->playerTeam)
 	{
-		//guys in formation are not trying to get to a critical point,
-		//don't make them yell at the player (unless they have an enemy and
-		//are in combat because BP thinks it sounds cool during battle)
-		//NOTE: only imperials, misc crewmen and hazard team have these wav files now
 		G_AddVoiceEvent(self, Q_irand(EV_JDETECTED1, EV_JDETECTED3), 0);
 	}
 
-	self->NPC->blockedSpeechDebounceTime = level.time + MIN_BLOCKED_SPEECH_TIME + Q_flrand(0.0f, 1.0f) * 4000;
+	self->NPC->blockedSpeechDebounceTime =
+		level.time + MIN_BLOCKED_SPEECH_TIME + Q_flrand(0.0f, 1.0f) * 4000;
+
 	self->NPC->blockingEntNum = blocker->s.number;
 }
+
 
 /*
 -------------------------

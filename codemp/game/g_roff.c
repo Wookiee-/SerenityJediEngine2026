@@ -397,7 +397,10 @@ static qboolean G_InitRoff(char* file, unsigned char* data)
 int G_LoadRoffs(const char* fileName)
 {
 	char file[MAX_QPATH];
-	char data[ROFF_INFO_SIZENEW];
+
+	// FIX: move huge buffer off the stack
+	static char data[ROFF_INFO_SIZENEW];
+
 	fileHandle_t f;
 	roff_hdr2_t* header;
 	int len, roff_id = 0;
@@ -405,7 +408,7 @@ int G_LoadRoffs(const char* fileName)
 	// Before even bothering with all of this, make sure we have a place to store it.
 	if (num_roffs >= MAX_ROFFSNEW)
 	{
-		Com_Printf(S_COLOR_RED"MAX_ROFFS count exceeded.  Skipping load of .ROF '%s'\n", fileName);
+		Com_Printf(S_COLOR_RED "MAX_ROFFS count exceeded.  Skipping load of .ROF '%s'\n", fileName);
 		return roff_id;
 	}
 
@@ -422,28 +425,26 @@ int G_LoadRoffs(const char* fileName)
 		}
 	}
 
-#ifdef _DEBUG
-	//	Com_Printf( S_COLOR_GREEN"Caching ROF: '%s'\n", file );
-#endif
-
 	// Read the file in one fell swoop
 	len = trap->FS_Open(file, &f, FS_READ);
 
 	if (len <= 0)
 	{
-		Com_Printf(S_COLOR_RED"Could not open .ROF file '%s'\n", fileName);
+		Com_Printf(S_COLOR_RED "Could not open .ROF file '%s'\n", fileName);
 		return roff_id;
 	}
 
 	if (len >= ROFF_INFO_SIZENEW)
 	{
-		Com_Printf(S_COLOR_RED".ROF file '%s': Too large for file buffer.\n", fileName);
+		Com_Printf(S_COLOR_RED ".ROF file '%s': Too large for file buffer.\n", fileName);
+		trap->FS_Close(f);
 		return roff_id;
 	}
 
-	trap->FS_Read(data, len, f); //read data in buffer
+	// read data into static buffer
+	trap->FS_Read(data, len, f);
 
-	trap->FS_Close(f); //close file
+	trap->FS_Close(f);
 
 	// Now let's check the header info...
 	header = (roff_hdr2_t*)data;
@@ -451,7 +452,7 @@ int G_LoadRoffs(const char* fileName)
 	// ..and make sure it's reasonably valid
 	if (!G_ValidRoff(header))
 	{
-		Com_Printf(S_COLOR_RED"Invalid roff format '%s'\n", fileName);
+		Com_Printf(S_COLOR_RED "Invalid roff format '%s'\n", fileName);
 	}
 	else
 	{

@@ -767,14 +767,14 @@ int AAS_GetAdjacentAreasWithLessPresenceTypes_r(int* areanums, int numareas, con
 // Returns:					-
 // Changes Globals:		-
 //===========================================================================
-int AAS_CheckAreaForPossiblePortals(const int areanum)
+static int AAS_CheckAreaForPossiblePortals(const int areanum)
 {
 	int i, j, k, fen, ben;
 	int areanums[MAX_PORTALAREAS], otherareanum;
 	int numareafrontfaces[MAX_PORTALAREAS], numareabackfaces[MAX_PORTALAREAS];
-	int frontfacenums[MAX_PORTALAREAS], backfacenums[MAX_PORTALAREAS];
+	int frontfacenums[MAX_PORTALAREAS]{}, backfacenums[MAX_PORTALAREAS]{};
 	int numfrontfaces, numbackfaces;
-	int frontareanums[MAX_PORTALAREAS], backareanums[MAX_PORTALAREAS];
+	int frontareanums[MAX_PORTALAREAS]{}, backareanums[MAX_PORTALAREAS]{};
 	int numbackareas;
 	int backplanenum;
 

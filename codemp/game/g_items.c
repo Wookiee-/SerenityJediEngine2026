@@ -669,12 +669,14 @@ static qboolean pas_find_enemies(gentity_t* self)
 	qboolean found = qfalse;
 	float bestDist = TURRET_RADIUS * TURRET_RADIUS;
 	vec3_t org2;
-	gentity_t* entity_list[MAX_GENTITIES];
+
+	// FIX: move large array off the stack
+	static gentity_t* entity_list[MAX_GENTITIES];
+
 	trace_t tr;
 
-	if (self->aimDebounceTime > level.time) // time since we've been shut off
+	if (self->aimDebounceTime > level.time)
 	{
-		// We were active and alert, i.e. had an enemy in the last 3 secs
 		if (self->painDebounceTime < level.time)
 		{
 			G_Sound(self, CHAN_BODY, G_SoundIndex("sound/chars/turret/ping.wav"));
@@ -711,7 +713,6 @@ static qboolean pas_find_enemies(gentity_t* self)
 		{
 			continue;
 		}
-		//don't allow sentry gun to attack our own stuff (specifically our seeker item)
 		if (target->r.ownerNum == self->genericValue3)
 		{
 			continue;
@@ -724,7 +725,6 @@ static qboolean pas_find_enemies(gentity_t* self)
 		if (target->s.eType == ET_NPC &&
 			target->s.NPC_class == CLASS_VEHICLE)
 		{
-			//don't get mad at vehicles, silly.
 			continue;
 		}
 		if (self->parent && sje_is_ally(self->parent, target) == qtrue)
@@ -734,10 +734,10 @@ static qboolean pas_find_enemies(gentity_t* self)
 
 		if (target->client)
 		{
-			if (target->NPC && target->client->playerTeam == NPCTEAM_PLAYER && target->client->enemyTeam ==
-				NPCTEAM_ENEMY)
+			if (target->NPC &&
+				target->client->playerTeam == NPCTEAM_PLAYER &&
+				target->client->enemyTeam == NPCTEAM_ENEMY)
 			{
-				// dont attack allied npcs
 				continue;
 			}
 			VectorCopy(target->client->ps.origin, org);
@@ -749,21 +749,18 @@ static qboolean pas_find_enemies(gentity_t* self)
 
 		trap->Trace(&tr, org2, NULL, NULL, org, self->s.number, MASK_SHOT, qfalse, 0, 0);
 
-		if (!tr.allsolid && !tr.startsolid && (tr.fraction == 1.0 || tr.entityNum == target->s.number))
+		if (!tr.allsolid && !tr.startsolid &&
+			(tr.fraction == 1.0f || tr.entityNum == target->s.number))
 		{
 			vec3_t enemyDir;
-			// Only acquire if have a clear shot, Is it in range and closer than our best?
 			VectorSubtract(target->r.currentOrigin, self->r.currentOrigin, enemyDir);
 			const float enemyDist = VectorLengthSquared(enemyDir);
 
-			if (enemyDist < bestDist) // all things equal, keep current
+			if (enemyDist < bestDist)
 			{
 				if (self->attackDebounceTime + 100 < level.time)
 				{
-					// We haven't fired or acquired an enemy in the last 2 seconds-start-up sound
 					G_Sound(self, CHAN_BODY, G_SoundIndex("sound/chars/turret/startup.wav"));
-
-					// Wind up turrets for a bit
 					self->attackDebounceTime = level.time + 900 + Q_flrand(0.0f, 1.0f) * 200;
 				}
 

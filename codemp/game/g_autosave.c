@@ -134,7 +134,7 @@ void Create_Autosave(vec3_t origin, int size, const qboolean teleportPlayers)
 
 void Load_Autosaves(void)
 {
-	//load in our autosave from the .autosp
+	// load in our autosave from the .autosp
 	fileHandle_t f;
 	char buf[MAX_AUTOSAVE_FILESIZE];
 	char loadPath[MAX_QPATH];
@@ -155,32 +155,52 @@ void Load_Autosaves(void)
 	}
 	if (!len)
 	{
-		//empty file
+		// empty file
 		Com_Printf("^5Empty autosave file!\n");
 		trap->FS_Close(f);
 		return;
 	}
+
 	trap->FS_Read(buf, len, f);
 	trap->FS_Close(f);
 
 	char* s = buf;
 
-	while (*s != '\0' && s - buf < len)
+	while (*s != '\0' && (s - buf) < len)
 	{
-		vec3_t positionData;
+		vec3_t positionData = { 0 };
+
 		if (*s == '\n')
 		{
-			//hop over newlines
+			// hop over newlines
 			s++;
 			continue;
 		}
 
-		sscanf(s, "%f %f %f %i %i", &positionData[0], &positionData[1], &positionData[2], &sizeData, &teleportPlayers);
+		// FIX: check sscanf return value (removes warning C6031)
+		int parsed = sscanf(
+			s,
+			"%f %f %f %i %i",
+			&positionData[0],
+			&positionData[1],
+			&positionData[2],
+			&sizeData,
+			&teleportPlayers
+		);
 
-		Create_Autosave(positionData, sizeData, teleportPlayers);
+		if (parsed == 5)
+		{
+			// Only create autosave if the line parsed correctly
+			Create_Autosave(positionData, sizeData, teleportPlayers);
+		}
+		else
+		{
+			// Debug print instead of assert
+			Com_Printf("^1WARNING: Invalid autosave line skipped: \"%s\"\n", s);
+		}
 
-		//advance to the end of the line
-		while (*s != '\n' && *s != '\0' && s - buf < len)
+		// advance to the end of the line
+		while (*s != '\n' && *s != '\0' && (s - buf) < len)
 		{
 			s++;
 		}
@@ -194,7 +214,7 @@ void Save_Autosaves(void)
 	//save the autosaves
 	const fileHandle_t f = 0;
 
-	char fileBuf[MAX_AUTOSAVE_FILESIZE];
+	char fileBuf[MAX_AUTOSAVE_FILESIZE] = { 0 };
 	char loadPath[MAX_QPATH];
 	vmCvar_t mapname;
 
@@ -215,32 +235,38 @@ extern qboolean G_PointInBounds(vec3_t point, vec3_t mins, vec3_t maxs);
 
 void Delete_Autosaves(const gentity_t* ent)
 {
-	int touch[MAX_GENTITIES];
-	gentity_t* hit;
+	// Move large array off the stack
+	static int touch[MAX_GENTITIES];
+
+	gentity_t* hit = NULL;
 	vec3_t mins, maxs;
 
+	// Compute bounding box
 	VectorAdd(ent->r.currentOrigin, ent->r.mins, mins);
 	VectorAdd(ent->r.currentOrigin, ent->r.maxs, maxs);
+
 	const int num = trap->EntitiesInBox(mins, maxs, touch, MAX_GENTITIES);
 
+	// Remove autosave triggers inside the box
 	for (int i = 0; i < num; i++)
 	{
 		hit = &g_entities[touch[i]];
 
 		if (Q_stricmp(hit->classname, "trigger_autosave") == 0)
 		{
-			//found a manually set autosave entity
 			G_FreeEntity(hit);
 		}
 	}
 
+	// Reset hit pointer for G_Find loop
 	hit = NULL;
+
+	// Remove manually placed spawnpoints inside the box
 	while ((hit = G_Find(hit, FOFS(classname), "info_player_deathmatch")) != NULL)
 	{
-		if (hit->spawnflags & 1
-			&& G_PointInBounds(hit->r.currentOrigin, mins, maxs))
+		if ((hit->spawnflags & 1) &&
+			G_PointInBounds(hit->r.currentOrigin, mins, maxs))
 		{
-			//found a manually set spawn point
 			G_FreeEntity(hit);
 		}
 	}

@@ -9335,7 +9335,9 @@ static void Q3_SetRenderCullRadius(const int entID, const float float_data)
 // ------------------------------------------------------------
 char* G_GetLocationForEnt(const gentity_t* self)
 {
-	int touch[MAX_GENTITIES];
+	// FIX: move large array off the stack
+	static int touch[MAX_GENTITIES];
+
 	vec3_t mins, maxs;
 
 	// Validate entity
@@ -9383,7 +9385,6 @@ char* G_GetLocationForEnt(const gentity_t* self)
 		// Check for trigger_location
 		if (strcmp(hit->classname, "trigger_location") == 0)
 		{
-			// message may be NULL, so check it
 			if (hit->message == NULL)
 			{
 				trap->Print(S_COLOR_YELLOW "G_GetLocationForEnt: trigger_location %i has NULL message\n", entNum);

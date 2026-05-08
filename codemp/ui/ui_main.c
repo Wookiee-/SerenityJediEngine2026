@@ -2575,11 +2575,23 @@ static void UI_DrawNetMapCinematic(rectDef_t* rect, float scale, vec4_t color)
 
 static void UI_DrawNetFilter(rectDef_t* rect, float scale, vec4_t color, int textStyle, int i_menu_font)
 {
+	// Load the localized "Game:" label
 	trap->SE_GetStringTextString("MENUS_GAME", holdSPString, sizeof holdSPString);
 
-	Text_Paint(rect->x, rect->y, scale, color,
-		va("%s %s", holdSPString, UI_FilterDescription(ui_serverFilterType.integer)), 0, 0, textStyle,
-		i_menu_font);
+	//Only show SerenityJediEngine2026 as the filter option, since that's the only one that works for MP
+	const char* fixedGameName = "SerenityJediEngine2026"; //SERVER FILTER
+
+	Text_Paint(
+		rect->x,
+		rect->y,
+		scale,
+		color,
+		va("%s %s", holdSPString, fixedGameName),
+		0,
+		0,
+		textStyle,
+		i_menu_font
+	);
 }
 
 static void UI_DrawTier(rectDef_t* rect, float scale, vec4_t color, int textStyle, int i_menu_font)
@@ -3054,7 +3066,9 @@ static int UI_OwnerDrawWidth(int ownerDraw, float scale)
 		break;
 	case UI_NETFILTER:
 		trap->SE_GetStringTextString("MENUS_GAME", holdSPString, sizeof holdSPString);
-		s = va("%s %s", holdSPString, UI_FilterDescription(ui_serverFilterType.integer));
+
+		//Only show SerenityJediEngine2026 as the filter option, since that's the only one that works for MP
+		s = va("%s %s", holdSPString, "SerenityJediEngine2026"); //SERVER FILTER
 		break;
 	case UI_TIER:
 		break;
@@ -4404,28 +4418,21 @@ static qboolean UI_NetSource_HandleKey(int flags, float* special, int key)
 	return qfalse;
 }
 
+
 static qboolean UI_NetFilter_HandleKey(int flags, float* special, int key)
-{
+{ //SERVER FILTER
+	//Only show SerenityJediEngine2026 as the filter option, since that's the only one that works for MP
 	if (key == A_MOUSE1 || key == A_MOUSE2 || key == A_ENTER || key == A_KP_ENTER)
 	{
 		int value = ui_serverFilterType.integer;
 
 		if (key == A_MOUSE2)
 		{
-			value--;
+			value = 0;
 		}
 		else
 		{
-			value++;
-		}
-
-		if (value > uiInfo.modCount)
-		{
 			value = 0;
-		}
-		else if (value < 0)
-		{
-			value = uiInfo.modCount;
 		}
 
 		trap->Cvar_Set("ui_serverFilterType", va("%d", value));
@@ -8230,6 +8237,17 @@ static void UI_BuildServerDisplayList(int force) {
 			if (ui_browserFilterInvalidInfo.integer != 0 && !UI_ServerInfoIsValid(info)) {
 				trap->LAN_MarkServerVisible(lanSource, i, qfalse);
 				continue;
+			}
+
+			//Only show SerenityJediEngine2026 as the filter option, since that's the only one that works for MP
+			{
+				const char* hostname = Info_ValueForKey(info, "hostname");
+
+				if (Q_stricmp(hostname, "SerenityJediEngine2026") != 0)//SERVER FILTER
+				{
+					trap->LAN_MarkServerVisible(lanSource, i, qfalse);
+					continue;
+				}
 			}
 
 			clients = atoi(Info_ValueForKey(info, "clients"));

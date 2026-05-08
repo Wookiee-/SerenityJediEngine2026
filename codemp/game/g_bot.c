@@ -336,19 +336,18 @@ const char* G_RefreshNextMap(const int gametype, const qboolean forced)
 G_LoadArenas
 ===============
 */
-
 #define MAX_MAPS 1024
 #define MAPSBUFSIZE (MAX_MAPS * 64)
 
 void g_load_arenas(void)
 {
 #if 0
-	int			numdirs;
-	char		filename[MAX_QPATH];
-	char		dirlist[1024];
+	int         numdirs;
+	char        filename[MAX_QPATH];
+	char        dirlist[1024];
 	char* dirptr;
-	int			i, n;
-	int			dirlen;
+	int         i, n;
+	int         dirlen;
 
 	level.arenas.num = 0;
 
@@ -372,7 +371,8 @@ void g_load_arenas(void)
 
 #else
 
-	char filelist[MAPSBUFSIZE];
+	// FIX: move huge buffer off the stack
+	static char filelist[MAPSBUFSIZE];
 
 	level.arenas.num = 0;
 
@@ -383,14 +383,18 @@ void g_load_arenas(void)
 	int i = 0;
 
 	if (numFiles > MAX_MAPS)
+	{
 		numFiles = MAX_MAPS;
+	}
 
 	for (; i < numFiles; i++)
 	{
 		char filename[MAX_QPATH];
 		const int len = strlen(fileptr);
-		Com_sprintf(filename, sizeof filename, "scriptsmp/%s", fileptr);
+
+		Com_sprintf(filename, sizeof(filename), "scriptsmp/%s", fileptr);
 		G_LoadArenasFromFile(filename);
+
 		fileptr += len + 1;
 	}
 
@@ -400,18 +404,20 @@ void g_load_arenas(void)
 	}
 
 	G_RefreshNextMap(level.gametype, qfalse);
+
 #endif
 }
+
 
 void g_load_sp_arenas(void)
 {
 #if 0
-	int			numdirs;
-	char		filename[MAX_QPATH];
-	char		dirlist[1024];
+	int         numdirs;
+	char        filename[MAX_QPATH];
+	char        dirlist[1024];
 	char* dirptr;
-	int			i, n;
-	int			dirlen;
+	int         i, n;
+	int         dirlen;
 
 	level.arenas.num = 0;
 
@@ -435,7 +441,8 @@ void g_load_sp_arenas(void)
 
 #else
 
-	char filelist[MAPSBUFSIZE];
+	// FIX: move huge buffer off the stack
+	static char filelist[MAPSBUFSIZE];
 
 	level.arenas.num = 0;
 
@@ -446,14 +453,18 @@ void g_load_sp_arenas(void)
 	int i = 0;
 
 	if (numFiles > MAX_MAPS)
+	{
 		numFiles = MAX_MAPS;
+	}
 
 	for (; i < numFiles; i++)
 	{
 		char filename[MAX_QPATH];
 		const int len = strlen(fileptr);
-		Com_sprintf(filename, sizeof filename, "scriptsmp/%s", fileptr);
+
+		Com_sprintf(filename, sizeof(filename), "scriptsmp/%s", fileptr);
 		G_LoadArenasFromFile(filename);
+
 		fileptr += len + 1;
 	}
 
@@ -463,8 +474,10 @@ void g_load_sp_arenas(void)
 	}
 
 	G_RefreshNextMap(level.gametype, qfalse);
+
 #endif
 }
+
 
 /*
 ===============
@@ -849,7 +862,7 @@ G_BotConnect
 */
 qboolean G_BotConnect(const int clientNum, const qboolean restart)
 {
-	bot_settings_t settings;
+	bot_settings_t settings = { 0 };
 	char userinfo[MAX_INFO_STRING];
 
 	trap->GetUserinfo(clientNum, userinfo, sizeof userinfo);
@@ -1334,7 +1347,7 @@ static void G_LoadBots(void)
 {
 	vmCvar_t bots_file;
 	char dirlist[1024];
-	int dirlen;
+	int dirlen = 0;
 
 	if (!trap->Cvar_VariableIntegerValue("bot_enable"))
 	{
