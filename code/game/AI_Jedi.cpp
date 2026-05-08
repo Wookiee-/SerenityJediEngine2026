@@ -7698,6 +7698,12 @@ static qboolean Jedi_AttackDecide(const int enemy_dist)
 		return qfalse;
 	}
 
+	// New: never touch NPC->enemy if it's NULL
+	if (!NPC->enemy)
+	{
+		return qfalse;
+	}
+
 	if (Jedi_CultistDestroyer(NPC))
 	{
 		//destroyer
@@ -7714,10 +7720,12 @@ static qboolean Jedi_AttackDecide(const int enemy_dist)
 		}
 		return qfalse;
 	}
-	if (NPC->enemy->client
-		&& NPC->enemy->s.weapon == WP_SABER
-		&& NPC->enemy->client->ps.saberLockTime > level.time
-		&& NPC->client->ps.saberLockTime < level.time)
+
+	// Guard all client access
+	if (NPC->enemy->client &&
+		NPC->enemy->s.weapon == WP_SABER &&
+		NPC->enemy->client->ps.saberLockTime > level.time &&
+		NPC->client->ps.saberLockTime < level.time)
 	{
 		//enemy is in a saberLock and we are not
 		return qfalse;
@@ -7752,6 +7760,7 @@ static qboolean Jedi_AttackDecide(const int enemy_dist)
 		{
 			chance = NPCInfo->rank;
 		}
+
 		if (Q_irand(0, 30) < chance)
 		{
 			//based on skill with some randomness
@@ -7764,15 +7773,24 @@ static qboolean Jedi_AttackDecide(const int enemy_dist)
 		}
 	}
 
-	if (g_spskill->integer > 1 && NPC->client->ps.forcePowerLevel[FP_SABER_DEFENSE] > FORCE_LEVEL_1)
-	{// if we have high saber defense, try to attack right out of a parry or knockaway
+	if ((g_spskill->integer > 1) &&
+		(NPC->client->ps.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_1) &&
+		(NPC->enemy &&
+			NPC->enemy->client &&
+			NPC->enemy->client->ps.blockPoints > BLOCKPOINTS_HALF))
+	{// smart NPCs can try to attack right out of a parry or knockaway
 		if ((PM_SaberInParry(NPC->client->ps.saberMove) ||
-			PM_SaberInKnockaway(NPC->client->ps.saberMove))
-			&& NPC->client->ps.saberBlocked != BLOCKED_PARRY_BROKEN)
-		{//try to attack straight from a parry
-			NPC->client->ps.weaponTime = NPCInfo->shotTime = NPC->attackDebounceTime = 0;
+			PM_SaberInKnockaway(NPC->client->ps.saberMove)) &&
+			NPC->client->ps.saberBlocked != BLOCKED_PARRY_BROKEN)
+		{
+			NPC->client->ps.weaponTime = 0;
+			NPCInfo->shotTime = 0;
+			NPC->attackDebounceTime = 0;
+
 			NPC->client->ps.saberBlocked = BLOCKED_NONE;
-			Jedi_AdjustSaberAnimLevel(NPC, SS_FAST);//try to follow-up with a quick attack
+
+			Jedi_AdjustSaberAnimLevel(NPC, SS_MEDIUM);
+
 			WeaponThink();
 			return qtrue;
 		}
