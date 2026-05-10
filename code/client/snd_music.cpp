@@ -625,11 +625,16 @@ static qboolean Music_ParseLeveldata(gsl::czstring psLevelName)
 				const char* psNextMark = MusicExitPoint.sNextMark.c_str();
 				if (strlen(psNextMark)) // always NZ ptr
 				{
-					// then this must be "action" music under current rules...
 					//
-					assert(
-						!strcmp(psMusicStateType, Music_BaseStateToString(eBGRNDTRACK_ACTION) ? Music_BaseStateToString(
-							eBGRNDTRACK_ACTION) : ""));
+					// This used to assert — now we warn instead of crashing.
+					//
+					if (strcmp(psMusicStateType, Music_BaseStateToString(eBGRNDTRACK_ACTION)) != 0)
+					{
+						Com_Printf(S_COLOR_YELLOW
+							"WARNING: Music transition marker \"%s\" used outside ACTION state in file \"%s\"\n",
+							psNextMark, filename);
+					}
+
 					//
 					// does this marker exist in the explore piece?
 					//
@@ -656,6 +661,7 @@ static qboolean Music_ParseLeveldata(gsl::czstring psLevelName)
 					}
 				}
 			}
+
 		}
 	}
 

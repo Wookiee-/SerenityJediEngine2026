@@ -220,6 +220,11 @@ void RE_AddRefEntityToScene(const refEntity_t* ent)
 		return;
 	}
 
+	if (ent->reType == RT_ENT_CHAIN)
+	{ //minirefents must die.
+		return;
+	}
+
 	if (ent->reType < 0 || ent->reType >= RT_MAX_REF_ENTITY_TYPE) {
 		Com_Error(ERR_DROP, "RE_AddRefEntityToScene: bad reType %i", ent->reType);
 	}

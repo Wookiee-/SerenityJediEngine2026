@@ -204,6 +204,11 @@ void RE_AddRefEntityToScene(const refEntity_t* ent)
 		ri.Error(ERR_DROP, "RE_AddRefEntityToScene: bad reType %i", ent->reType);
 	}
 
+	if (ent->reType == RT_ENT_CHAIN)
+	{ //minirefents must die.
+		return;
+	}
+
 	backEndData->entities[r_numentities].e = *ent;
 	backEndData->entities[r_numentities].lightingCalculated = qfalse;
 
@@ -212,13 +217,11 @@ void RE_AddRefEntityToScene(const refEntity_t* ent)
 
 	r_numentities++;
 }
-
-#ifndef REND2_SP
 /*
 =====================
 RE_AddMiniRefEntityToScene
 
-1:1 with how vanilla does it --eez
+1:1 with how vanilla does it
 =====================
 */
 void RE_AddMiniRefEntityToScene(const miniRefEntity_t* miniRefEnt)
@@ -232,7 +235,6 @@ void RE_AddMiniRefEntityToScene(const miniRefEntity_t* miniRefEnt)
 	memcpy(&entity, miniRefEnt, sizeof(*miniRefEnt));
 	RE_AddRefEntityToScene(&entity);
 }
-#endif
 
 /*
 =====================

@@ -142,9 +142,7 @@ void G_ReadSessionData(gclient_t* client)
 	if (fields < 14)
 	{
 		// Not fatal — just warn and continue with whatever was parsed.
-		Com_Printf(S_COLOR_YELLOW
-			"G_ReadSessionData: sscanf parsed only %i fields for client %i\n",
-			fields, (int)(client - level.clients));
+		//Com_Printf(S_COLOR_YELLOW"G_ReadSessionData: sscanf parsed only %i fields for client %i\n",	fields, (int)(client - level.clients));
 	}
 
 	// Restore enumerated types

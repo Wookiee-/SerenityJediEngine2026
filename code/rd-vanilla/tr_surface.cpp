@@ -1906,7 +1906,7 @@ RB_SurfaceEntity
 Entities that have a single procedurally generated surface
 ====================
 */
-static void RB_SurfaceEntity(surfaceType_t* surf_type)
+static void RB_SurfaceEntity(surfaceType_t* surfType)
 {
 	switch (backEnd.currentEntity->e.reType) {
 	case RT_SPRITE:
@@ -1930,22 +1930,55 @@ static void RB_SurfaceEntity(surfaceType_t* surf_type)
 	case RT_CYLINDER:
 		RB_SurfaceCylinder();
 		break;
+	case RT_ENT_CHAIN:
+	{
+		static trRefEntity_t tempEnt = *backEnd.currentEntity;
+
+		//rww - if not static then currentEntity is garbage because
+		//this is a local. This was not static in sof2.. but I guess
+		//they never check ce.renderfx so it didn't show up.
+
+		const int start = backEnd.currentEntity->e.uRefEnt.uMini.miniStart;
+		const int count = backEnd.currentEntity->e.uRefEnt.uMini.miniCount;
+		assert(count > 0);
+		backEnd.currentEntity = &tempEnt;
+
+		assert(backEnd.currentEntity->e.renderfx >= 0);
+
+		for (int i = 0, j = start; i < count; i++, j++)
+		{
+			backEnd.currentEntity->e = backEnd.refdef.entities[j].e;
+			assert(backEnd.currentEntity->e.renderfx >= 0);
+
+			RB_SurfaceEntity(surfType);
+		}
+	}
+	break;
 	case RT_LATHE:
 		RB_SurfaceLathe();
 		break;
 	case RT_CLOUDS:
 		RB_SurfaceClouds();
 		break;
-	case RT_LIGHTNING:
-		RB_SurfaceLightningBolt();
-		break;
 	default:
 		RB_SurfaceAxis();
 		break;
 	}
+
+	// Tell the backend to merge the drawcalls except
+	// for types that can't be merged
+	// TODO: Create RT_BEAM internal shader and make it compatible with pass system
+	switch (backEnd.currentEntity->e.reType) {
+	case RT_BEAM:
+	case RT_ENT_CHAIN:
+		break;
+	default:
+		tess.shader->entityMergable = qtrue;
+		break;
+	}
 }
 
-static void RB_SurfaceBad(surfaceType_t* surf_type)
+static void RB_SurfaceBad(surfaceType_t* surfType)
 {
 	ri.Printf(PRINT_ALL, "Bad surface tesselated.\n");
 }

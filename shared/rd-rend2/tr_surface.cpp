@@ -178,7 +178,7 @@ based on Tess_InstantQuad from xreal
 */
 void RB_InstantQuad2(vec4_t quadVerts[4], vec2_t texCoords[4])
 {
-	//	GLimp_LogComment("--- RB_InstantQuad2 ---\n");					// FIXME: REIMPLEMENT (wasn't implemented in ioq3 to begin with) --eez
+	//	GLimp_LogComment("--- RB_InstantQuad2 ---\n");					// FIXME: REIMPLEMENT (wasn't implemented in ioq3 to begin with)
 
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;
@@ -2430,6 +2430,30 @@ static void RB_SurfaceEntity(surfaceType_t* surfType)
 	case RT_ORIENTEDLINE:
 		RB_SurfaceOrientedLine();
 		break;
+	case RT_ENT_CHAIN:
+	{
+		static trRefEntity_t tempEnt = *backEnd.currentEntity;
+
+		//rww - if not static then currentEntity is garbage because
+		//this is a local. This was not static in sof2.. but I guess
+		//they never check ce.renderfx so it didn't show up.
+
+		const int start = backEnd.currentEntity->e.uRefEnt.uMini.miniStart;
+		const int count = backEnd.currentEntity->e.uRefEnt.uMini.miniCount;
+		assert(count > 0);
+		backEnd.currentEntity = &tempEnt;
+
+		assert(backEnd.currentEntity->e.renderfx >= 0);
+
+		for (int i = 0, j = start; i < count; i++, j++)
+		{
+			backEnd.currentEntity->e = backEnd.refdef.entities[j].e;
+			assert(backEnd.currentEntity->e.renderfx >= 0);
+
+			RB_SurfaceEntity(surfType);
+		}
+	}
+	break;
 	case RT_LATHE:
 		RB_SurfaceLathe();
 		break;
@@ -2440,8 +2464,18 @@ static void RB_SurfaceEntity(surfaceType_t* surfType)
 		RB_SurfaceAxis();
 		break;
 	}
-	// FIX ME: just a testing hack. Pretty sure we can merge all of these
-	tess.shader->entityMergable = qtrue;
+
+	// Tell the backend to merge the drawcalls except
+	// for types that can't be merged
+	// TODO: Create RT_BEAM internal shader and make it compatible with pass system
+	switch (backEnd.currentEntity->e.reType) {
+	case RT_BEAM:
+	case RT_ENT_CHAIN:
+		break;
+	default:
+		tess.shader->entityMergable = qtrue;
+		break;
+	}
 }
 
 static void RB_SurfaceBad(surfaceType_t* surfType)

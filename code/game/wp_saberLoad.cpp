@@ -483,7 +483,7 @@ qboolean WP_UseFirstValidSaberStyle(const gentity_t* ent, int* saberAnimLevel)
 		{
 			//can't use dual style if not using 2 sabers
 			valid_styles &= ~(1 << SS_DUAL);
-			if (*saberAnimLevel == SS_DUAL) // saber style switch bug fixed --eez
+			if (*saberAnimLevel == SS_DUAL) // saber style switch bug fixed
 			{
 				style_invalid = qtrue;
 			}

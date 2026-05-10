@@ -113,7 +113,7 @@ static qhandle_t R_RegisterMD3(const char* name, model_t* mod)
 	}
 
 #ifdef _DEBUG
-	ri.Printf(PRINT_WARNING, "R_RegisterMD3: couldn't load %s\n", name);
+	//ri.Printf(PRINT_WARNING, "R_RegisterMD3: couldn't load %s\n", name);
 #endif
 
 	mod->type = MOD_BAD;

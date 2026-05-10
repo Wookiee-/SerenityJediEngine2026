@@ -222,7 +222,7 @@ void RE_AddRefEntityToScene(const refEntity_t* ent) {
 =====================
 RE_AddMiniRefEntityToScene
 
-1:1 with how vanilla does it --eez
+1:1 with how vanilla does it
 =====================
 */
 void RE_AddMiniRefEntityToScene(const miniRefEntity_t* miniRefEnt)

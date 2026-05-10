@@ -10783,42 +10783,31 @@ static void PM_Footsteps(void)
 						}
 						else
 						{
-							if (pm->ps->stats[STAT_HEALTH] <= 70 && pm->ps->stats[STAT_HEALTH] >= 40)
+							if (is_holding_block_button && pm->ps->sprintFuel > 15) // staff sprint here
 							{
-								PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN9, setAnimFlags);
-							}
-							else if (pm->ps->stats[STAT_HEALTH] <= 40)
-							{
-								PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN8, setAnimFlags);
+								//This controls saber movement anims //JaceSolaris
+								PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN_STAFF, setAnimFlags);
+
+								if (!(pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING))
+								{
+									pm->ps->PlayerEffectFlags |= 1 << PEF_SPRINTING;
+									g_entities[pm->ps->clientNum].client->IsSprinting = qtrue;
+									if (pm->ps->sprintFuel < 17) // single sprint here
+									{
+										pm->ps->sprintFuel -= 10;
+									}
+								}
 							}
 							else
 							{
-								if (is_holding_block_button && pm->ps->sprintFuel > 15) // staff sprint here
-								{
-									//This controls saber movement anims //JaceSolaris
-									PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN_STAFF, setAnimFlags);
+								PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN1, setAnimFlags);
 
-									if (!(pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING))
-									{
-										pm->ps->PlayerEffectFlags |= 1 << PEF_SPRINTING;
-										g_entities[pm->ps->clientNum].client->IsSprinting = qtrue;
-										if (pm->ps->sprintFuel < 17) // single sprint here
-										{
-											pm->ps->sprintFuel -= 10;
-										}
-									}
-								}
-								else
+								if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING ||
+									pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING)
 								{
-									PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN1, setAnimFlags);
-
-									if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING ||
-										pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING)
-									{
-										pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
-										pm->ps->PlayerEffectFlags &= ~(1 << PEF_WEAPONSPRINTING);
-										g_entities[pm->ps->clientNum].client->IsSprinting = qfalse;
-									}
+									pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
+									pm->ps->PlayerEffectFlags &= ~(1 << PEF_WEAPONSPRINTING);
+									g_entities[pm->ps->clientNum].client->IsSprinting = qfalse;
 								}
 							}
 						}
@@ -10831,42 +10820,31 @@ static void PM_Footsteps(void)
 						}
 						else
 						{
-							if (pm->ps->stats[STAT_HEALTH] <= 70 && pm->ps->stats[STAT_HEALTH] >= 40)
+							if (is_holding_block_button && pm->ps->sprintFuel > 15) //dual sprint here
 							{
-								PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN7, setAnimFlags);
-							}
-							else if (pm->ps->stats[STAT_HEALTH] <= 40)
-							{
-								PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN8, setAnimFlags);
+								//This controls saber movement anims //JaceSolaris
+								PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN_DUAL, setAnimFlags);
+
+								if (!(pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING))
+								{
+									pm->ps->PlayerEffectFlags |= 1 << PEF_SPRINTING;
+									g_entities[pm->ps->clientNum].client->IsSprinting = qtrue;
+									if (pm->ps->sprintFuel < 17) // single sprint here
+									{
+										pm->ps->sprintFuel -= 10;
+									}
+								}
 							}
 							else
 							{
-								if (is_holding_block_button && pm->ps->sprintFuel > 15) //dual sprint here
-								{
-									//This controls saber movement anims //JaceSolaris
-									PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN_DUAL, setAnimFlags);
+								PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN1, setAnimFlags);
 
-									if (!(pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING))
-									{
-										pm->ps->PlayerEffectFlags |= 1 << PEF_SPRINTING;
-										g_entities[pm->ps->clientNum].client->IsSprinting = qtrue;
-										if (pm->ps->sprintFuel < 17) // single sprint here
-										{
-											pm->ps->sprintFuel -= 10;
-										}
-									}
-								}
-								else
+								if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING ||
+									pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING)
 								{
-									PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN1, setAnimFlags);
-
-									if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING ||
-										pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING)
-									{
-										pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
-										pm->ps->PlayerEffectFlags &= ~(1 << PEF_WEAPONSPRINTING);
-										g_entities[pm->ps->clientNum].client->IsSprinting = qfalse;
-									}
+									pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
+									pm->ps->PlayerEffectFlags &= ~(1 << PEF_WEAPONSPRINTING);
+									g_entities[pm->ps->clientNum].client->IsSprinting = qfalse;
 								}
 							}
 						}
@@ -10885,63 +10863,52 @@ static void PM_Footsteps(void)
 							}
 							else
 							{
-								if (pm->ps->stats[STAT_HEALTH] <= 70 && pm->ps->stats[STAT_HEALTH] >= 40)
+								if (is_holding_block_button && pm->ps->sprintFuel > 15) // single sprint here
 								{
-									PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN9, setAnimFlags);
-								}
-								else if (pm->ps->stats[STAT_HEALTH] <= 40)
-								{
-									PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN8, setAnimFlags);
-								}
-								else
-								{
-									if (is_holding_block_button && pm->ps->sprintFuel > 15) // single sprint here
+									//This controls saber movement anims //JaceSolaris
+									if (pm->ps->saber[0].type == SABER_BACKHAND
+										|| pm->ps->saber[0].type == SABER_ASBACKHAND) //saber backhand
 									{
-										//This controls saber movement anims //JaceSolaris
-										if (pm->ps->saber[0].type == SABER_BACKHAND
-											|| pm->ps->saber[0].type == SABER_ASBACKHAND) //saber backhand
-										{
-											PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN_STAFF, setAnimFlags);
-										}
-										else if (pm->ps->saber[0].type == SABER_YODA) //saber yoda
-										{
-											PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN10, setAnimFlags);
-										}
-										else if (pm->ps->saber[0].type == SABER_GRIE) //saber kylo
-										{
-											PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN7, setAnimFlags);
-										}
-										else if (pm->ps->saber[0].type == SABER_GRIE4) //saber kylo
-										{
-											PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN7, setAnimFlags);
-										}
-										else
-										{
-											//This controls saber movement anims //JaceSolaris
-											PM_SetAnim(pm, SETANIM_BOTH, BOTH_SPRINT_SABER, setAnimFlags);
-										}
-
-										if (!(pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING))
-										{
-											pm->ps->PlayerEffectFlags |= 1 << PEF_SPRINTING;
-											g_entities[pm->ps->clientNum].client->IsSprinting = qtrue;
-											if (pm->ps->sprintFuel < 17) // single sprint here
-											{
-												pm->ps->sprintFuel -= 10;
-											}
-										}
+										PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN_STAFF, setAnimFlags);
+									}
+									else if (pm->ps->saber[0].type == SABER_YODA) //saber yoda
+									{
+										PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN10, setAnimFlags);
+									}
+									else if (pm->ps->saber[0].type == SABER_GRIE) //saber kylo
+									{
+										PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN7, setAnimFlags);
+									}
+									else if (pm->ps->saber[0].type == SABER_GRIE4) //saber kylo
+									{
+										PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN7, setAnimFlags);
 									}
 									else
 									{
-										PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN1, setAnimFlags);
+										//This controls saber movement anims //JaceSolaris
+										PM_SetAnim(pm, SETANIM_BOTH, BOTH_SPRINT_SABER, setAnimFlags);
+									}
 
-										if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING ||
-											pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING)
+									if (!(pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING))
+									{
+										pm->ps->PlayerEffectFlags |= 1 << PEF_SPRINTING;
+										g_entities[pm->ps->clientNum].client->IsSprinting = qtrue;
+										if (pm->ps->sprintFuel < 17) // single sprint here
 										{
-											pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
-											pm->ps->PlayerEffectFlags &= ~(1 << PEF_WEAPONSPRINTING);
-											g_entities[pm->ps->clientNum].client->IsSprinting = qfalse;
+											pm->ps->sprintFuel -= 10;
 										}
+									}
+								}
+								else
+								{
+									PM_SetAnim(pm, SETANIM_BOTH, BOTH_RUN1, setAnimFlags);
+
+									if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING ||
+										pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING)
+									{
+										pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
+										pm->ps->PlayerEffectFlags &= ~(1 << PEF_WEAPONSPRINTING);
+										g_entities[pm->ps->clientNum].client->IsSprinting = qfalse;
 									}
 								}
 							}
@@ -18666,7 +18633,6 @@ void PM_WeaponLightsaber()
 
 			if (curmove >= LS_PARRY_UP && curmove <= LS_REFLECT_LL)
 			{//from a parry or reflection, can go directly into an attack
-
 				if (pm->ps->clientNum >= MAX_CLIENTS && !PM_ControlledByPlayer())
 				{
 					newmove = PM_NPCSaberAttackFromBlock(saber_moveData[curmove].endQuad);//from a parry or reflection, can go directly into an attack
@@ -21645,7 +21611,6 @@ void Pmove(pmove_t* pmove)
 			PM_AirMove();
 		}
 	}
-
 
 	if (!VectorCompare(pm->ps->origin, pml.previous_origin))
 	{
