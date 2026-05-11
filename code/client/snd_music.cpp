@@ -661,7 +661,6 @@ static qboolean Music_ParseLeveldata(gsl::czstring psLevelName)
 					}
 				}
 			}
-
 		}
 	}
 

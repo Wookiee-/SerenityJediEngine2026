@@ -7773,24 +7773,23 @@ static qboolean Jedi_AttackDecide(const int enemy_dist)
 		}
 	}
 
-	if ((g_spskill->integer > 1) &&
-		(NPC->client->ps.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_1) &&
-		(NPC->enemy &&
-			NPC->enemy->client &&
-			NPC->enemy->client->ps.blockPoints > BLOCKPOINTS_HALF))
-	{// smart NPCs can try to attack right out of a parry or knockaway
+	if (g_spskill->integer > 1 &&
+		NPC->client->ps.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_1 &&
+		NPC->client->ps.saberFatigueChainCount < MISHAPLEVEL_HEAVY &&
+		NPC->enemy &&
+		NPC->enemy->client &&
+		NPC->enemy->client->ps.blockPoints > BLOCKPOINTS_HALF)
+	{// smart NPCs can try to attack right out of a parry or knockaway if their enemy has high blockpoints
 		if ((PM_SaberInParry(NPC->client->ps.saberMove) ||
 			PM_SaberInKnockaway(NPC->client->ps.saberMove)) &&
 			NPC->client->ps.saberBlocked != BLOCKED_PARRY_BROKEN)
 		{
+			// try to attack straight from a parry
 			NPC->client->ps.weaponTime = 0;
 			NPCInfo->shotTime = 0;
 			NPC->attackDebounceTime = 0;
-
 			NPC->client->ps.saberBlocked = BLOCKED_NONE;
-
-			Jedi_AdjustSaberAnimLevel(NPC, SS_MEDIUM);
-
+			Jedi_AdjustSaberAnimLevel(NPC, SS_MEDIUM); // cinematic, harder hit to chew through block points
 			WeaponThink();
 			return qtrue;
 		}
@@ -8913,7 +8912,6 @@ static void Jedi_Combat()
 
 					if (NPC->enemy && NPC_IsAlive(NPC, NPC->enemy) && irand(0, 100) <= 25)
 					{// 25% of the time, knock them over...
-
 						if (NPC_HandleSlapMelee(NPC, NPC->enemy, enemy_dist) == qtrue)
 						{
 							// Doing a slap/kick

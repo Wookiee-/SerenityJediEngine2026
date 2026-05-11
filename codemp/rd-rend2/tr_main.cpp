@@ -1781,19 +1781,20 @@ void R_AddDrawSurf(surfaceType_t* surface, int entityNum, const shader_t* shader
 {
 	int index;
 	drawSurf_t* surf;
+	const shader_t* drawShader = (shader->remappedShader) ? shader->remappedShader : shader;
 
 	if (tr.refdef.rdflags & RDF_NOFOG)
 	{
 		fogIndex = 0;
 	}
 
-	if ((shader->surfaceFlags & SURF_FORCESIGHT) && !(tr.refdef.rdflags & RDF_ForceSightOn))
+	if ((drawShader->surfaceFlags & SURF_FORCESIGHT) && !(tr.refdef.rdflags & RDF_ForceSightOn))
 	{	//if shader is only seen with ForceSight and we don't have ForceSight on, then don't draw
 		return;
 	}
 
 	if (tr.viewParms.flags & VPF_DEPTHSHADOW &&
-		(postRender == qtrue || shader->sort != SS_OPAQUE))
+		(postRender == qtrue || drawShader->sort != SS_OPAQUE))
 	{
 		return;
 	}
@@ -1805,7 +1806,7 @@ void R_AddDrawSurf(surfaceType_t* surface, int entityNum, const shader_t* shader
 	surf->surface = surface;
 
 	if (tr.viewParms.flags & VPF_DEPTHSHADOW &&
-		shader->useSimpleDepthShader == qtrue)
+		drawShader->useSimpleDepthShader == qtrue)
 	{
 		surf->sort = R_CreateSortKey(entityNum, tr.defaultShader->sortedIndex, 0, 0);
 		surf->dlightBits = 0;
@@ -1813,7 +1814,7 @@ void R_AddDrawSurf(surfaceType_t* surface, int entityNum, const shader_t* shader
 	}
 	else
 	{
-		surf->sort = R_CreateSortKey(entityNum, shader->sortedIndex, cubemap, postRender);
+		surf->sort = R_CreateSortKey(entityNum, drawShader->sortedIndex, cubemap, postRender);
 		surf->dlightBits = dlightMap;
 		surf->fogIndex = fogIndex;
 	}
