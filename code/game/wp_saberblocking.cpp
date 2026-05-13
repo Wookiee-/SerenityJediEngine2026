@@ -76,7 +76,7 @@ extern void WP_BlockPointsRegenerate(const gentity_t* self, int override_amt);
 extern saber_moveName_t PM_SaberBounceForAttack(int move);
 extern void WP_SaberDrop(const gentity_t* self, gentity_t* saber);
 extern qboolean pm_saber_innonblockable_attack(int anim);
-extern qboolean pm_saber_in_special_attack(int anim);
+extern qboolean PM_SaberInSpecialAttack(int anim);
 extern qboolean PM_SaberInKata(saber_moveName_t saberMove);
 extern void wp_saber_clear_damage_for_ent_num(gentity_t* attacker, int entityNum, int saberNum, int blade_num);
 extern cvar_t* d_slowmoaction;

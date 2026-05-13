@@ -1435,6 +1435,71 @@ void CG_AddPlayerWeapon(refEntity_t* parent, playerState_t* ps, centity_t* cent,
 	}
 }
 
+static void CG_DrawZ6TruegunsBarrel(const playerState_t* ps)
+{
+	weaponInfo_t* wi = &cg_weapons[WP_REPEATER];
+	centity_t* cent = &cg_entities[cg.predictedPlayerState.clientNum];
+
+	refEntity_t hand;
+	refEntity_t barrel;
+	vec3_t ang = { 0,0,0 };
+
+	memset(&hand, 0, sizeof(hand));
+	memset(&barrel, 0, sizeof(barrel));
+
+	CG_CalculateWeaponPosition(hand.origin, ang);
+	VectorMA(hand.origin, cg_gunX.value, cg.refdef.viewaxis[0], hand.origin);
+	VectorMA(hand.origin, cg_gunY.value, cg.refdef.viewaxis[1], hand.origin);
+	VectorMA(hand.origin, cg_gunZ.value, cg.refdef.viewaxis[2], hand.origin);
+
+	AnglesToAxis(ang, hand.axis);
+	hand.hModel = wi->handsModel;
+	hand.renderfx = RF_DEPTHHACK | RF_FIRST_PERSON;
+
+	CG_AddWeaponWithPowerups(&hand);
+
+	// spinning barrel
+	ang[ROLL] = CG_MachinegunSpinAngle(cent);
+	AnglesToAxis(ang, barrel.axis);
+
+	barrel.hModel = wi->barrelModel;
+	CG_PositionRotatedEntityOnTag(&barrel, &hand, wi->handsModel, "tag_barrel");
+
+	CG_AddWeaponWithPowerups(&barrel);
+}
+
+// Draw only the spinning barrel (for trueguns=0 case where hands are already drawn)
+static void CG_DrawZ6SpinningBarrelOnly(const playerState_t* ps)
+{
+	weaponInfo_t* wi = &cg_weapons[WP_REPEATER];
+	centity_t* cent = &cg_entities[cg.predictedPlayerState.clientNum];
+
+	refEntity_t hand;
+	refEntity_t barrel;
+	vec3_t ang = { 0,0,0 };
+
+	memset(&hand, 0, sizeof(hand));
+	memset(&barrel, 0, sizeof(barrel));
+
+	CG_CalculateWeaponPosition(hand.origin, ang);
+	VectorMA(hand.origin, cg_gunX.value, cg.refdef.viewaxis[0], hand.origin);
+	VectorMA(hand.origin, cg_gunY.value, cg.refdef.viewaxis[1], hand.origin);
+	VectorMA(hand.origin, cg_gunZ.value, cg.refdef.viewaxis[2], hand.origin);
+
+	AnglesToAxis(ang, hand.axis);
+	hand.hModel = wi->handsModel;
+	hand.renderfx = RF_DEPTHHACK | RF_FIRST_PERSON;
+
+	// spinning barrel
+	ang[ROLL] = CG_MachinegunSpinAngle(cent);
+	AnglesToAxis(ang, barrel.axis);
+
+	barrel.hModel = wi->barrelModel;
+	CG_PositionRotatedEntityOnTag(&barrel, &hand, wi->handsModel, "tag_barrel");
+
+	CG_AddWeaponWithPowerups(&barrel);
+}
+
 /*
 ==============
 CG_AddViewWeapon
@@ -1482,12 +1547,13 @@ void CG_AddViewWeapon(playerState_t* ps)
 		return;
 	}
 
-	// Hide gun if disabled or using trueguns
-	if (!cg_drawGun.integer ||
+	// Hide gun if disabled or using trueguns (but not for Z6 - we handle it specially)
+	if ((!cg_drawGun.integer ||
 		ps->zoomMode ||
 		cg_trueguns.integer ||
 		ps->weapon == WP_SABER ||
 		ps->weapon == WP_MELEE)
+		/*&& !(ps->weapon == WP_REPEATER && !cg_trueguns.integer && cg_SpinningBarrels.integer)*/)
 	{
 		if (ps->eFlags & EF_FIRING)
 		{
@@ -1634,6 +1700,12 @@ void CG_AddViewWeapon(playerState_t* ps)
 			qtrue      // left-hand
 		);
 	}
+
+	// Special case: Z6 with trueguns OFF and spinning barrels - add spinning barrel to normal md3 weapon
+	/*if (ps->weapon == WP_REPEATER && !cg_trueguns.integer && cg_SpinningBarrels.integer)
+	{
+		CG_DrawZ6SpinningBarrelOnly(ps);
+	}*/
 }
 
 /*

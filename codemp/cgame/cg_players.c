@@ -53,6 +53,7 @@ extern qboolean PM_InKataAnim(int anim);
 extern qboolean PM_StandingAtReadyAnim(int anim);
 extern qboolean PM_WalkingOrRunningAnim(int anim);
 extern qboolean pm_saber_innonblockable_attack(int anim);
+extern qboolean G_DrawSaberTrailForAnimation(int anim);
 
 #define MIN_SABERBLADE_DRAW_LENGTH 0.5f
 
@@ -12363,7 +12364,7 @@ void CG_AddSaberBlade(centity_t* cent, centity_t* scent, int renderfx, int saber
 								//ugh, need to have a real sound debouncer... or do this game-side
 								client->saber[saberNum].blade[blade_num].hitWallDebounceTime = cg.time;
 								if (PM_SaberInAttack(cent->currentState.saberMove)
-									|| pm_saber_in_special_attack(cent->currentState.torsoAnim))
+									|| PM_SaberInSpecialAttack(cent->currentState.torsoAnim))
 								{
 									trap->S_StartSound(trace.endpos, -1, CHAN_WEAPON,
 										trap->S_RegisterSound(va(
@@ -12390,17 +12391,7 @@ void CG_AddSaberBlade(centity_t* cent, centity_t* scent, int renderfx, int saber
 				VectorCopy(trace.plane.normal, client->saber[saberNum].blade[blade_num].trail.oldNormal[i]);
 			}
 			else
-			{
-				if (client->saber[saberNum].blade[blade_num].trail.haveOldPos[i])
-				{
-					// Hmmm, no impact this frame, but we have an old point
-					// Let's put the mark there, we should use an endcap mark to close the line, but we
-					//	can probably just get away with a round mark
-					//					CG_ImpactMark( cgs.media.rivetMarkShader, client->saber[saberNum].blade[blade_num].trail.oldPos[i], client->saber[saberNum].blade[blade_num].trail.oldNormal[i],
-					//							0.0f, 1.0f, 1.0f, 1.0f, 1.0f, qfalse, 1.1f, qfalse );
-				}
-
-				// we aren't impacting, so turn off our mark tracking mechanism
+			{// we aren't impacting, so turn off our mark tracking mechanism
 				client->saber[saberNum].blade[blade_num].trail.haveOldPos[i] = qfalse;
 			}
 		}
@@ -12413,19 +12404,17 @@ CheckTrail:
 		goto JustDoIt;
 	}
 
-	if (!WP_SaberBladeUseSecondBladeStyle(&client->saber[saberNum], blade_num) && client->saber[saberNum].trailStyle >
-		1
-		|| WP_SaberBladeUseSecondBladeStyle(&client->saber[saberNum], blade_num) && client->saber[saberNum].
-		trailStyle2 >
-		1)
+	if (!WP_SaberBladeUseSecondBladeStyle(&client->saber[saberNum], blade_num) &&
+		client->saber[saberNum].trailStyle > 1 ||
+		WP_SaberBladeUseSecondBladeStyle(&client->saber[saberNum], blade_num) &&
+		client->saber[saberNum].trailStyle2 > 1)
 	{
 		//don't actually draw the trail at all
 		goto JustDoIt;
 	}
 
-	//FIXME: if trailStyle is 1, use the motion blur instead
-
 	saber_trail = &client->saber[saberNum].blade[blade_num].trail;
+
 	if (cg_SFXSabers.integer == 0)
 	{
 		int trail_dur;
@@ -12433,15 +12422,13 @@ CheckTrail:
 		saber_trail->duration = saber_moveData[cent->currentState.saberMove].trailLength;
 
 		if (cent->currentState.userInt3 & 1 << FLAG_ATTACKFAKE)
-		{
-			//attack faking, have a longer saber trail
-			saber_trail->duration *= 2;
+		{//fake attacking players have longer saber trails since they're moving faster than they should be.
+			saber_trail->duration *= 2.0f;
 		}
 
 		if (cent->currentState.userInt3 & 1 << FLAG_FATIGUED)
-		{
-			//fatigued players have slightly shorter saber trails since they're moving slower.
-			saber_trail->duration *= .5;
+		{//fatigued players have shorter saber trails since they're moving slower than they should be.
+			saber_trail->duration *= 0.5f;
 		}
 
 		trail_dur = saber_trail->duration / 5.0f;
@@ -12452,7 +12439,11 @@ CheckTrail:
 			if (PM_SuperBreakWinAnim(cent->currentState.torsoAnim)
 				|| PM_InKataAnim(cent->currentState.torsoAnim))
 			{
-				trail_dur = 150;
+				trail_dur = 150.0f;
+			}
+			else if (G_DrawSaberTrailForAnimation(cent->currentState.torsoAnim))
+			{// Certain saber animations get a longer trail.
+				trail_dur = 300.0f;
 			}
 			else
 			{
@@ -12468,6 +12459,8 @@ CheckTrail:
 			{
 				if (client->saber[saberNum].type == SABER_SITH_SWORD
 					|| (PM_SuperBreakWinAnim(cent->currentState.torsoAnim)
+						|| G_DrawSaberTrailForAnimation(cent->currentState.torsoAnim)
+						|| PM_InKataAnim(cent->currentState.torsoAnim)
 						|| saber_moveData[cent->currentState.saberMove].trailLength > 0
 						|| cent->currentState.powerups & 1 << PW_SPEED && cg_speedTrail.integer
 						|| cent->currentState.saberInFlight && saberNum == 0)
@@ -12699,9 +12692,9 @@ CheckTrail:
 
 								if (PM_SaberInAttack(cent->currentState.saberMove)
 									|| PM_SuperBreakWinAnim(cent->currentState.torsoAnim)
-									|| PM_InKataAnim(cent->currentState.torsoAnim))
-								{
-									//in attack, strong trail
+									|| PM_InKataAnim(cent->currentState.torsoAnim)
+									|| G_DrawSaberTrailForAnimation(cent->currentState.torsoAnim))
+								{//in attack, strong trail
 									fx.mKillTime = 300;
 								}
 								else
@@ -18848,7 +18841,7 @@ SkipTrueView:
 		{
 			vec3_t ef_org;
 			vec3_t t_ang, fx_ang;
-			matrix3_t axis;
+			matrix3_t axis = { 0 };
 
 			VectorSet(t_ang, cent->turAngles[PITCH], cent->turAngles[YAW], cent->turAngles[ROLL]);
 

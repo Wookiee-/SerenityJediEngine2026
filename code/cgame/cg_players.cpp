@@ -39,7 +39,7 @@ constexpr auto CG_SWINGSPEED = 0.3f;
 #include <cmath>
 
 extern qboolean WP_SaberBladeUseSecondBladeStyle(const saberInfo_t* saber, int blade_num);
-extern void wp_saber_swing_sound(const gentity_t* ent, int saberNum, swingType_t swing_type);
+extern void WP_SaberSwingSound(const gentity_t* ent, int saberNum, swingType_t swing_type);
 extern qboolean PM_InKataAnim(int anim);
 extern qboolean PM_InLedgeMove(int anim);
 extern void WP_SabersDamageTrace(gentity_t* ent, qboolean no_effects);
@@ -179,7 +179,7 @@ static void CG_PlayerFootsteps(const centity_t* cent, footstepType_t foot_step_t
 static void CG_PlayerAnimEvents(int animFileIndex, qboolean torso, int old_frame, int frame, int entNum);
 extern void BG_G2SetBoneAngles(const centity_t* cent, int boneIndex, const vec3_t angles, int flags,
 	Eorientations up, Eorientations left, Eorientations forward, qhandle_t* modelList);
-extern qboolean pm_saber_in_special_attack(int anim);
+extern qboolean PM_SaberInSpecialAttack(int anim);
 extern qboolean PM_SaberInAttack(int move);
 extern qboolean PM_SaberInTransitionAny(int move);
 extern int PM_GetTurnAnim(const gentity_t* gent, int anim);
@@ -1076,7 +1076,7 @@ static void CG_PlayerAnimEventDo(centity_t* cent, animevent_t* anim_event)
 		if (cent->gent)
 		{
 			//cheat over to game side and play sound from there...
-			wp_saber_swing_sound(cent->gent, anim_event->eventData[AED_SABER_SWING_saber_num],
+			WP_SaberSwingSound(cent->gent, anim_event->eventData[AED_SABER_SWING_saber_num],
 				static_cast<swingType_t>(anim_event->eventData[AED_SABER_SWING_TYPE]));
 		}
 		break;
@@ -12646,7 +12646,7 @@ static void CG_AddSaberBladeGo(const centity_t* cent, centity_t* scent, const in
 			if (!cent->gent->client->ps.saberInFlight
 				&& !PM_SaberInAttack(cent->gent->client->ps.saberMove)
 				&& !PM_SaberInTransitionAny(cent->gent->client->ps.saberMove)
-				&& !pm_saber_in_special_attack(cent->gent->client->ps.torsoAnim))
+				&& !PM_SaberInSpecialAttack(cent->gent->client->ps.torsoAnim))
 			{
 				//idle, do no marks
 				no_marks = qtrue;
@@ -12656,7 +12656,7 @@ static void CG_AddSaberBladeGo(const centity_t* cent, centity_t* scent, const in
 		{
 			if (cent->gent->client->ps.saberInFlight
 				|| PM_SaberInAttack(cent->gent->client->ps.saberMove)
-				|| pm_saber_in_special_attack(cent->gent->client->ps.torsoAnim))
+				|| PM_SaberInSpecialAttack(cent->gent->client->ps.torsoAnim))
 			{
 				trace_mask |= CONTENTS_BODY | CONTENTS_CORPSE;
 			}
@@ -12743,7 +12743,7 @@ static void CG_AddSaberBladeGo(const centity_t* cent, centity_t* scent, const in
 											//ugh, need to have a real sound debouncer... or do this game-side
 											cent->gent->client->ps.saberHitWallSoundDebounceTime = cg.time;
 											if (PM_SaberInAttack(cent->gent->client->ps.saberMove)
-												|| pm_saber_in_special_attack(cent->gent->client->ps.torsoAnim))
+												|| PM_SaberInSpecialAttack(cent->gent->client->ps.torsoAnim))
 											{
 												cgi_S_StartSound(cent->lerpOrigin, cent->currentState.clientNum,
 													CHAN_ITEM, cgi_S_RegisterSound(
@@ -12851,13 +12851,13 @@ static void CG_AddSaberBladeGo(const centity_t* cent, centity_t* scent, const in
 			if (cent->currentState.userInt3 & 1 << FLAG_ATTACKFAKE)
 			{
 				//attack faking, have a longer saber trail
-				saber_trail->duration *= 2;
+				saber_trail->duration *= 2.0f;
 			}
 
 			if (cent->currentState.userInt3 & 1 << FLAG_FATIGUED)
 			{
 				//fatigued players have slightly shorter saber trails since they're moving slower.
-				saber_trail->duration *= .5;
+				saber_trail->duration *= 0.5f;
 			}
 
 			// if we happen to be timescaled or running in a high framerate situation, we don't want to flood

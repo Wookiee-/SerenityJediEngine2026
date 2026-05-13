@@ -697,7 +697,7 @@ static void G_InitCvars()
 
 	g_saberAutoBlocking = gi.cvar("g_saberAutoBlocking", "1", CVAR_ARCHIVE);
 	//must press +block button to do any blocking
-	g_saberRealisticCombat = gi.cvar("g_saberRealisticCombat", "1", CVAR_ARCHIVE);
+	g_saberRealisticCombat = gi.cvar("g_saberRealisticCombat", "2", CVAR_ARCHIVE);
 	//makes collision more precise, increases damage
 	g_dismemberProbabilities = gi.cvar("g_dismemberProbabilities", "1", CVAR_ARCHIVE);
 	//0 = ignore probabilities, 1 = use probabilities

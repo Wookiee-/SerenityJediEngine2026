@@ -3071,8 +3071,8 @@ static qboolean PM_CanDoDualDoubleAttacks(void)
 			return qfalse;
 		}
 	}
-	if (pm_saber_in_special_attack(pm->ps->torsoAnim) ||
-		pm_saber_in_special_attack(pm->ps->legsAnim))
+	if (PM_SaberInSpecialAttack(pm->ps->torsoAnim) ||
+		PM_SaberInSpecialAttack(pm->ps->legsAnim))
 	{
 		return qfalse;
 	}
@@ -3466,7 +3466,7 @@ static saber_moveName_t PM_SaberAttackForMovement(const saber_moveName_t curmove
 				pm->ps->velocity[2] > 100 &&
 				PM_GroundDistance() < 32 &&
 				!PM_InSpecialJump(pm->ps->legsAnim) &&
-				!pm_saber_in_special_attack(pm->ps->torsoAnim) &&
+				!PM_SaberInSpecialAttack(pm->ps->torsoAnim) &&
 				BG_EnoughForcePowerForMove(FATIGUE_JUMPATTACK, isPlayer))
 			{
 				//FLIP AND DOWNWARD ATTACK
@@ -3482,7 +3482,7 @@ static saber_moveName_t PM_SaberAttackForMovement(const saber_moveName_t curmove
 				pm->ps->velocity[2] > 100 &&
 				PM_GroundDistance() < 32 &&
 				!PM_InSpecialJump(pm->ps->legsAnim) &&
-				!pm_saber_in_special_attack(pm->ps->torsoAnim) &&
+				!PM_SaberInSpecialAttack(pm->ps->torsoAnim) &&
 				PM_Can_Do_Kill_Move())
 			{
 				//DFA
@@ -3493,7 +3493,7 @@ static saber_moveName_t PM_SaberAttackForMovement(const saber_moveName_t curmove
 			else if (pm->ps->groundEntityNum != ENTITYNUM_NONE &&
 				pm->ps->pm_flags & PMF_DUCKED &&
 				pm->ps->weaponTime <= 0 &&
-				!pm_saber_in_special_attack(pm->ps->torsoAnim) &&
+				!PM_SaberInSpecialAttack(pm->ps->torsoAnim) &&
 				PM_Can_Do_Kill_Move())
 			{
 				newmove = PM_SaberLungeAttackMove(noSpecials);
@@ -3532,7 +3532,7 @@ static saber_moveName_t PM_SaberAttackForMovement(const saber_moveName_t curmove
 				//BACKFLIP ATTACK
 				newmove = PM_SaberBackflipAttackMove();
 			}
-			else if (PM_CanBackstab() && !pm_saber_in_special_attack(pm->ps->torsoAnim))
+			else if (PM_CanBackstab() && !PM_SaberInSpecialAttack(pm->ps->torsoAnim))
 			{
 				//BACKSTAB (attack varies by level)
 				if (pm->ps->fd.saberAnimLevel >= FORCE_LEVEL_2 && pm->ps->fd.saberAnimLevel != SS_STAFF)
@@ -6327,7 +6327,7 @@ weapChecks:
 				// 5. Determine attack from movement or NPC logic
 #ifdef _GAME
 				if ((g_entities[pm->ps->clientNum].r.svFlags & SVF_BOT ||
-					pm_entSelf->s.eType == ET_NPC) && 
+					pm_entSelf->s.eType == ET_NPC) &&
 					Q_irand(0, 1))// randomly use NPC random or chain attack for knockaways
 				{
 					newmove = PM_NPCSaberAttackFromQuad(saber_moveData[curmove].endQuad);
@@ -7312,7 +7312,7 @@ void PM_SetSaberMove(saber_moveName_t new_move)
 
 			PM_SaberPerfectBlockUpdate(new_move);
 
-			if (!PM_SaberInBounce(new_move) && !PM_SaberInReturn(new_move)) //or new move isn't slow bounce move
+			if (!PM_SaberInBounce(new_move) && !PM_SaberInReturn(new_move))
 			{
 				//switched away from a slow bounce move, remove the flags.
 				pm->ps->userInt3 &= ~(1 << FLAG_SLOWBOUNCE);
@@ -7320,21 +7320,21 @@ void PM_SetSaberMove(saber_moveName_t new_move)
 				pm->ps->userInt3 &= ~(1 << FLAG_PARRIED);
 				pm->ps->userInt3 &= ~(1 << FLAG_BLOCKING);
 				pm->ps->userInt3 &= ~(1 << FLAG_BLOCKED);
-			}
-
-			if (!PM_SaberInMassiveBounce(pm->ps->torsoAnim))
-			{
-				//cancel out pre-block flag
+				//cancel out Mblock flag
 				pm->ps->userInt3 &= ~(1 << FLAG_MBLOCKBOUNCE);
 			}
 
-			if (!PM_SaberInParry(new_move))
+			if (PM_SaberInAttack(new_move) && pm->ps->saberFatigueChainCount < MISHAPLEVEL_THIRTEEN)
 			{
-				//cancel out pre-block flag
+				pm->ps->userInt3 &= ~(1 << FLAG_ATTACKFATIGUE);
+			}
+
+			if (!PM_SaberInParry(new_move))
+			{//cancel out pre-block flag
 				pm->ps->userInt3 &= ~(1 << FLAG_PREBLOCK);
 			}
 
-			if (PM_SaberInAttack(new_move) || pm_saber_in_special_attack(anim))
+			if (PM_SaberInAttack(new_move) || PM_SaberInSpecialAttack(anim))
 			{
 				if (pm->ps->saberMove != new_move)
 				{
@@ -7381,7 +7381,7 @@ void PM_SetSaberMove(saber_moveName_t new_move)
 						}
 					}
 				}
-				else if (setflags & SETANIM_FLAG_RESTART && pm_saber_in_special_attack(anim))
+				else if (setflags & SETANIM_FLAG_RESTART && PM_SaberInSpecialAttack(anim))
 				{
 					//sigh, if restarted a special, then set the weaponTime *again*
 					if (!PM_InCartwheel(pm->ps->torsoAnim))
@@ -7392,26 +7392,23 @@ void PM_SetSaberMove(saber_moveName_t new_move)
 				}
 			}
 			else if (PM_SaberInStart(new_move))
-			{
-				const int damage_delay = 150;
-				if (pm->ps->torsoTimer < damage_delay)
+			{//don't damage on the first few frames of a start anim because it may pop from one position to some drastically different one, killing the enemy without hitting them.
+				int damageDelay = 150;
+				if (pm->ps->torsoTimer < damageDelay)
 				{
-					pm->ps->torsoTimer;
+					damageDelay = pm->ps->torsoTimer;
 				}
 			}
+		}
 
-			if (PM_SaberInSpecial(new_move) &&
-				pm->ps->weaponTime < pm->ps->torsoTimer)
-			{
-				//rww 01-02-03 - I think this will solve the issue of special attacks being interrupt able, hopefully without side effects
-				pm->ps->weaponTime = pm->ps->torsoTimer;
-			}
+		if (PM_SaberInSpecial(new_move) &&
+			pm->ps->weaponTime < pm->ps->torsoTimer)
+		{ //rww 01-02-03 - I think this will solve the issue of special attacks being interruptable, hopefully without side effects
+			pm->ps->weaponTime = pm->ps->torsoTimer;
 		}
 
 		pm->ps->saberMove = new_move;
 		pm->ps->saberBlocking = saber_moveData[new_move].blocking;
-
-		pm->ps->torsoAnim = anim;
 
 		if (pm->ps->clientNum == 0)
 		{
@@ -7425,8 +7422,9 @@ void PM_SetSaberMove(saber_moveName_t new_move)
 				pm->ps->saberBlocked = BLOCKED_NONE;
 			}
 		}
-		else if (pm->ps->saberBlocked <= BLOCKED_ATK_BOUNCE || !BG_SabersOff(pm->ps) || (new_move < LS_PARRY_UR ||
-			new_move > LS_REFLECT_LL))
+		else if (pm->ps->saberBlocked <= BLOCKED_ATK_BOUNCE ||
+			!BG_SabersOff(pm->ps) ||
+			(new_move < LS_PARRY_UR || new_move > LS_REFLECT_LL))
 		{
 			//NPCs only clear blocked if not blocking?
 			pm->ps->saberBlocked = BLOCKED_NONE;
@@ -7691,7 +7689,7 @@ qboolean PM_SaberInFullDamageMove(const playerState_t* ps, const int anim_index)
 
 	if (PM_SaberInAttack(ps->saberMove)
 		|| PM_SaberInDamageMove(ps->saberMove)
-		|| pm_saber_in_special_attack(ps->torsoAnim) //jacesolaris 2019 test for idle kill
+		|| PM_SaberInSpecialAttack(ps->torsoAnim) //jacesolaris 2019 test for idle kill
 		|| PM_SaberDoDamageAnim(ps->torsoAnim)
 		&& !PM_KickMove(ps->saberMove)
 		&& !PM_InSaberLock(ps->torsoAnim)

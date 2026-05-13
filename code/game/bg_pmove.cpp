@@ -76,7 +76,7 @@ extern saber_moveName_t PM_AttackMoveForQuad(int quad);
 extern qboolean PM_SaberInTransition(int move);
 extern qboolean PM_SaberInTransitionAny(int move);
 extern qboolean PM_SaberInBounce(int move);
-extern qboolean pm_saber_in_special_attack(int anim);
+extern qboolean PM_SaberInSpecialAttack(int anim);
 extern qboolean PM_SaberInAttack(int move);
 extern qboolean PM_InAnimForsaber_move(int anim, int saberMove);
 extern saber_moveName_t PM_SaberBounceForAttack(int move);
@@ -125,7 +125,7 @@ extern qboolean G_TryingKataAttack(const usercmd_t* cmd);
 extern qboolean G_TryingCartwheel(const gentity_t* self, const usercmd_t* cmd);
 extern qboolean G_TryingJumpAttack(gentity_t* self, usercmd_t* cmd);
 extern qboolean G_TryingJumpForwardAttack(const gentity_t* self, const usercmd_t* cmd);
-extern void wp_saber_swing_sound(const gentity_t* ent, int saberNum, swingType_t swing_type);
+extern void WP_SaberSwingSound(const gentity_t* ent, int saberNum, swingType_t swing_type);
 extern qboolean WP_UseFirstValidSaberStyle(const gentity_t* ent, int* saberAnimLevel);
 extern qboolean PM_SaberInAttackPure(int move);
 qboolean PM_InKnockDown(const playerState_t* ps);
@@ -299,7 +299,7 @@ static qboolean PM_CanForceFall()
 	if (!PM_InRoll(pm->ps) // not rolling
 		&& !PM_InKnockDown(pm->ps) // not knocked down
 		&& !PM_InDeathAnim() // not dead
-		&& !pm_saber_in_special_attack(pm->ps->torsoAnim) // not doing special attack
+		&& !PM_SaberInSpecialAttack(pm->ps->torsoAnim) // not doing special attack
 		&& !PM_SaberInAttack(pm->ps->saberMove) // not attacking
 		&& !(pm->ps->pm_flags & PMF_JUMP_HELD) // have to have released jump since last press
 		&& pm->cmd.upmove > 10 // pressing the jump button
@@ -2650,7 +2650,7 @@ static qboolean pm_check_jump()
 			&& !PM_PainAnim(pm->ps->torsoAnim)
 			&& !PM_FlippingAnim(pm->ps->legsAnim)
 			&& !PM_SpinningAnim(pm->ps->legsAnim)
-			&& !pm_saber_in_special_attack(pm->ps->torsoAnim))
+			&& !PM_SaberInSpecialAttack(pm->ps->torsoAnim))
 		{
 			//HMM... do NPCs need this logic?
 			if (!PM_SaberInTransitionAny(pm->ps->saberMove) //not going to/from/between an attack anim
@@ -4107,7 +4107,7 @@ static int PM_GetLandingAnim()
 		}
 	}
 
-	if (PM_SpinningAnim(anim) || pm_saber_in_special_attack(anim))
+	if (PM_SpinningAnim(anim) || PM_SaberInSpecialAttack(anim))
 	{
 		return -1;
 	}
@@ -4294,7 +4294,7 @@ static qboolean pm_try_roll()
 {
 	constexpr float roll_dist = 192; //was 64;
 
-	if (PM_SaberInAttack(pm->ps->saberMove) || pm_saber_in_special_attack(pm->ps->torsoAnim)
+	if (PM_SaberInAttack(pm->ps->saberMove) || PM_SaberInSpecialAttack(pm->ps->torsoAnim)
 		|| PM_SpinningSaberAnim(pm->ps->legsAnim)
 		|| PM_SaberInStart(pm->ps->saberMove))
 	{
@@ -4514,7 +4514,7 @@ static qboolean PM_TryRoll_SJE()
 {
 	constexpr float roll_dist = 192; //was 64;
 
-	if (PM_SaberInAttack(pm->ps->saberMove) || pm_saber_in_special_attack(pm->ps->torsoAnim)
+	if (PM_SaberInAttack(pm->ps->saberMove) || PM_SaberInSpecialAttack(pm->ps->torsoAnim)
 		|| PM_SpinningSaberAnim(pm->ps->legsAnim)
 		|| PM_SaberInStart(pm->ps->saberMove))
 	{
@@ -8718,8 +8718,8 @@ qboolean PM_BoltBlockingAnim(const int anim)
 	case BOTH_BOLT_BLOCK_BACKHAND_BOTTOM_RIGHT:
 	case BOTH_BOLT_BLOCK_BACKHAND_MIDDLE_LEFT:
 	case BOTH_BOLT_BLOCK_BACKHAND_MIDDLE_RIGHT:
-	case BOTH_BOLT_BLOCK_BACKHAND_MIDDLE_TOP:
 	case BOTH_BOLT_BLOCK_BACKHAND_TOP_LEFT:
+	case BOTH_BOLT_BLOCK_BACKHAND_TOP_MIDDLE:
 	case BOTH_BOLT_BLOCK_BACKHAND_TOP_RIGHT:
 		//
 	case BOTH_BOLT_BLOCK_DUAL_BOTTOM_LEFT:
@@ -13734,7 +13734,7 @@ void PM_SetSaberMove(saber_moveName_t new_move)
 
 			PM_SaberPerfectBlockUpdate(new_move);
 
-			if (!PM_SaberInBounce(new_move) && !PM_SaberInReturn(new_move)) //or new move isn't slowbounce move
+			if (!PM_SaberInBounce(new_move) && !PM_SaberInReturn(new_move))
 			{
 				//switched away from a slow bounce move, remove the flags.
 				pm->ps->userInt3 &= ~(1 << FLAG_SLOWBOUNCE);
@@ -13742,29 +13742,29 @@ void PM_SetSaberMove(saber_moveName_t new_move)
 				pm->ps->userInt3 &= ~(1 << FLAG_PARRIED);
 				pm->ps->userInt3 &= ~(1 << FLAG_BLOCKING);
 				pm->ps->userInt3 &= ~(1 << FLAG_BLOCKED);
-			}
-
-			if (!PM_SaberInMassiveBounce(pm->ps->torsoAnim))
-			{
-				//cancel out pre-block flag
+				//cancel out Mblock flag
 				pm->ps->userInt3 &= ~(1 << FLAG_MBLOCKBOUNCE);
 			}
 
-			if (!PM_SaberInParry(new_move))
+			if (PM_SaberInAttack(new_move) && pm->ps->saberFatigueChainCount < MISHAPLEVEL_THIRTEEN)
 			{
-				//cancel out pre-block flag
+				pm->ps->userInt3 &= ~(1 << FLAG_ATTACKFATIGUE);
+			}
+
+			if (!PM_SaberInParry(new_move))
+			{//cancel out pre-block flag
 				pm->ps->userInt3 &= ~(1 << FLAG_PREBLOCK);
 			}
 
-			if (PM_SaberInAttack(new_move) || pm_saber_in_special_attack(anim))
+			if (PM_SaberInAttack(new_move) || PM_SaberInSpecialAttack(anim))
 			{
 				//playing an attack
 				if (pm->ps->saberMove != new_move)
 				{
 					//wasn't playing that attack before
-					if (pm_saber_in_special_attack(anim))
+					if (PM_SaberInSpecialAttack(anim))
 					{
-						wp_saber_swing_sound(pm->gent, 0, SWING_FAST);
+						WP_SaberSwingSound(pm->gent, 0, SWING_FAST);
 						if (!PM_InCartwheel(pm->ps->torsoAnim))
 						{
 							//can still attack during a cartwheel/arial
@@ -13777,22 +13777,22 @@ void PM_SetSaberMove(saber_moveName_t new_move)
 						{
 						case SS_DESANN:
 						case SS_STRONG:
-							wp_saber_swing_sound(pm->gent, 0, SWING_STRONG);
+							WP_SaberSwingSound(pm->gent, 0, SWING_STRONG);
 							break;
 						case SS_MEDIUM:
 						case SS_DUAL:
 						case SS_STAFF:
-							wp_saber_swing_sound(pm->gent, 0, SWING_MEDIUM);
+							WP_SaberSwingSound(pm->gent, 0, SWING_MEDIUM);
 							break;
 						case SS_TAVION:
 						case SS_FAST:
-							wp_saber_swing_sound(pm->gent, 0, SWING_FAST);
+							WP_SaberSwingSound(pm->gent, 0, SWING_FAST);
 							break;
 						default:;
 						}
 					}
 				}
-				else if (setflags & SETANIM_FLAG_RESTART && pm_saber_in_special_attack(anim))
+				else if (setflags & SETANIM_FLAG_RESTART && PM_SaberInSpecialAttack(anim))
 				{
 					//sigh, if restarted a special, then set the weaponTime *again*
 					if (!PM_InCartwheel(pm->ps->torsoAnim))
@@ -13803,17 +13803,16 @@ void PM_SetSaberMove(saber_moveName_t new_move)
 				}
 			}
 			else if (PM_SaberInStart(new_move))
-			{
-				//don't damage on the first few frames of a start anim because it may pop from one position to some drastically different one, killing the enemy without hitting them.
-				constexpr int damage_delay = 150;
-				if (pm->ps->torsoAnimTimer < damage_delay)
+			{//don't damage on the first few frames of a start anim because it may pop from one position to some drastically different one, killing the enemy without hitting them.
+				int damageDelay = 150;
+				if (pm->ps->torsoAnimTimer < damageDelay)
 				{
-					pm->ps->torsoAnimTimer;
+					damageDelay = pm->ps->torsoAnimTimer;
 				}
-			}
-			if (pm->ps->saberAnimLevel == SS_STRONG)
-			{
-				wp_saber_swing_sound(pm->gent, 0, SWING_FAST);
+				if (pm->ps->saberAnimLevel == SS_STRONG)
+				{
+					WP_SaberSwingSound(pm->gent, 0, SWING_FAST);
+				}
 			}
 		}
 
@@ -13884,8 +13883,9 @@ void PM_SetSaberMove(saber_moveName_t new_move)
 				pm->ps->saberBlocked = BLOCKED_NONE;
 			}
 		}
-		else if (pm->ps->saberBlocked <= BLOCKED_ATK_BOUNCE || !pm->ps->SaberActive() || (new_move < LS_PARRY_UR ||
-			new_move > LS_REFLECT_LL))
+		else if (pm->ps->saberBlocked <= BLOCKED_ATK_BOUNCE ||
+			!pm->ps->SaberActive() ||
+			(new_move < LS_PARRY_UR || new_move > LS_REFLECT_LL))
 		{
 			//NPCs only clear blocked if not blocking?
 			pm->ps->saberBlocked = BLOCKED_NONE;
@@ -21875,7 +21875,7 @@ static qboolean PM_SaberInFullDamageMove(const playerState_t* ps)
 	//The player is attacking with a saber attack that does full damage
 	if (PM_SaberInAttack(ps->saberMove)
 		|| PM_SaberInDamageMove(ps->saberMove)
-		|| pm_saber_in_special_attack(ps->torsoAnim) //jacesolaris 2019 test for idlekill
+		|| PM_SaberInSpecialAttack(ps->torsoAnim) //jacesolaris 2019 test for idlekill
 		|| PM_SaberDoDamageAnim(ps->torsoAnim)
 		&& !PM_KickMove(ps->saberMove)
 		&& !PM_InSaberLock(ps->torsoAnim)

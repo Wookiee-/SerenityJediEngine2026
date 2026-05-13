@@ -64,7 +64,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define DEFAULT_REDTEAM_NAME	"Empire"
 #define DEFAULT_BLUETEAM_NAME	"Rebellion"
 
-#define CURRENT_SJE_CLIENTVERSION		"Day-11,Month-05,Year-26,BuildNum-06" // build date
+#define CURRENT_SJE_CLIENTVERSION		"Day-13,Month-05,Year-26,BuildNum-07" // build date
 
 #define	STEPSIZE		18
 
@@ -1987,7 +1987,7 @@ qboolean PM_KickMove(int move);
 qboolean PM_SaberInIdle(int move);
 qboolean PM_FlippingAnim(int anim);
 qboolean PM_SpinningSaberAnim(int anim);
-qboolean pm_saber_in_special_attack(int anim);
+qboolean PM_SaberInSpecialAttack(int anim);
 qboolean PM_SaberInKata(saber_moveName_t saberMove);
 qboolean PM_InKataAnim(int anim);
 qboolean PM_InKataBotDashDodgeAnim(const int anim);

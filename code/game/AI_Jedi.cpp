@@ -91,7 +91,7 @@ extern void WP_KnockdownTurret(gentity_t* pas);
 extern void WP_DeactivateSaber(const gentity_t* self, qboolean clear_length = qfalse);
 extern int PM_AnimLength(const int index, const animNumber_t anim);
 extern qboolean PM_SaberInStart(int move);
-extern qboolean pm_saber_in_special_attack(int anim);
+extern qboolean PM_SaberInSpecialAttack(int anim);
 extern qboolean PM_SaberInAttack(int move);
 extern qboolean PM_SaberInBounce(int move);
 extern qboolean PM_SaberInParry(int move);
@@ -554,7 +554,7 @@ static qboolean npc_can_do_slap()
 		|| PM_InRoll(&NPC->client->ps)
 		|| PM_SuperBreakLoseAnim(NPC->client->ps.torsoAnim)
 		|| PM_SuperBreakWinAnim(NPC->client->ps.torsoAnim)
-		|| pm_saber_in_special_attack(NPC->client->ps.torsoAnim)
+		|| PM_SaberInSpecialAttack(NPC->client->ps.torsoAnim)
 		|| PM_InSpecialJump(NPC->client->ps.torsoAnim)
 		|| PM_SaberInBounce(NPC->client->ps.saberMove)
 		|| PM_SaberInKnockaway(NPC->client->ps.saberMove)
@@ -1928,7 +1928,7 @@ static void Jedi_AdjustSaberAnimLevel(const gentity_t* self, const int new_level
 		|| PM_InRoll(&self->client->ps)
 		|| PM_SuperBreakLoseAnim(self->client->ps.torsoAnim)
 		|| PM_SuperBreakWinAnim(self->client->ps.torsoAnim)
-		|| pm_saber_in_special_attack(self->client->ps.torsoAnim)
+		|| PM_SaberInSpecialAttack(self->client->ps.torsoAnim)
 		|| PM_InSpecialJump(self->client->ps.torsoAnim)
 		|| PM_SaberInBounce(self->client->ps.saberMove)
 		|| PM_SaberInKnockaway(self->client->ps.saberMove)
@@ -4315,7 +4315,7 @@ static evasionType_t jedi_check_flip_evasions(gentity_t* self, const float right
 		Q_irand(0, 1) &&
 		!PM_InRoll(&self->client->ps) &&
 		!PM_InKnockDown(&self->client->ps) &&
-		!pm_saber_in_special_attack(self->client->ps.torsoAnim) &&
+		!PM_SaberInSpecialAttack(self->client->ps.torsoAnim) &&
 		(self->NPC->rank == RANK_CREWMAN || self->NPC->rank >= RANK_LT))
 	{
 		vec3_t fwd, right, traceto;
@@ -4618,7 +4618,7 @@ qboolean Jedi_SaberBusy(const gentity_t* self)
 	if (self->client->ps.torsoAnimTimer > 300
 		&& (PM_SaberInAttack(self->client->ps.saberMove) && self->client->ps.saberAnimLevel == SS_STRONG
 			|| PM_SpinningSaberAnim(self->client->ps.torsoAnim)
-			|| pm_saber_in_special_attack(self->client->ps.torsoAnim)
+			|| PM_SaberInSpecialAttack(self->client->ps.torsoAnim)
 			|| PM_SaberInBrokenParry(self->client->ps.saberMove)
 			|| PM_FlippingAnim(self->client->ps.torsoAnim)
 			|| PM_RollingAnim(self->client->ps.torsoAnim)))
@@ -4791,7 +4791,7 @@ evasionType_t jedi_saber_block_go(gentity_t* self, usercmd_t* cmd, vec3_t p_hitl
 		return EVASION_NONE;
 	}
 	if (PM_InSpecialJump(self->client->ps.legsAnim)
-		&& pm_saber_in_special_attack(self->client->ps.torsoAnim))
+		&& PM_SaberInSpecialAttack(self->client->ps.torsoAnim))
 	{
 		return EVASION_NONE;
 	}
@@ -4875,7 +4875,7 @@ evasionType_t jedi_saber_block_go(gentity_t* self, usercmd_t* cmd, vec3_t p_hitl
 						|| (!PM_SaberInAttack(self->client->ps.saberMove) //not attacking
 							&& !PM_SaberInStart(self->client->ps.saberMove) //not starting an attack
 							&& !PM_SpinningSaberAnim(self->client->ps.torsoAnim) //not in a saber spin
-							&& !pm_saber_in_special_attack(self->client->ps.torsoAnim)))) //not in a special attack
+							&& !PM_SaberInSpecialAttack(self->client->ps.torsoAnim)))) //not in a special attack
 				{
 					//need to check all these because it overrides both torso and legs with the dodge
 					do_dodge = qtrue;
@@ -9875,7 +9875,7 @@ static qboolean NPC_CanReactToEnemy(gentity_t* NPC, gentity_t* enemy)
 	if (PM_SaberInAttack(NPC->client->ps.saberMove) ||
 		PM_SaberInStart(NPC->client->ps.saberMove) ||
 		PM_SpinningSaberAnim(NPC->client->ps.torsoAnim) ||
-		pm_saber_in_special_attack(NPC->client->ps.torsoAnim))
+		PM_SaberInSpecialAttack(NPC->client->ps.torsoAnim))
 	{
 		return qfalse;
 	}
@@ -9967,7 +9967,7 @@ Jedi_Attack
 // - usercmd_t ucmd;
 // - qboolean in_camera;
 // - TIMER_Set, TIMER_Done, Jedi_Move, Jedi_FaceEnemy, NPC_UpdateAngles
-// - ForceThrow, PM_SaberInBrokenParry, pm_saber_in_special_attack,
+// - ForceThrow, PM_SaberInBrokenParry, PM_SaberInSpecialAttack,
 //   PM_SpinningSaberAnim, PM_SaberInTransition, InFront, etc.
 
 // =====================
@@ -10738,7 +10738,7 @@ static qboolean JediShouldAttack(gentity_t* self)
 
 	// Do not override special saber states
 	if (PM_SaberInBrokenParry(self->client->ps.saberMove) ||
-		pm_saber_in_special_attack(self->client->ps.torsoAnim) ||
+		PM_SaberInSpecialAttack(self->client->ps.torsoAnim) ||
 		PM_SpinningSaberAnim(self->client->ps.torsoAnim))
 	{
 		return qfalse;

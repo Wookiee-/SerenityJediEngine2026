@@ -1634,7 +1634,7 @@ qboolean PM_SaberInKillAttack(const int anim)
 	return qfalse;
 }
 
-qboolean pm_saber_in_special_attack(const int anim)
+qboolean PM_SaberInSpecialAttack(const int anim)
 {
 	switch (anim)
 	{
