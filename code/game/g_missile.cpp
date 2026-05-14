@@ -100,6 +100,8 @@ extern void G_Knockdown(gentity_t* self, gentity_t* attacker, const vec3_t push_
 extern qboolean PM_PainAnim(int anim);
 extern qboolean PM_InKnockDown(const playerState_t* ps);
 extern qboolean PM_InKataAnim(int anim);
+extern qboolean PM_InCartwheel(int anim);
+extern int G_PickPainAnim(const gentity_t* self, const vec3_t point, int hit_loc);
 
 //-------------------------------------------------------------------------
 static void G_Missile_Bounce_Effect(const gentity_t* ent, vec3_t org, vec3_t dir, const qboolean hit_world)
@@ -1530,6 +1532,8 @@ void G_MissileImpacted(gentity_t* ent, gentity_t* other, vec3_t impact_pos, vec3
 				!PM_InKnockDown(&other->client->ps) &&
 				!WP_DoingForcedAnimationForForcePowers(other))
 			{
+				int		pain_anim = -1;
+
 				if (Q_irand(0, 3))
 				{// 75% chance to play pain anim
 					if (PM_CrouchAnim(other->client->ps.legsAnim))
@@ -1542,7 +1546,15 @@ void G_MissileImpacted(gentity_t* ent, gentity_t* other, vec3_t impact_pos, vec3
 					}
 					else
 					{
-						NPC_SetAnim(other, SETANIM_TORSO, Q_irand(BOTH_PAIN2, BOTH_PAIN3), SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+						pain_anim = G_PickPainAnim(other, impact_pos, hit_loc);
+
+						int parts = SETANIM_BOTH;
+						if (PM_CrouchAnim(other->client->ps.legsAnim) || 
+							PM_InCartwheel(other->client->ps.legsAnim))
+						{
+							parts = SETANIM_LEGS;
+						}
+						NPC_SetAnim(other, parts, pain_anim, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 						other->client->ps.torsoAnimTimer = 400;
 					}
 				}

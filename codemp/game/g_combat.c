@@ -4875,7 +4875,6 @@ void G_Dismember(const gentity_t* ent, const gentity_t* enemy, vec3_t point, con
 	trap->LinkEntity((sharedEntity_t*)limb);
 }
 
-
 void DismembermentTest(gentity_t* self)
 {
 	int sect = G2_MODELPART_HEAD;
@@ -8130,7 +8129,7 @@ qboolean g_radius_damage(vec3_t origin, gentity_t* attacker, const float damage,
 #define FATIGUE_HURTBONUS 3 //the FP bonus you get for killing another player
 #define FATIGUE_SMALLBONUS 2 //the FP bonus you get for killing another player
 
-void AddFatigueKillBonus(const gentity_t* attacker,	const gentity_t* victim,const int means_of_death)
+void AddFatigueKillBonus(const gentity_t* attacker, const gentity_t* victim, const int means_of_death)
 {
 	// Validate attacker and victim
 	if (attacker == NULL ||

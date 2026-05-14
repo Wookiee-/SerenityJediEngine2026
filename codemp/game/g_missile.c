@@ -61,7 +61,7 @@ extern float VectorDistance(vec3_t v1, vec3_t v2);
 qboolean PM_SaberInStart(int move);
 extern qboolean PM_SaberInReturn(int move);
 extern qboolean wp_saber_block_non_random_missile(gentity_t* self, vec3_t hitloc, qboolean missileBlock);
-extern int wp_saber_must_bolt_block(gentity_t* self, const gentity_t* atk, qboolean check_b_box_block, vec3_t point,int rSaberNum,int rBladeNum);
+extern int wp_saber_must_bolt_block(gentity_t* self, const gentity_t* atk, qboolean check_b_box_block, vec3_t point, int rSaberNum, int rBladeNum);
 void wp_flechette_alt_blow(gentity_t* ent);
 void wp_stasis_missile_blow(gentity_t* ent);
 extern qboolean G_DoDodge(gentity_t* self, gentity_t* shooter, vec3_t dmg_origin, int hit_loc, int* dmg, int mod);
@@ -83,7 +83,7 @@ extern qboolean WP_SaberBlockBolt(gentity_t* self, vec3_t hitloc, qboolean missi
 void wp_handle_bolt_block(gentity_t* bolt, gentity_t* blocker, trace_t* trace, vec3_t fwd);
 extern int WP_SaberBlockCost(gentity_t* defender, const gentity_t* attacker, vec3_t hit_locs);
 extern void WP_BlockPointsDrain(const gentity_t* self, int fatigue);
-extern void G_KnockOver(gentity_t* self, const gentity_t* attacker, const vec3_t push_dir, float strength,qboolean breakSaberLock);
+extern void G_KnockOver(gentity_t* self, const gentity_t* attacker, const vec3_t push_dir, float strength, qboolean breakSaberLock);
 extern float manual_running_and_saberblocking(const gentity_t* defender);
 extern qboolean WP_SaberFatiguedParryDirection(gentity_t* self, vec3_t hitloc, qboolean missileBlock);
 extern qboolean PM_CrouchAnim(const int anim);
@@ -91,6 +91,8 @@ extern void G_Knockdown(gentity_t* self, gentity_t* attacker, const vec3_t push_
 extern qboolean PM_PainAnim(int anim);
 extern qboolean PM_InKnockDown(const playerState_t* ps);
 extern qboolean PM_InKataAnim(int anim);
+extern int G_PickPainAnim(const gentity_t* self, vec3_t point, int hit_loc);
+extern qboolean PM_InCartwheel(int anim);
 
 static float vector_bolt_distance(vec3_t v1, vec3_t v2)
 {
@@ -1076,7 +1078,82 @@ static qboolean G_IsBobaDeflect(const gentity_t* ent, const gentity_t* other)
 
 	return qtrue;
 }
-extern int G_PickPainAnim(const gentity_t* self, vec3_t point, int hit_loc);
+//
+// Computes full SP‑style hit‑location for MP.
+//
+static int G_ComputeHitLocation(const gentity_t* target, const vec3_t impact_point)
+{
+	if (!target || !target->client)
+	{
+		return HL_NONE;
+	}
+
+	// Store last hit location for effects
+	VectorCopy(impact_point, target->client->ps.lastHitLoc);
+
+	//
+	// Vertical fraction of impact inside bounding box
+	//
+	float top = target->r.currentOrigin[2] + target->r.maxs[2];
+	float bottom = target->r.currentOrigin[2] + target->r.mins[2];
+	float height = top - bottom;
+
+	float frac = 0.5f;
+	if (height > 0.01f)
+	{
+		frac = (impact_point[2] - bottom) / height;
+		if (frac < 0.0f) frac = 0.0f;
+		if (frac > 1.0f) frac = 1.0f;
+	}
+
+	//
+	// Left / right (Y axis)
+	//
+	qboolean right_side = (impact_point[1] >= target->r.currentOrigin[1]) ? qtrue : qfalse;
+
+	//
+	// Front / back (X axis)
+	//
+	qboolean front_side = (impact_point[0] >= target->r.currentOrigin[0]) ? qtrue : qfalse;
+
+	//
+	// FULL HIT‑LOCATION MAPPING
+	//
+	if (frac >= 0.85f)
+	{
+		return HL_HEAD;
+	}
+	else if (frac >= 0.60f)
+	{
+		// Shoulders / upper chest / upper back
+		if (front_side == qtrue)
+		{
+			return right_side ? HL_CHEST_RT : HL_CHEST_LT;
+		}
+		else
+		{
+			return right_side ? HL_BACK_RT : HL_BACK_LT;
+		}
+	}
+	else if (frac >= 0.40f)
+	{
+		// Chest / back center
+		return front_side ? HL_CHEST : HL_BACK;
+	}
+	else if (frac >= 0.25f)
+	{
+		return HL_WAIST;
+	}
+	else if (frac >= 0.15f)
+	{
+		return right_side ? HL_LEG_RT : HL_LEG_LT;
+	}
+	else
+	{
+		return right_side ? HL_FOOT_RT : HL_FOOT_LT;
+	}
+}
+
 qboolean G_MissileImpact(gentity_t* ent, trace_t* trace)
 {
 	vec3_t   fwd;
@@ -1263,8 +1340,8 @@ qboolean G_MissileImpact(gentity_t* ent, trace_t* trace)
 	}
 
 	//
-    // Beskar / Boba Fett bounce handling
-    //
+	// Beskar / Boba Fett bounce handling
+	//
 	if ((beskar || boba_fett) &&
 		other->health > 0 &&
 		!PM_PainAnim(other->client->ps.torsoAnim) &&
@@ -1587,8 +1664,12 @@ qboolean G_MissileImpact(gentity_t* ent, trace_t* trace)
 				!PM_InKnockDown(&other->client->ps) &&
 				!WP_DoingForcedAnimationForForcePowers(other))
 			{
+				int pain_anim = -1;
+
+				// 75% chance to play pain animation
 				if (Q_irand(0, 3))
-				{// 75% chance to play pain anim
+				{
+					// Crouch = knockdown instead of pain anim
 					if (PM_CrouchAnim(other->client->ps.legsAnim))
 					{
 						vec3_t dir;
@@ -1599,7 +1680,28 @@ qboolean G_MissileImpact(gentity_t* ent, trace_t* trace)
 					}
 					else
 					{
-						G_SetAnim(other, NULL, SETANIM_TORSO, Q_irand(BOTH_PAIN2, BOTH_PAIN3), SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
+						vec3_t impact_point;
+
+						if (trace != NULL)
+						{
+							VectorCopy(trace->endpos, impact_point);
+						}
+						else
+						{
+							VectorCopy(ent->r.currentOrigin, impact_point);
+						}
+
+						int hit_loc = G_ComputeHitLocation(other, impact_point);
+
+						pain_anim = G_PickPainAnim(other, impact_point, hit_loc);
+
+						int parts = SETANIM_BOTH;
+						if (PM_CrouchAnim(other->client->ps.legsAnim) ||
+							PM_InCartwheel(other->client->ps.legsAnim))
+						{
+							parts = SETANIM_LEGS;
+						}
+						G_SetAnim(other, NULL, parts, pain_anim, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
 						other->client->ps.torsoTimer = 400;
 					}
 				}

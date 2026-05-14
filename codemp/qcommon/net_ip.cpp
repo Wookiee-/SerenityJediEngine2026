@@ -483,7 +483,7 @@ static SOCKET NET_IPSocket(char* net_interface, const int port, int* err)
 
 	Com_Printf("-----------------------------------------------------------------\n");
 	Com_Printf("---------- Genuine SerenityJediEngine-(Solaris Edition)----------\n");
-	Com_Printf("---------------------Build date 13/05/2026-----------------------\n"); // build date
+	Com_Printf("---------------------Build date 14/05/2026-----------------------\n"); // build date
 	Com_Printf("---------------------------Build 07------------------------------\n");
 	Com_Printf("-----------------------------------------------------------------\n");
 	Com_Printf("------------------------LightSaber-------------------------------\n");
