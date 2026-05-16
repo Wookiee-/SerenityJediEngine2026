@@ -1592,7 +1592,7 @@ void G2_SetRagDoll(CGhoul2Info_v& ghoul2_v, CRagDollParams* parms)
 		return;
 	default:
 #ifdef _DEBUG
-		Com_Printf("Debug: G2_SetRagDoll - Unknown RagPhase %d\n", parms->RagPhase);
+		//Com_Printf("Debug: G2_SetRagDoll - Unknown RagPhase %d\n", parms->RagPhase);
 #endif
 		return;
 	}
@@ -1881,7 +1881,7 @@ void G2_SetRagDoll(CGhoul2Info_v& ghoul2_v, CRagDollParams* parms)
 		if (!warned_missing_rag_bones)
 		{
 #ifdef _DEBUG
-			Com_Printf("WARNING: G2_SetRagDoll - model has no usable rag bones; skipping ragdoll for this model\n");
+			//Com_Printf("WARNING: G2_SetRagDoll - model has no usable rag bones; skipping ragdoll for this model\n");
 #endif
 			warned_missing_rag_bones = qtrue;
 		}
