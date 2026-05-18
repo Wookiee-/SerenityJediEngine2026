@@ -10582,8 +10582,8 @@ static void UI_BuildPlayerModel_List(const qboolean inGameLoad)
 	static const size_t DIR_LIST_SIZE = 16384;
 
 	size_t dirListSize = DIR_LIST_SIZE;
-	char stackDirList[8192];
-	int dirlen;
+	char stackDirList[8192]={0};
+	int dirlen={0};
 
 	char* dirlist = malloc(DIR_LIST_SIZE);
 	if (!dirlist)
@@ -10633,7 +10633,7 @@ static void UI_BuildPlayerModel_List(const qboolean inGameLoad)
 			char filelist[2048];
 			int iSkinParts = 0;
 
-			char* buffer = malloc(filelen + 1);
+			char* buffer = malloc(filelen + 1.0f);
 			if (!buffer)
 			{
 				trap->FS_Close(f);

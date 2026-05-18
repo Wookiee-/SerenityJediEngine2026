@@ -55,7 +55,7 @@ extern qboolean PM_InKnockDown(const playerState_t* ps);
 extern qboolean PM_InGetUp(const playerState_t* ps);
 extern void WP_SetSaber(gentity_t* ent, int saberNum, const char* saber_name);
 extern void WP_RemoveSaber(gentity_t* ent, int saberNum);
-extern void wp_saber_fall_sound(const gentity_t* owner, const gentity_t* saber);
+extern void WP_SaberFallSound(const gentity_t* owner, const gentity_t* saber);
 extern saber_colors_t TranslateSaberColor(const char* name);
 extern void WP_ForcePowerDrain(const gentity_t* self, forcePowers_t force_power, int override_amt);
 
@@ -580,7 +580,7 @@ static int Pickup_Weapon(gentity_t* ent, gentity_t* other)
 			}
 			else
 			{
-				g_create_g2_attached_weapon_model(other, weaponData[ent->item->giTag].weaponMdl, other->handRBolt, 0);
+				G_CreateG2AttachedWeaponModel(other, weaponData[ent->item->giTag].weaponMdl, other->handRBolt, 0);
 				//holster sabers
 				wp_saber_add_holstered_g2_saber_models(ent);
 			}
@@ -1820,7 +1820,7 @@ static void G_BounceItem(gentity_t* ent, trace_t* trace)
 	{
 		//a dropped saber item
 		//FIXME: use NPC_type (as saberType) to get proper bounce sound?
-		wp_saber_fall_sound(nullptr, ent);
+		WP_SaberFallSound(nullptr, ent);
 	}
 
 	// check for stop

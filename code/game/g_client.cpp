@@ -33,7 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "b_local.h"
 
 extern int wp_saber_init_blade_data(gentity_t* ent);
-extern void g_create_g2_attached_weapon_model(gentity_t* ent, const char* ps_weapon_model, int bolt_num,
+extern void G_CreateG2AttachedWeaponModel(gentity_t* ent, const char* ps_weapon_model, int bolt_num,
 	int weapon_num);
 extern void Boba_Precache();
 extern void Mando_Precache();
@@ -2286,16 +2286,16 @@ static void G_AddWeaponModels(gentity_t* ent)
 		{
 			if (ent->client->ps.weapon == WP_EMPLACED_GUN && !(ent->client->ps.eFlags & EF_LOCKED_TO_WEAPON))
 			{
-				g_create_g2_attached_weapon_model(ent, "models/map_objects/hoth/eweb_model.glm", ent->handRBolt, 0);
+				G_CreateG2AttachedWeaponModel(ent, "models/map_objects/hoth/eweb_model.glm", ent->handRBolt, 0);
 			}
 			else if (ent->client->ps.weapon == WP_DROIDEKA)
 			{
-				g_create_g2_attached_weapon_model(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt, 0);
-				g_create_g2_attached_weapon_model(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handLBolt, 1);
+				G_CreateG2AttachedWeaponModel(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt, 0);
+				G_CreateG2AttachedWeaponModel(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handLBolt, 1);
 			}
 			else
 			{
-				g_create_g2_attached_weapon_model(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt, 0);
+				G_CreateG2AttachedWeaponModel(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt, 0);
 			}
 			//holster sabers
 			wp_saber_add_holstered_g2_saber_models(ent);
@@ -2584,7 +2584,7 @@ void G_ChangePlayerModel(gentity_t* ent, const char* newModel)
 
 	if (ent->client->ps.weapon == WP_DROIDEKA && ent->client->NPC_class == CLASS_DROIDEKA)
 	{
-		g_create_g2_attached_weapon_model(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handLBolt, 1);
+		G_CreateG2AttachedWeaponModel(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handLBolt, 1);
 	}
 
 	if (ent->client->ps.groundEntityNum == ENTITYNUM_NONE && PM_InLedgeMove(ent->client->ps.legsAnim))
@@ -3295,16 +3295,16 @@ qboolean ClientSpawn(gentity_t* ent, SavedGameJustLoaded_e e_saved_game_just_loa
 		{
 			if (ent->client->ps.weapon == WP_EMPLACED_GUN && !(ent->client->ps.eFlags & EF_LOCKED_TO_WEAPON))
 			{
-				g_create_g2_attached_weapon_model(ent, "models/map_objects/hoth/eweb_model.glm", ent->handRBolt, 0);
+				G_CreateG2AttachedWeaponModel(ent, "models/map_objects/hoth/eweb_model.glm", ent->handRBolt, 0);
 			}
 			else if (ent->client->ps.weapon == WP_DROIDEKA)
 			{
-				g_create_g2_attached_weapon_model(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt, 0);
-				g_create_g2_attached_weapon_model(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handLBolt, 1);
+				G_CreateG2AttachedWeaponModel(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt, 0);
+				G_CreateG2AttachedWeaponModel(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handLBolt, 1);
 			}
 			else
 			{
-				g_create_g2_attached_weapon_model(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt, 0);
+				G_CreateG2AttachedWeaponModel(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt, 0);
 			}
 			//holster sabers
 			wp_saber_add_holstered_g2_saber_models(ent);

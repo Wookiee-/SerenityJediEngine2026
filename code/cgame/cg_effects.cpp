@@ -900,45 +900,26 @@ void CG_DrawTargetBeam(vec3_t start, vec3_t end, vec3_t norm, const char* beam_f
 	}
 }
 
-void CG_PlayEffectBolted(const char* fx_name, const int modelIndex, const int boltIndex, const int entNum,vec3_t origin,const int i_loop_time, const bool is_relative)
+void CG_PlayEffectBolted(const char* fx_name, const int modelIndex, const int boltIndex, const int entNum, vec3_t origin, const int i_loop_time, const bool is_relative)
 {
-	vec3_t axis[3] = {};
-	int boltInfo = 0;
+	vec3_t axis[3];
+	int boltInfo;
 
-	// Bounds check for bolt index to prevent out-of-bounds access
-	// Only check if entity and ghoul2 data are valid
-	if (entNum >= 0 && entNum < MAX_GENTITIES &&
-		modelIndex >= 0 &&
-		g_entities[entNum].ghoul2.size() > static_cast<size_t>(modelIndex))
-	{
-		CGhoul2Info_v& ghoul2 = g_entities[entNum].ghoul2;
-		const int maxBolts = static_cast<int>(ghoul2[modelIndex].mBltlist.size());
-
-		if (ghoul2[modelIndex].mModelindex != -1 &&
-			boltIndex >= 0 &&
-			boltIndex < maxBolts)
-		{
-			// Valid bolt index, proceed with attachment
-			gi.G2API_AttachEnt(&boltInfo, &ghoul2[modelIndex], boltIndex, entNum, modelIndex);
-			//send direcly to FX scheduler
-			theFxScheduler.PlayEffect(fx_name,
-				origin,
-				axis,
-				boltInfo,
-				-1,
-				false,
-				i_loop_time,
-				is_relative);
-			return;
-		}
-	}
-
-	// Debug output for invalid bolt indices
-	Com_Printf("CG_PlayEffectBolted: invalid bolt index %d for entity %d, model %d - playing at origin\n",
-		boltIndex, entNum, modelIndex);
-
-	// Play effect at origin as fallback (effect won't be bolted but won't crash)
-	theFxScheduler.PlayEffect(fx_name, origin, axis, -1, -1, false);
+	//pack the data into boltInfo as if we were going to send it over the network
+	gi.G2API_AttachEnt(&boltInfo,
+		&g_entities[entNum].ghoul2[modelIndex],
+		boltIndex,
+		entNum,
+		modelIndex);
+	//send direcly to FX scheduler
+	theFxScheduler.PlayEffect(fx_name,
+		origin,
+		axis,
+		boltInfo,
+		-1,
+		false,
+		i_loop_time,
+		is_relative); //iLoopTime 0 = not looping, 1 for infinite, else duration
 }
 
 void CG_PlayEffectIDBolted(const int fx_id, const int modelIndex, const int boltIndex, const int entNum,

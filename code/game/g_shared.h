@@ -917,6 +917,8 @@ public:
 	int Dash_Count;
 	gentity_t* lastSaberTarget;
 	int lastSaberTargetTime;
+	int reloadTime;
+	int painCooldownTime;
 
 	void sg_export(
 		ojk::SavedGameHelper& saved_game) const
@@ -1022,6 +1024,8 @@ public:
 		saved_game.write<int32_t>(Dash_Count);
 		saved_game.write<int32_t>(lastSaberTarget);
 		saved_game.write<int32_t>(lastSaberTargetTime);
+		saved_game.write<int32_t>(reloadTime);
+		saved_game.write<int32_t>(painCooldownTime);
 	}
 
 	void sg_import(
@@ -1128,6 +1132,8 @@ public:
 		saved_game.read<int32_t>(Dash_Count);
 		saved_game.read<int32_t>(lastSaberTarget);
 		saved_game.read<int32_t>(lastSaberTargetTime);
+		saved_game.read<int32_t>(reloadTime);
+		saved_game.read<int32_t>(painCooldownTime);
 	}
 }; // GClientBase
 
@@ -1536,6 +1542,7 @@ struct gentity_s
 
 	int reloadTime; //Every 0.2 seconds reload a bullet
 	int reloadCooldown;
+	int weaponfiredelaytime;
 	int TimeOfWeaponDrop;
 
 	int next_kick_time;
@@ -1751,6 +1758,7 @@ struct gentity_s
 
 		saved_game.write<int32_t>(reloadTime);
 		saved_game.write<int32_t>(reloadCooldown);
+		saved_game.write<int32_t>(weaponfiredelaytime);
 		saved_game.write<int32_t>(TimeOfWeaponDrop);
 
 		saved_game.write<int32_t>(next_kick_time);
@@ -1966,6 +1974,7 @@ struct gentity_s
 
 		saved_game.read<int32_t>(reloadTime);
 		saved_game.read<int32_t>(reloadCooldown);
+		saved_game.read<int32_t>(weaponfiredelaytime);
 		saved_game.read<int32_t>(TimeOfWeaponDrop);
 
 		saved_game.read<int32_t>(next_kick_time);

@@ -1440,6 +1440,11 @@ void FireWeapon(gentity_t* ent, const qboolean alt_fire)
 		return;
 	}
 
+	if (ent->weaponfiredelaytime > level.time)
+	{
+		return;
+	}
+
 	if (ent->s.weapon == WP_DROIDEKA && PM_RunningAnim(ent->client->ps.legsAnim))
 	{
 		return;

@@ -12044,7 +12044,7 @@ static void PM_FinishWeaponChange()
 			G_RemoveWeaponModels(pm->gent);
 			//holster sabers
 			wp_saber_add_holstered_g2_saber_models(pm->gent);
-			g_create_g2_attached_weapon_model(pm->gent, "models/map_objects/hoth/eweb_model.glm",
+			G_CreateG2AttachedWeaponModel(pm->gent, "models/map_objects/hoth/eweb_model.glm",
 				pm->gent->handRBolt, 0);
 		}
 
@@ -12232,12 +12232,12 @@ static void PM_FinishWeaponChange()
 			if (weaponData[weapon].weaponMdl[0])
 			{
 				//might be NONE, so check if it has a model
-				g_create_g2_attached_weapon_model(pm->gent, weaponData[weapon].weaponMdl, pm->gent->handRBolt, 0);
+				G_CreateG2AttachedWeaponModel(pm->gent, weaponData[weapon].weaponMdl, pm->gent->handRBolt, 0);
 
 				if (weapon == WP_BLASTER_PISTOL && (pm->gent && pm->gent->client && pm->gent->client->NPC_class ==
 					CLASS_MANDO))
 				{
-					g_create_g2_attached_weapon_model(pm->gent, weaponData[WP_BLASTER_PISTOL].weaponMdl,
+					G_CreateG2AttachedWeaponModel(pm->gent, weaponData[WP_BLASTER_PISTOL].weaponMdl,
 						pm->gent->handLBolt, 1);
 					pm->ps->eFlags |= EF2_DUAL_WEAPONS;
 				}
@@ -12248,7 +12248,7 @@ static void PM_FinishWeaponChange()
 
 				if (pm->gent->client->NPC_class == CLASS_DROIDEKA)
 				{
-					g_create_g2_attached_weapon_model(pm->gent, weaponData[WP_DROIDEKA].weaponMdl, pm->gent->handLBolt, 1);
+					G_CreateG2AttachedWeaponModel(pm->gent, weaponData[WP_DROIDEKA].weaponMdl, pm->gent->handLBolt, 1);
 				}
 			}
 		}
@@ -19739,7 +19739,7 @@ static void PM_Weapon()
 			if (weaponData[pm->ps->weapon].weaponMdl[0])
 			{
 				//might be NONE, so check if it has a model
-				g_create_g2_attached_weapon_model(pm->gent, weaponData[pm->ps->weapon].weaponMdl,
+				G_CreateG2AttachedWeaponModel(pm->gent, weaponData[pm->ps->weapon].weaponMdl,
 					pm->gent->handRBolt, 0);
 				//make it sound like we took another one out from... uh.. somewhere...
 				if (cg.time > 0)
@@ -19871,7 +19871,8 @@ static void PM_Weapon()
 		// ---- FIXED VEHICLE / FAIL ANIM GATE ----
 		const qboolean on_vehicle = (pm->gent && pm->gent->s.m_iVehicleNum != 0) ? qtrue : qfalse;
 
-		if (on_vehicle)
+		if (on_vehicle ||
+			pm->ps->weaponfiredelaytime > level.time)
 		{
 			// No anims if on vehicle / in fail anims
 		}

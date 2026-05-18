@@ -174,7 +174,7 @@ extern void G_Knockdown(gentity_t* self, gentity_t* attacker, const vec3_t push_
 extern void G_KnockOffVehicle(gentity_t* pRider, const gentity_t* self, qboolean bPull);
 extern qboolean PM_LockedAnim(int anim);
 extern qboolean Rosh_BeingHealed(const gentity_t* self);
-extern qboolean G_OkayToLean(const playerState_t* ps, const usercmd_t* cmd, qboolean interrupt_okay);
+extern qboolean G_OkayToLean(const playerState_t* ps, const usercmd_t* cmd, qboolean interruptOkay);
 extern qboolean PM_KickMove(int move);
 int wp_absorb_conversion(const gentity_t* attacked, int atd_abs_level, int at_power, int at_power_level,
 	int at_force_spent);
@@ -716,7 +716,7 @@ static void g_create_g2_holstered_weapon_model(gentity_t* ent, const char* ps_we
 	}
 }
 
-void g_create_g2_attached_weapon_model(gentity_t* ent, const char* ps_weapon_model, const int bolt_num,
+void G_CreateG2AttachedWeaponModel(gentity_t* ent, const char* ps_weapon_model, const int bolt_num,
 	const int weapon_num)
 {
 	if (!ps_weapon_model)
@@ -792,11 +792,17 @@ void g_create_g2_attached_weapon_model(gentity_t* ent, const char* ps_weapon_mod
 
 void WP_SaberAddG2SaberModels(gentity_t* ent, const int specific_saber_num)
 {
+	if (!ent || !ent->client)
+	{
+		return;
+	}
+
 	int saberNum = 0, max_saber = 1;
 
 	if (specific_saber_num != -1 && specific_saber_num <= max_saber)
 	{
-		saberNum = max_saber = specific_saber_num;
+		saberNum = specific_saber_num;
+		max_saber = specific_saber_num;
 	}
 	for (; saberNum <= max_saber; saberNum++)
 	{
@@ -843,16 +849,39 @@ void WP_SaberAddG2SaberModels(gentity_t* ent, const int specific_saber_num)
 				handBolt = gi.G2API_AddBolt(&ent->ghoul2[ent->playerModel], "*l_hand_cap_l_arm");
 			}
 		}
-		g_create_g2_attached_weapon_model(ent, ent->client->ps.saber[saberNum].model, handBolt, saberNum);
+
+
+		//---------------------------
+		// Create the saber model
+		//---------------------------
+		const char* saber_model = ent->client->ps.saber[saberNum].model;
+		if (!saber_model || !saber_model[0])
+		{
+			saber_model = DEFAULT_SABER_MODEL;
+			ent->client->ps.saber[saberNum].model = DEFAULT_SABER_MODEL;
+		}
+
+		G_CreateG2AttachedWeaponModel(
+			ent,
+			saber_model,
+			handBolt,
+			saberNum
+		);
 
 		if (ent->client->ps.saber[saberNum].skin != nullptr)
 		{
 			//if this saber has a customSkin, use it
 			// lets see if it's out there
 			const int saberSkin = gi.RE_RegisterSkin(ent->client->ps.saber[saberNum].skin);
-			if (saberSkin)
+
+
+			if (saberSkin > 0)
 			{
-				gi.G2API_SetSkin(&ent->ghoul2[ent->weaponModel[saberNum]], G_SkinIndex(ent->client->ps.saber[saberNum].skin), saberSkin);
+				// ⭐ Safety: only apply skin if model index is valid
+				if (ent->weaponModel[saberNum] >= 0)
+				{
+					gi.G2API_SetSkin(&ent->ghoul2[ent->weaponModel[saberNum]], G_SkinIndex(ent->client->ps.saber[saberNum].skin), saberSkin);
+				}
 			}
 		}
 	}
@@ -1494,7 +1523,7 @@ void wp_set_saber_ent_model_skin(const gentity_t* ent, gentity_t* saberent)
 	}
 }
 
-void wp_saber_fall_sound(const gentity_t* owner, const gentity_t* saber)
+void WP_SaberFallSound(const gentity_t* owner, const gentity_t* saber)
 {
 	if (!saber)
 	{
@@ -4180,6 +4209,8 @@ static qboolean G_DrawSaberTrailForAnimation(const gentity_t* self)
 	case BOTH_H7_S7_B_:
 	case BOTH_H7_S7_BR:
 
+	case BOTH_SABER_BLOCKBOLT:
+
 		// Taunts
 	case BOTH_ENGAGETAUNT:
 	case BOTH_DUAL_TAUNT:
@@ -5904,10 +5935,12 @@ qboolean WP_BrokenBoltBlockKnockBack(gentity_t* victim)
 		return qfalse;
 	}
 
-	if (victim->s.weapon == WP_SABER && victim->client->ps.SaberActive() && victim->client->ps.blockPoints <=
-		BLOCKPOINTS_TEN
-		|| victim->s.weapon == WP_SABER && victim->client->ps.SaberActive() && victim->client->ps.forcePower <=
-		BLOCKPOINTS_TEN)
+	if (victim->s.weapon == WP_SABER &&
+		victim->client->ps.SaberActive() &&
+		victim->client->ps.blockPoints <= BLOCKPOINTS_TEN ||
+		victim->s.weapon == WP_SABER &&
+		victim->client->ps.SaberActive() &&
+		victim->client->ps.forcePower <= BLOCKPOINTS_TEN)
 	{
 		//knock their asses down!!
 		G_Stagger(victim);
@@ -8382,22 +8415,42 @@ WP_SaberImpact
 */
 static void WP_SaberImpact(gentity_t* owner, gentity_t* saber, trace_t* trace)
 {
+	//===========================
+	// Safety: validate pointers
+	//===========================
+	if (!saber || !trace)
+	{
+		return;
+	}
+
+	if (!owner)
+	{
+		// Some logic below assumes owner, but if it's NULL we can still safely
+		// process bounce and saber-saber collisions that don't require owner.
+	}
+
 	gentity_t* other = &g_entities[trace->entityNum];
 
-	if (other->takedamage && other->svFlags & SVF_BBRUSH)
+	//===========================
+	// Breakable brushes
+	//===========================
+	if (other &&
+		(other->takedamage != 0) &&
+		(other->svFlags & SVF_BBRUSH))
 	{
-		//a breakable brush?  break it!
-		if (other->spawnflags & 1 //INVINCIBLE
-			|| other->flags & FL_DMG_BY_HEAVY_WEAP_ONLY) //HEAVY weapon damage only
+		// A breakable brush? Try to break it.
+		if ((other->spawnflags & 1) != 0 || // INVINCIBLE
+			(other->flags & FL_DMG_BY_HEAVY_WEAP_ONLY) != 0) // HEAVY weapon damage only
 		{
-			//can't actually break it
-			//no hit effect (besides regular client-side one)
+			// Can't actually break it → no extra effect
 		}
 		else if (other->NPC_targetname &&
-			(!owner || !owner->targetname || Q_stricmp(owner->targetname, other->NPC_targetname)))
+			(!owner ||
+				!owner->targetname ||
+				Q_stricmp(owner->targetname, other->NPC_targetname)))
 		{
-			//only breakable by an entity who is not the attacker
-			//no hit effect (besides regular client-side one)
+			// Only breakable by an entity who is not the attacker
+			// → no extra effect
 		}
 		else
 		{
@@ -8410,10 +8463,12 @@ static void WP_SaberImpact(gentity_t* owner, gentity_t* saber, trace_t* trace)
 			{
 				dmg = 20;
 			}
+
 			G_Damage(other, saber, owner, dir, trace->endpos, dmg, 0, MOD_SABER);
-			if (owner
-				&& owner->client
-				&& owner->client->ps.saber[0].hitOtherEffect)
+
+			if (owner &&
+				owner->client &&
+				owner->client->ps.saber[0].hitOtherEffect)
 			{
 				G_PlayEffect(owner->client->ps.saber[0].hitOtherEffect, trace->endpos, dir);
 			}
@@ -8421,7 +8476,8 @@ static void WP_SaberImpact(gentity_t* owner, gentity_t* saber, trace_t* trace)
 			{
 				G_PlayEffect("saber/saber_cut", trace->endpos, dir);
 			}
-			if (owner->s.number == 0)
+
+			if (owner && owner->s.number == 0)
 			{
 				AddSoundEvent(owner, trace->endpos, 256, AEL_DISCOVERED);
 				AddSightEvent(owner, trace->endpos, 512, AEL_DISCOVERED, 50);
@@ -8430,16 +8486,22 @@ static void WP_SaberImpact(gentity_t* owner, gentity_t* saber, trace_t* trace)
 		}
 	}
 
-	if (owner->s.number < MAX_CLIENTS || G_ControlledByPlayer(owner))
+	//===========================
+	// Stick saber into walls (Serenity mode, no forced return)
+	//===========================
+	if (owner &&
+		(owner->s.number < MAX_CLIENTS || G_ControlledByPlayer(owner)))
 	{
-		if (other && owner->client->ps.saberEntityState == SES_LEAVING
-			&& other->s.number == ENTITYNUM_WORLD //hit solid object.
-			&& owner->client->ps.forcePowerLevel[FP_SABERTHROW] >= FORCE_LEVEL_3)
+		if (other &&
+			owner->client &&
+			owner->client->ps.saberEntityState == SES_LEAVING &&
+			other->s.number == ENTITYNUM_WORLD && // hit solid world
+			owner->client->ps.forcePowerLevel[FP_SABERTHROW] >= FORCE_LEVEL_3)
 		{
 			// Reject floors and ceilings
 			if (trace->plane.normal[2] >= 0.8f || trace->plane.normal[2] <= -0.8f)
 			{
-				// too horizontal to stick
+				// Too horizontal to stick
 			}
 			else
 			{
@@ -8454,130 +8516,180 @@ static void WP_SaberImpact(gentity_t* owner, gentity_t* saber, trace_t* trace)
 				// Blade must be pointing INTO the wall
 				if (DotProduct(bladeDir, wallInward) > 0.35f)
 				{
-					if (g_DebugSaberCombat->integer)
+					if (g_DebugSaberCombat && g_DebugSaberCombat->integer)
 					{
-						Com_Printf("SABER IMPACT:1. Stick in wall succsess WP_thrownSaberBallistics start at %i\n", level.time);
+						Com_Printf(
+							"SABER IMPACT:1. Stick in wall succsess WP_thrownSaberBallistics start at %i\n",
+							level.time);
 					}
 					WP_thrownSaberBallistics(saber, owner, trace);
 					return;
 				}
 				else
 				{
-					if (g_DebugSaberCombat->integer)
+					if (g_DebugSaberCombat && g_DebugSaberCombat->integer)
 					{
 						Com_Printf("Missed the stick in walls just drop at %i\n", level.time);
 					}
-					//hit a wall?
+					// Hit a wall → drop
 					WP_SaberDrop(saber->owner, saber);
 				}
 			}
 		}
 	}
 
+	//===========================
+	// Saber flight: return or drop
+	//===========================
 	if (saber->s.pos.trType == TR_LINEAR)
 	{
-		//hit a wall?
-		WP_SaberDrop(saber->owner, saber);
+		if (owner &&
+			(owner->s.number < MAX_CLIENTS || G_ControlledByPlayer(owner)))
+		{
+			// Hit a wall? Drop it.
+			WP_SaberDrop(saber->owner, saber);
+		}
+		else
+		{
+			// Hit a wall? Send it back.
+			WP_SaberReturn(saber->owner, saber);
+		}
 	}
 
-	if (other && !other->client && other->contents & CONTENTS_LIGHTSABER)
+	//===========================
+	// Saber vs saber collision
+	//===========================
+	if (other &&
+		!other->client &&
+		(other->contents & CONTENTS_LIGHTSABER))
 	{
-		//2 in-flight sabers collided!
-		WP_SaberKnockSound(saber->owner, 0, 0);
+		// Two in-flight sabers collided!
+		WP_SaberBlockSound(saber->owner, 0, 0);
 		WP_SaberBlockEffect(saber->owner, 0, 0, trace->endpos, nullptr, qfalse);
+
 		qboolean no_flare = qfalse;
-		if (saber->owner
-			&& saber->owner->client
-			&& saber->owner->client->ps.saber[0].saberFlags2 & SFL2_NO_CLASH_FLARE)
+
+		if (saber->owner &&
+			saber->owner->client &&
+			(saber->owner->client->ps.saber[0].saberFlags2 & SFL2_NO_CLASH_FLARE))
 		{
 			no_flare = qtrue;
 		}
-		if (!no_flare)
+
+		if (no_flare == qfalse)
 		{
 			g_saberFlashTime = level.time - 50;
 			VectorCopy(trace->endpos, g_saberFlashPos);
 		}
 	}
 
-	if (owner && owner->s.number == 0 && owner->client)
+	//===========================
+	// Player-owned saber: AI awareness events
+	//===========================
+	if (owner && owner->client && owner->s.number == 0)
 	{
-		//Add the event
 		if (owner->client->ps.SaberLength() > 0)
 		{
-			//saber is on, very suspicious
-			if (!owner->client->ps.saberInFlight && owner->client->ps.groundEntityNum == ENTITYNUM_WORLD
-				//holding saber and on ground
-				|| saber->s.pos.trType == TR_STATIONARY) //saber out there somewhere and on ground
+			// Saber is on → very suspicious
+			const qboolean saberOnGround =
+				((owner->client->ps.saberInFlight == qfalse &&
+					owner->client->ps.groundEntityNum == ENTITYNUM_WORLD) ||
+					(saber->s.pos.trType == TR_STATIONARY)) ? qtrue : qfalse;
+
+			if (saberOnGround == qtrue)
 			{
-				//an on-ground alert
+				// On-ground alert
 				AddSoundEvent(owner, saber->currentOrigin, 128, AEL_DISCOVERED, qfalse, qtrue);
 			}
 			else
 			{
-				//an in-air alert
+				// In-air alert
 				AddSoundEvent(owner, saber->currentOrigin, 128, AEL_DISCOVERED);
 			}
+
 			AddSightEvent(owner, saber->currentOrigin, 256, AEL_DISCOVERED, 50);
 		}
 		else
 		{
-			//saber is off, not as suspicious
+			// Saber is off → less suspicious
 			AddSoundEvent(owner, saber->currentOrigin, 128, AEL_SUSPICIOUS);
 			AddSightEvent(owner, saber->currentOrigin, 256, AEL_SUSPICIOUS);
 		}
 	}
 
-	// check for bounce
-	if (!other->takedamage && saber->s.eFlags & (EF_BOUNCE | EF_BOUNCE_HALF))
+	//===========================
+	// Bounce logic
+	//===========================
+	if (other &&
+		!(other->takedamage) &&
+		(saber->s.eFlags & (EF_BOUNCE | EF_BOUNCE_HALF)))
 	{
-		// Check to see if there is a bounce count
+		// Bounce count handling
 		if (saber->bounceCount)
 		{
-			// decrement number of bounces and then see if it should be done bouncing
+			// Decrement and see if done bouncing
 			if (--saber->bounceCount <= 0)
 			{
-				// He (or she) will bounce no more (after this current bounce, that is).
 				saber->s.eFlags &= ~(EF_BOUNCE | EF_BOUNCE_HALF);
-				if (saber->s.pos.trType == TR_LINEAR && owner && owner->client && owner->client->ps.saberEntityState ==
-					SES_RETURNING)
+
+				if (saber->s.pos.trType == TR_LINEAR &&
+					owner &&
+					owner->client &&
+					owner->client->ps.saberEntityState == SES_RETURNING)
 				{
 					WP_SaberDrop(saber->owner, saber);
 				}
 				return;
 			}
-			//bounced and still have bounces left
-			if (saber->s.pos.trType == TR_LINEAR && owner && owner->client && owner->client->ps.saberEntityState ==
-				SES_RETURNING)
+
+			// Bounced and still have bounces left
+			if (saber->s.pos.trType == TR_LINEAR &&
+				owner &&
+				owner->client &&
+				owner->client->ps.saberEntityState == SES_RETURNING)
 			{
-				//under telekinetic control
+				// Under telekinetic control
 				if (!gi.inPVS(saber->currentOrigin, owner->client->renderInfo.handRPoint))
 				{
-					//not in the PVS of my master
+					// Not in the PVS of my master
 					saber->bounceCount -= 25;
 				}
 			}
 		}
 
-		if (saber->s.pos.trType == TR_LINEAR && owner && owner->client && owner->client->ps.saberEntityState == SES_RETURNING)
+		// Handle physical bounce
+		if (saber->s.pos.trType == TR_LINEAR &&
+			owner &&
+			owner->client &&
+			owner->client->ps.saberEntityState == SES_RETURNING)
 		{
-			//don't home for a few frames so we can get around this thing
+			// Don't home for a few frames so we can get around this thing
 			trace_t bounce_tr;
 			vec3_t end;
 			const float owner_dist = Distance(owner->client->renderInfo.handRPoint, saber->currentOrigin);
 
-			VectorMA(saber->currentOrigin, 10, trace->plane.normal, end);
-			gi.trace(&bounce_tr, saber->currentOrigin, saber->mins, saber->maxs, end, owner->s.number, saber->clipmask,
-				static_cast<EG2_Collision>(0), 0);
+			VectorMA(saber->currentOrigin, 10.0f, trace->plane.normal, end);
+			gi.trace(&bounce_tr,
+				saber->currentOrigin,
+				saber->mins,
+				saber->maxs,
+				end,
+				owner->s.number,
+				saber->clipmask,
+				static_cast<EG2_Collision>(0),
+				0);
+
 			VectorCopy(bounce_tr.endpos, saber->currentOrigin);
-			if (owner_dist > 0)
+
+			if (owner_dist > 0.0f)
 			{
-				if (owner_dist > 50)
+				if (owner_dist > 50.0f)
 				{
-					owner->client->ps.saberEntityDist = owner_dist - 50;
+					owner->client->ps.saberEntityDist = owner_dist - 50.0f;
 				}
 				else
 				{
-					owner->client->ps.saberEntityDist = 0;
+					owner->client->ps.saberEntityDist = 0.0f;
 				}
 			}
 			return;
@@ -8587,39 +8699,46 @@ static void WP_SaberImpact(gentity_t* owner, gentity_t* saber, trace_t* trace)
 
 		if (saber->s.pos.trType == TR_GRAVITY)
 		{
-			//bounced
-			//play a bounce sound
-			wp_saber_fall_sound(owner, saber);
-			//change rotation
+			// Bounced under gravity → play sound and spin
+			WP_SaberFallSound(owner, saber);
 			VectorCopy(saber->currentAngles, saber->s.apos.trBase);
 			saber->s.apos.trType = TR_LINEAR;
 			saber->s.apos.trTime = level.time;
-			VectorSet(saber->s.apos.trDelta, Q_irand(-300, 300), Q_irand(-300, 300), Q_irand(-300, 300));
+			VectorSet(saber->s.apos.trDelta,
+				Q_irand(-300, 300),
+				Q_irand(-300, 300),
+				Q_irand(-300, 300));
 		}
-		//see if we stopped
 		else if (saber->s.pos.trType == TR_STATIONARY)
 		{
-			//stopped
-			//play a bounce sound
-			wp_saber_fall_sound(owner, saber);
-			//stop rotation
+			// Stopped → play sound and settle on slope
+			WP_SaberFallSound(owner, saber);
 			VectorClear(saber->s.apos.trDelta);
 			pitch_roll_for_slope(saber, trace->plane.normal, saber->currentAngles);
 			saber->currentAngles[0] += SABER_PITCH_HACK;
 			VectorCopy(saber->currentAngles, saber->s.apos.trBase);
-			//remember when it fell so it can return auto-magically
-			saber->aimDebounceTime = level.time;
+			saber->aimDebounceTime = level.time; // remember when it fell
 		}
 	}
-	else if (other->client && other->health > 0
-		&& (other->NPC && other->NPC->aiFlags & NPCAI_BOSS_CHARACTER
-			|| other->client->NPC_class == CLASS_BOBAFETT
-			|| other->client->ps.powerups[PW_GALAK_SHIELD] > 0))
+	//===========================
+	// Boss / shielded targets deflect thrown sabers
+	//===========================
+	else if (other &&
+		other->client &&
+		other->health > 0 &&
+		((other->NPC &&
+			((other->NPC->aiFlags & NPCAI_BOSS_CHARACTER) ||
+				(other->NPC->aiFlags & NPCAI_BOSS_SERENITYJEDIENGINE))) ||
+			other->client->NPC_class == CLASS_BOBAFETT ||
+			other->client->ps.powerups[PW_GALAK_SHIELD] > 0))
 	{
-		//Luke, Desann and Tavion slap thrown sabers aside
+		// Boss-type characters slap thrown sabers aside
 		WP_SaberDrop(owner, saber);
 
-		if (owner && owner->client->ps.blockPoints < BLOCKPOINTS_HALF || owner->client->ps.forcePower < BLOCKPOINTS_HALF)
+		if (owner &&
+			owner->client &&
+			(owner->client->ps.blockPoints < BLOCKPOINTS_HALF ||
+				owner->client->ps.forcePower < BLOCKPOINTS_HALF))
 		{
 			WP_SaberKnockSound(owner, 0, 0);
 		}
@@ -8627,20 +8746,25 @@ static void WP_SaberImpact(gentity_t* owner, gentity_t* saber, trace_t* trace)
 		{
 			WP_SaberBlockSound(owner, 0, 0);
 		}
+
 		WP_SaberBlockEffect(owner, 0, 0, trace->endpos, nullptr, qfalse);
+
 		qboolean no_flare = qfalse;
-		if (owner
-			&& owner->client
-			&& owner->client->ps.saber[0].saberFlags2 & SFL2_NO_CLASH_FLARE)
+
+		if (owner &&
+			owner->client &&
+			(owner->client->ps.saber[0].saberFlags2 & SFL2_NO_CLASH_FLARE))
 		{
 			no_flare = qtrue;
 		}
-		if (!no_flare)
+
+		if (no_flare == qfalse)
 		{
 			g_saberFlashTime = level.time - 50;
 			VectorCopy(trace->endpos, g_saberFlashPos);
 		}
-		//FIXME: make Luke/Desann/Tavion play an attack anim or some other special anim when this happens
+
+		// Play special deflect sound/anim
 		Jedi_PlayDeflectSound(other);
 	}
 }

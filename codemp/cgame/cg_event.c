@@ -47,6 +47,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // simple de-duplication for obituary/kill prints to avoid repeated/multi-line spam
 static char cg_lastObit[1024] = "";
 static int cg_lastObitTime = 0;
+extern qboolean PM_PainAnim(int anim);
+extern qboolean PM_ReloadAnim(int anim);
 
 static void CG_SanitizeStringForPrint(const char* in, char* out, int outLen)
 {
@@ -82,7 +84,6 @@ static qboolean CG_CheckAndStoreObit(const char* san)
 	cg_lastObitTime = cg.time;
 	return qfalse;
 }
-
 
 extern qboolean WP_SaberBladeUseSecondBladeStyle(const saberInfo_t* saber, int blade_num);
 extern qboolean CG_VehicleWeaponImpact(centity_t* cent);
@@ -2907,7 +2908,10 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 		}
 		break;
 	case EV_FIRE_WEAPON:
+	{
 		DEBUGNAME("EV_FIRE_WEAPON");
+
+		// Special case: emplaced turrets (non‑NPC, non‑client entities)
 		if (cent->currentState.number >= MAX_CLIENTS && cent->currentState.eType != ET_NPC)
 		{
 			//special case for turret firing
@@ -2942,13 +2946,15 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 
 			if (cent->currentState.eventParm)
 			{
-				trap->G2API_GetBoltMatrix(cent->ghoul2, 0, cent->bolt2, &matrix, cent->currentState.angles,
-					cent->currentState.origin, cg.time, cgs.game_models, cent->modelScale);
+				trap->G2API_GetBoltMatrix(cent->ghoul2, 0, cent->bolt2, &matrix,
+					cent->currentState.angles, cent->currentState.origin,
+					cg.time, cgs.game_models, cent->modelScale);
 			}
 			else
 			{
-				trap->G2API_GetBoltMatrix(cent->ghoul2, 0, cent->bolt1, &matrix, cent->currentState.angles,
-					cent->currentState.origin, cg.time, cgs.game_models, cent->modelScale);
+				trap->G2API_GetBoltMatrix(cent->ghoul2, 0, cent->bolt1, &matrix,
+					cent->currentState.angles, cent->currentState.origin,
+					cg.time, cgs.game_models, cent->modelScale);
 			}
 
 			gunpoint[0] = matrix.matrix[0][3];
@@ -2961,9 +2967,31 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 
 			trap->FX_PlayEffectID(cgs.effects.mEmplacedMuzzleFlash, gunpoint, gunangle, -1, -1, qfalse);
 		}
+		// Normal weapons / NPCs
 		else if (cent->currentState.weapon != WP_EMPLACED_GUN || cent->currentState.eType == ET_NPC)
 		{
+			centity_t* shooter = cent;
 			int doit = 1;
+
+			// Shooter cannot fire while in reload anim
+			if (PM_ReloadAnim(shooter->currentState.torsoAnim))
+			{
+				break;
+			}
+
+			// Shooter cannot fire while in pain anim
+			if (PM_PainAnim(shooter->currentState.torsoAnim))
+			{
+				break;
+			}
+
+			// Shooter frozen (only meaningful for local client)
+			if (cg.snap &&
+				cg.snap->ps.clientNum == shooter->currentState.number &&
+				cg.snap->ps.frozenTime > cg.time)
+			{
+				break;
+			}
 
 			if (cent->currentState.eType == ET_NPC &&
 				cent->currentState.NPC_class == CLASS_VEHICLE &&
@@ -2976,16 +3004,29 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 			if (cg.snap->ps.duelInProgress)
 			{ // this client is dueling
 				if (es->number != cg.snap->ps.clientNum && es->number != cg.snap->ps.duelIndex)
-				{	// event did not origniate from one of the duelers
+				{   // event did not originate from one of the duelers
 					doit = 0;
 				}
 			}
+
 			if (doit)
 			{
+				/*if (shooter->currentState.reloadTime > 0)
+				{
+					cancel_firing(shooter);
+				}
+				else if (PM_PainAnim(shooter->currentState.torsoAnim))
+				{
+					cancel_firing(shooter);
+				}
+				else
+				{*/
 				CG_FireWeapon(cent, qfalse);
+				//}
 			}
 		}
-		break;
+	}
+	break;
 
 	case EV_ALTFIRE:
 		DEBUGNAME("EV_ALTFIRE");
@@ -3614,10 +3655,10 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 			}
 			if (doit)
 			{
-				if (cent->currentState.eventParm != cg.snap->ps.clientNum || 
-					cg.renderingThirdPerson || 
-					cg_trueguns.integer	||					
-					cg.predictedPlayerState.weapon == WP_SABER || 
+				if (cent->currentState.eventParm != cg.snap->ps.clientNum ||
+					cg.renderingThirdPerson ||
+					cg_trueguns.integer ||
+					cg.predictedPlayerState.weapon == WP_SABER ||
 					cg.predictedPlayerState.weapon == WP_MELEE)
 				{
 					//h4q3ry

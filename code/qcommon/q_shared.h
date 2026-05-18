@@ -2264,6 +2264,8 @@ public:
 	int			hackingBaseTime;
 	int         saberstuckinwalltimer;
 
+	int weaponfiredelaytime;
+
 #endif // !JK2_MODE
 
 	void sg_export(
@@ -2524,6 +2526,7 @@ public:
 		saved_game.write<int32_t>(hackingTime);
 		saved_game.write<int32_t>(hackingBaseTime);
 		saved_game.write<int32_t>(saberstuckinwalltimer);
+		saved_game.write<int32_t>(weaponfiredelaytime);
 #endif // !JK2_MODE
 	}
 
@@ -2785,6 +2788,7 @@ public:
 		saved_game.read<int32_t>(hackingTime);
 		saved_game.read<int32_t>(hackingBaseTime);
 		saved_game.read<int32_t>(saberstuckinwalltimer);
+		saved_game.read<int32_t>(weaponfiredelaytime);
 #endif // !JK2_MODE
 	}
 }; // PlayerStateBase

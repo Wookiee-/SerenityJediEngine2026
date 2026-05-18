@@ -102,6 +102,7 @@ extern qboolean PM_InKnockDown(const playerState_t* ps);
 extern qboolean PM_InKataAnim(int anim);
 extern qboolean PM_InCartwheel(int anim);
 extern int G_PickPainAnim(const gentity_t* self, const vec3_t point, int hit_loc);
+extern qboolean PM_SaberInMassiveBounce(int anim);
 
 //-------------------------------------------------------------------------
 static void G_Missile_Bounce_Effect(const gentity_t* ent, vec3_t org, vec3_t dir, const qboolean hit_world)
@@ -802,7 +803,7 @@ static void g_missile_bouncedoff_saber(gentity_t* ent, gentity_t* missile, vec3_
 }
 
 //------------------------------------------------------------------------------
-// wp_handle_bolt_block
+// WP_HandleBoltBlock
 //
 // Handles all advanced bolt/missile block behaviours:
 //  - Manual saber block → reflect toward crosshair.
@@ -813,7 +814,7 @@ static void g_missile_bouncedoff_saber(gentity_t* ent, gentity_t* missile, vec3_
 // Behaviour is preserved, but structure is cleaned up, NULL-safety added,
 // and qboolean usage is explicit and consistent.
 //------------------------------------------------------------------------------
-static void wp_handle_bolt_block(gentity_t* ent, gentity_t* missile, vec3_t forward)
+static void WP_HandleBoltBlock(gentity_t* ent, gentity_t* missile, vec3_t forward)
 {
 	if (!ent || !missile)
 	{
@@ -1530,8 +1531,15 @@ void G_MissileImpacted(gentity_t* ent, gentity_t* other, vec3_t impact_pos, vec3
 				!PM_InKataAnim(other->client->ps.legsAnim) &&
 				!PM_InKataAnim(other->client->ps.torsoAnim) &&
 				!PM_InKnockDown(&other->client->ps) &&
+				!PM_SaberInMassiveBounce(other->client->ps.torsoAnim) &&
 				!WP_DoingForcedAnimationForForcePowers(other))
 			{
+				//COOLDOWN CHECK
+				if (other->client->painCooldownTime > level.time)
+				{
+					// Still cooling down → skip pain anim
+					return;// No need to set a new cooldown, since we're skipping the anim entirely
+				}
 				int		pain_anim = -1;
 
 				if (Q_irand(0, 3))
@@ -1549,7 +1557,7 @@ void G_MissileImpacted(gentity_t* ent, gentity_t* other, vec3_t impact_pos, vec3
 						pain_anim = G_PickPainAnim(other, impact_pos, hit_loc);
 
 						int parts = SETANIM_BOTH;
-						if (PM_CrouchAnim(other->client->ps.legsAnim) || 
+						if (PM_CrouchAnim(other->client->ps.legsAnim) ||
 							PM_InCartwheel(other->client->ps.legsAnim))
 						{
 							parts = SETANIM_LEGS;
@@ -1558,6 +1566,7 @@ void G_MissileImpacted(gentity_t* ent, gentity_t* other, vec3_t impact_pos, vec3
 						other->client->ps.torsoAnimTimer = 400;
 					}
 				}
+				other->client->painCooldownTime = level.time + 2000;// 2 second cooldown on pain anims
 			}
 
 			// DEMP2 special behaviour
@@ -2083,7 +2092,7 @@ static void g_missile_impact(gentity_t* ent, trace_t* trace, const int hit_loc =
 		VectorSubtract(ent->currentOrigin, other->currentOrigin, diff);
 		VectorNormalize(diff);
 
-		wp_handle_bolt_block(other, ent, diff);
+		WP_HandleBoltBlock(other, ent, diff);
 
 		if (other->owner && !other->owner->s.number && other->owner->client)
 		{
@@ -2140,7 +2149,7 @@ static void g_missile_impact(gentity_t* ent, trace_t* trace, const int hit_loc =
 					other->owner->client->ps.weaponTime = 0;
 				}
 
-				wp_handle_bolt_block(other, ent, diff);
+				WP_HandleBoltBlock(other, ent, diff);
 
 				if (other->owner && other->owner->client)
 				{

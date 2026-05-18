@@ -287,7 +287,7 @@ constexpr auto FORCE_JUMP_CHARGE_TIME = 1000.0f; //Force jump reaches maximum po
 extern void WP_InitForcePowers(gentity_t* ent);
 extern int WP_GetVelocityForForceJump(const gentity_t* self, vec3_t jump_vel, const usercmd_t* ucmd);
 extern int wp_saber_init_blade_data(gentity_t* ent);
-extern void g_create_g2_attached_weapon_model(gentity_t* ent, const char* ps_weapon_model, int bolt_num,
+extern void G_CreateG2AttachedWeaponModel(gentity_t* ent, const char* ps_weapon_model, int bolt_num,
 	int weapon_num);
 extern void WP_SaberAddG2SaberModels(gentity_t* ent, int specific_saber_num = -1);
 extern void wp_saber_add_holstered_g2_saber_models(gentity_t* ent, int specific_saber_num = -1);

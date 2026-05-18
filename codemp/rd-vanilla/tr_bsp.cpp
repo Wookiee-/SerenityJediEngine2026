@@ -1664,11 +1664,14 @@ static void R_LoadFogs(const lump_t* l, const lump_t* brushesLump, const lump_t*
 
 		if (!shader->fogParms)
 		{//bad shader!!
-			assert(shader->fogParms);
 			out->parms.color[0] = 1.0f;
 			out->parms.color[1] = 0.0f;
 			out->parms.color[2] = 0.0f;
 			out->parms.depthForOpaque = 250.0f;
+
+#ifdef _DEBUG
+			Com_Printf("WARNING: Shader '%s' has NULL fogParms\n", shader->name);
+#endif
 		}
 		else
 		{

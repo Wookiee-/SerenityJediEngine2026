@@ -2039,7 +2039,9 @@ typedef struct entityState_s {
 	int	    communicatingflags;
 	int     frozenTime;
 	int		modelindex;		// model used
-} entityState_t;
+	int     weaponfiredelaytime;
+	int     reloadTime;
+} entityState_t;//any additions here must also be added to entityStateFields in msg.cpp and netf_overrides.txt in ext-data/ mp
 
 typedef enum {
 	CA_UNINITIALIZED,

@@ -143,8 +143,7 @@ extern float manual_npc_kick_absorbing(const gentity_t* defender);
 extern qboolean BG_FullBodyEmoteAnim(int anim);
 extern qboolean BG_FullBodyCowerAnim(int anim);
 extern cvar_t* d_slowmoaction;
-extern void G_StartStasisEffect(const gentity_t* ent, int me_flags = 0, int length = 1000, float time_scale = 0.0f,
-	int spin_time = 0);
+extern void G_StartStasisEffect(const gentity_t* ent, int me_flags = 0, int length = 1000, float time_scale = 0.0f, int spin_time = 0);
 extern qboolean IsSurrendering(const gentity_t* self);
 extern qboolean IsRespecting(const gentity_t* self);
 extern qboolean IsCowering(const gentity_t* self);
@@ -179,11 +178,12 @@ extern qboolean PM_Dyinganim(const playerState_t* ps);
 extern int IsPressingKickButton(const gentity_t* self);
 extern qboolean NPC_Should_Block(const gentity_t* npc);
 extern qboolean Manual_NPCSaberblocking(const gentity_t* defender);
+extern qboolean PM_PainAnim(int anim);
 
 static int G_FindLookItem(gentity_t* self)
 {
 	int bestEntNum = ENTITYNUM_NONE;
-	gentity_t* entity_list[MAX_GENTITIES];
+	static gentity_t* entity_list[MAX_GENTITIES];
 	vec3_t center, mins{}, maxs{}, fwdangles{}, forward;
 	constexpr float radius = 256;
 	float bestRating = 0.0f;
@@ -1837,7 +1837,7 @@ void G_MatchPlayerWeapon(gentity_t* ent)
 			}
 			else
 			{
-				g_create_g2_attached_weapon_model(ent, weaponData[new_weap].weaponMdl, ent->handRBolt, 0);
+				G_CreateG2AttachedWeaponModel(ent, weaponData[new_weap].weaponMdl, ent->handRBolt, 0);
 				//holster sabers
 				wp_saber_add_holstered_g2_saber_models(ent);
 			}
@@ -2068,7 +2068,7 @@ but any server game effects are handled here
 */
 extern void WP_SabersDamageTrace(gentity_t* ent, qboolean no_effects = qfalse);
 extern void wp_saber_update_old_blade_data(gentity_t* ent);
-
+void cancel_firing(gentity_t* ent);
 static void ClientEvents(gentity_t* ent, const int old_event_sequence)
 {
 	int event;
@@ -2095,32 +2095,60 @@ static void ClientEvents(gentity_t* ent, const int old_event_sequence)
 			break;
 
 		case EV_FIRE_WEAPON:
-			if (PM_ReloadAnim(ent->client->ps.torsoAnim))
-			{
-				return;
-			}
+		{
 #ifndef FINAL_BUILD
-			if (fired) {
-				gi.Printf("DOUBLE EV_FIRE_WEAPON AND-OR EV_ALTFIRE!!\n");
+			if (fired)
+			{
+				gi.Printf("DOUBLE EV_FIRE_WEAPON AND-OR EV_ALT_FIRE!!\n");
 			}
 			fired = qtrue;
 #endif
-			FireWeapon(ent, qfalse);
-			break;
+
+			gentity_t* shooter = ent; // ent is the shooter in ClientEvents
+
+			if (shooter->client->reloadTime > 0)
+			{
+				cancel_firing(shooter);
+			}
+			else if (PM_PainAnim(shooter->client->ps.torsoAnim))
+			{
+				// Only cancel if the SHOOTER is in pain
+				cancel_firing(shooter);
+			}
+			else
+			{
+				FireWeapon(shooter, qfalse);
+			}
+		}
+		break;
 
 		case EV_ALTFIRE:
-			if (PM_ReloadAnim(ent->client->ps.torsoAnim))
-			{
-				return;
-			}
+		{
 #ifndef FINAL_BUILD
-			if (fired) {
-				gi.Printf("DOUBLE EV_FIRE_WEAPON AND-OR EV_ALTFIRE!!\n");
+			if (fired)
+			{
+				gi.Printf("DOUBLE EV_FIRE_WEAPON AND-OR EV_ALT_FIRE!!\n");
 			}
 			fired = qtrue;
 #endif
-			FireWeapon(ent, qtrue);
-			break;
+
+			gentity_t* shooter = ent; // ent is the shooter
+
+			if (shooter->client->reloadTime > 0)
+			{
+				cancel_firing(shooter);
+			}
+			else if (PM_PainAnim(shooter->client->ps.torsoAnim))
+			{
+				// Only cancel if the SHOOTER is in pain
+				cancel_firing(shooter);
+			}
+			else
+			{
+				FireWeapon(shooter, qtrue);
+			}
+		}
+		break;
 
 		default:
 			break;
@@ -7449,6 +7477,12 @@ void CancelReload(gentity_t* ent)
 {
 	ent->reloadTime = 0;
 	ent->reloadCooldown = level.time + 500;
+}
+
+void cancel_firing(gentity_t* ent)
+{
+	ent->reloadTime = 0;
+	ent->weaponfiredelaytime = level.time + 500;
 }
 
 ////////////////////// reload

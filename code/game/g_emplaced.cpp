@@ -1076,7 +1076,7 @@ void ExitEmplacedWeapon(gentity_t* ent)
 			}
 			else
 			{
-				g_create_g2_attached_weapon_model(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt, 0);
+				G_CreateG2AttachedWeaponModel(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt, 0);
 				//holster sabers
 				wp_saber_add_holstered_g2_saber_models(ent);
 			}

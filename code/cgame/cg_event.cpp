@@ -33,9 +33,9 @@ extern qboolean CG_TryPlayCustomSound(vec3_t origin, int entityNum, soundChannel
 extern void fx_kothos_beam(vec3_t start, vec3_t end);
 extern void CG_GibPlayerHeadshot(vec3_t player_origin);
 extern void CG_GibPlayer(vec3_t player_origin);
-extern float ShortestLineSegBewteen2LineSegs(vec3_t start1, vec3_t end1, vec3_t start2, vec3_t end2, vec3_t close_pnt1,
-	vec3_t close_pnt2);
+extern float ShortestLineSegBewteen2LineSegs(vec3_t start1, vec3_t end1, vec3_t start2, vec3_t end2, vec3_t close_pnt1, vec3_t close_pnt2);
 extern void CG_StrikeBolt(const centity_t* cent, vec3_t origin);
+extern qboolean PM_PainAnim(int anim);
 
 //==========================================================================
 
@@ -322,7 +322,7 @@ An entity has an event value
 ==============
 */
 #define	DEBUGNAME(x) if(cg_debugEvents.integer){CG_Printf(x"\n");}
-
+extern void cancel_firing(gentity_t* ent);
 void CG_EntityEvent(centity_t* cent, vec3_t position)
 {
 	const char* s;
@@ -703,14 +703,54 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 		break;
 
 	case EV_FIRE_WEAPON:
+	{
 		DEBUGNAME("EV_FIRE_WEAPON");
-		CG_FireWeapon(cent, qfalse);
-		break;
+
+		gentity_t* shooter = cent->gent;
+
+		if (shooter && shooter->client)
+		{
+			if (shooter->client->reloadTime > 0)
+			{
+				cancel_firing(shooter);
+			}
+			else if (PM_PainAnim(shooter->client->ps.torsoAnim))
+			{
+				cancel_firing(shooter);
+			}
+			else
+			{
+				CG_FireWeapon(cent, qfalse);
+			}
+		}
+	}
+	break;
 
 	case EV_ALTFIRE:
-		DEBUGNAME("EV_ALTFIRE");
-		CG_FireWeapon(cent, qtrue);
-		break;
+	{
+		DEBUGNAME("EV_ALT_FIRE");
+
+		// Shooter is the entity that generated this event
+		gentity_t* shooter = cent->gent;
+
+		if (shooter && shooter->client)
+		{
+			if (shooter->client->reloadTime > 0)
+			{
+				cancel_firing(shooter);
+			}
+			else if (PM_PainAnim(shooter->client->ps.torsoAnim))
+			{
+				// Only cancel if the SHOOTER is in pain
+				cancel_firing(shooter);
+			}
+			else
+			{
+				CG_FireWeapon(cent, qtrue);
+			}
+		}
+	}
+	break;
 
 	case EV_DISRUPTOR_MAIN_SHOT:
 		DEBUGNAME("EV_DISRUPTOR_MAIN_SHOT");

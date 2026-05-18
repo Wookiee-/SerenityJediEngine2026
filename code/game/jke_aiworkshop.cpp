@@ -728,7 +728,7 @@ static void Workshop_Set_Aiflags_f(gentity_t* ent)
 extern stringID_table_t WPTable[];
 extern void ChangeWeapon(const gentity_t* ent, int new_weapon);
 extern int wp_saber_init_blade_data(gentity_t* ent);
-extern void g_create_g2_attached_weapon_model(gentity_t* ent, const char* ps_weapon_model, int bolt_num,
+extern void G_CreateG2AttachedWeaponModel(gentity_t* ent, const char* ps_weapon_model, int bolt_num,
 	int weapon_num);
 extern void WP_SaberAddG2SaberModels(gentity_t* ent, int specific_saber_num = -1);
 extern void wp_saber_add_holstered_g2_saber_models(gentity_t* ent, int specific_saber_num = -1);
@@ -771,7 +771,7 @@ static void Workshop_Set_Weapon_f(gentity_t* ent)
 	}
 	else
 	{
-		g_create_g2_attached_weapon_model(selected, weaponData[weaponNum].weaponMdl, selected->handRBolt, 0);
+		G_CreateG2AttachedWeaponModel(selected, weaponData[weaponNum].weaponMdl, selected->handRBolt, 0);
 		wp_saber_add_holstered_g2_saber_models(selected);
 	}
 }

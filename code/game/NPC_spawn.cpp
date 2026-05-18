@@ -596,7 +596,7 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 			}
 			if (ent->client->ps.weapon != WP_SABER)
 			{
-				g_create_g2_attached_weapon_model(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt,
+				G_CreateG2AttachedWeaponModel(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt,
 					0);
 			}
 		}
@@ -607,7 +607,7 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 				&& (!(ent->NPC->aiFlags & NPCAI_MATCHPLAYERWEAPON) || !ent->weaponModel[0]))
 				//they do this themselves
 			{
-				g_create_g2_attached_weapon_model(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt,
+				G_CreateG2AttachedWeaponModel(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt,
 					0);
 				wp_saber_add_holstered_g2_saber_models(ent);
 			}
@@ -633,7 +633,7 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 					//they do this themselves
 				{
 					//dual blaster pistols, so add the left-hand one, too
-					g_create_g2_attached_weapon_model(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handLBolt, 1);
+					G_CreateG2AttachedWeaponModel(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handLBolt, 1);
 				}
 				break;
 			case WP_THERMAL:
@@ -733,7 +733,7 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 			}
 			if (ent->client->ps.weapon != WP_SABER)
 			{
-				g_create_g2_attached_weapon_model(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt,
+				G_CreateG2AttachedWeaponModel(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt,
 					0);
 			}
 		}
@@ -755,7 +755,7 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 				&& (!(ent->NPC->aiFlags & NPCAI_MATCHPLAYERWEAPON) || !ent->weaponModel[0]))
 				//they do this themselves
 			{
-				g_create_g2_attached_weapon_model(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt,
+				G_CreateG2AttachedWeaponModel(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt,
 					0);
 				wp_saber_add_holstered_g2_saber_models(ent);
 			}
@@ -775,7 +775,7 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 					//they do this themselves
 				{
 					//dual blaster pistols, so add the left-hand one, too
-					g_create_g2_attached_weapon_model(ent, weaponData[ent->client->ps.weapon].weaponMdl,
+					G_CreateG2AttachedWeaponModel(ent, weaponData[ent->client->ps.weapon].weaponMdl,
 						ent->handLBolt, 1);
 				}
 				break;
@@ -785,7 +785,7 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 					//they do this themselves
 				{
 					//dual blaster pistols, so add the left-hand one, too
-					g_create_g2_attached_weapon_model(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handLBolt, 1);
+					G_CreateG2AttachedWeaponModel(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handLBolt, 1);
 				}
 				break;
 			case WP_DISRUPTOR:
@@ -896,7 +896,7 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 			&& ent->client->ps.weapon != WP_SABER //sabers done above
 			&& (!(ent->NPC->aiFlags & NPCAI_MATCHPLAYERWEAPON) || !ent->weaponModel[0])) //they do this themselves
 		{
-			g_create_g2_attached_weapon_model(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt, 0);
+			G_CreateG2AttachedWeaponModel(ent, weaponData[ent->client->ps.weapon].weaponMdl, ent->handRBolt, 0);
 			wp_saber_add_holstered_g2_saber_models(ent);
 		}
 		break;
@@ -933,7 +933,7 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 		if (!ent->weaponModel[1])
 		{
 			//we have the scepter, so put it in our left hand if we don't already have a second weapon
-			g_create_g2_attached_weapon_model(ent, weaponData[WP_SCEPTER].weaponMdl, ent->handLBolt, 1);
+			G_CreateG2AttachedWeaponModel(ent, weaponData[WP_SCEPTER].weaponMdl, ent->handLBolt, 1);
 		}
 		ent->genericBolt1 = gi.G2API_AddBolt(&ent->ghoul2[ent->weaponModel[1]], "*flash");
 	}
@@ -4655,13 +4655,20 @@ void SP_NPC_ShadowTrooper(gentity_t* self)
 {
 	if (!self->NPC_type)
 	{
-		if (!Q_irand(0, 1))
+		if (com_outcast->integer == 7) //nina version
 		{
-			self->NPC_type = "ShadowTrooper";
+			self->NPC_type = "ShadowTrooper3";
 		}
 		else
 		{
-			self->NPC_type = "ShadowTrooper2";
+			if (!Q_irand(0, 1))
+			{
+				self->NPC_type = "ShadowTrooper";
+			}
+			else
+			{
+				self->NPC_type = "ShadowTrooper2";
+			}
 		}
 	}
 	SP_NPC_spawner(self);

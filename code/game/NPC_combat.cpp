@@ -706,21 +706,21 @@ void G_SetEnemy(gentity_t* self, gentity_t* enemy)
 				ChangeWeapon(self, WP_BLASTER);
 				self->client->ps.weapon = WP_BLASTER;
 				self->client->ps.weaponstate = WEAPON_READY;
-				g_create_g2_attached_weapon_model(self, weaponData[WP_BLASTER].weaponMdl, self->handRBolt, 0);
+				G_CreateG2AttachedWeaponModel(self, weaponData[WP_BLASTER].weaponMdl, self->handRBolt, 0);
 			}
 			else if (self->client->ps.stats[STAT_WEAPONS] & 1 << WP_BLASTER_PISTOL)
 			{
 				ChangeWeapon(self, WP_BLASTER_PISTOL);
 				self->client->ps.weapon = WP_BLASTER_PISTOL;
 				self->client->ps.weaponstate = WEAPON_READY;
-				g_create_g2_attached_weapon_model(self, weaponData[WP_BLASTER_PISTOL].weaponMdl, self->handRBolt, 0);
+				G_CreateG2AttachedWeaponModel(self, weaponData[WP_BLASTER_PISTOL].weaponMdl, self->handRBolt, 0);
 			}
 			else if (self->client->ps.stats[STAT_WEAPONS] & 1 << WP_DROIDEKA)
 			{
 				ChangeWeapon(self, WP_DROIDEKA);
 				self->client->ps.weapon = WP_DROIDEKA;
 				self->client->ps.weaponstate = WEAPON_READY;
-				g_create_g2_attached_weapon_model(self, weaponData[WP_DROIDEKA].weaponMdl, self->handRBolt, 0);
+				G_CreateG2AttachedWeaponModel(self, weaponData[WP_DROIDEKA].weaponMdl, self->handRBolt, 0);
 			}
 		}
 		return;
@@ -1146,12 +1146,12 @@ void NPC_ChangeWeapon(const int new_weapon)
 		}
 		else if (NPC->client->ps.weapon == WP_DROIDEKA)
 		{
-			g_create_g2_attached_weapon_model(NPC, weaponData[NPC->client->ps.weapon].weaponMdl, NPC->handRBolt, 0);
-			g_create_g2_attached_weapon_model(NPC, weaponData[NPC->client->ps.weapon].weaponMdl, NPC->handLBolt, 1);
+			G_CreateG2AttachedWeaponModel(NPC, weaponData[NPC->client->ps.weapon].weaponMdl, NPC->handRBolt, 0);
+			G_CreateG2AttachedWeaponModel(NPC, weaponData[NPC->client->ps.weapon].weaponMdl, NPC->handLBolt, 1);
 		}
 		else
 		{
-			g_create_g2_attached_weapon_model(NPC, weaponData[NPC->client->ps.weapon].weaponMdl, NPC->handRBolt, 0);
+			G_CreateG2AttachedWeaponModel(NPC, weaponData[NPC->client->ps.weapon].weaponMdl, NPC->handRBolt, 0);
 			wp_saber_add_holstered_g2_saber_models(NPC);
 		}
 	}
@@ -1178,12 +1178,12 @@ void NPC_ChangeNPCWeapon(gentity_t* NPC, const int new_weapon)
 		}
 		else if (NPC->client->ps.weapon == WP_DROIDEKA)
 		{
-			g_create_g2_attached_weapon_model(NPC, weaponData[NPC->client->ps.weapon].weaponMdl, NPC->handRBolt, 0);
-			g_create_g2_attached_weapon_model(NPC, weaponData[NPC->client->ps.weapon].weaponMdl, NPC->handLBolt, 1);
+			G_CreateG2AttachedWeaponModel(NPC, weaponData[NPC->client->ps.weapon].weaponMdl, NPC->handRBolt, 0);
+			G_CreateG2AttachedWeaponModel(NPC, weaponData[NPC->client->ps.weapon].weaponMdl, NPC->handLBolt, 1);
 		}
 		else
 		{
-			g_create_g2_attached_weapon_model(NPC, weaponData[NPC->client->ps.weapon].weaponMdl, NPC->handRBolt, 0);
+			G_CreateG2AttachedWeaponModel(NPC, weaponData[NPC->client->ps.weapon].weaponMdl, NPC->handRBolt, 0);
 			wp_saber_add_holstered_g2_saber_models(NPC);
 		}
 	}

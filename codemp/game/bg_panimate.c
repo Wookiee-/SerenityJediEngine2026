@@ -1181,6 +1181,8 @@ qboolean G_DrawSaberTrailForAnimation(const int anim)
 	case BOTH_H7_S7_B_:
 	case BOTH_H7_S7_BR:
 
+	case BOTH_SABER_BLOCKBOLT:
+
 		// Taunts
 	case BOTH_ENGAGETAUNT:
 	case BOTH_DUAL_TAUNT:

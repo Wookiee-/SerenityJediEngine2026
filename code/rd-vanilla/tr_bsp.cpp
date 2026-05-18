@@ -1021,13 +1021,16 @@ static void R_LoadFogs(const lump_t* l, const lump_t* brushesLump, const lump_t*
 		// get information from the shader for fog parameters
 		const shader_t* shader = R_FindShader(fogs->shader, lightmaps, stylesDefault, qtrue);
 
-		assert(shader->fogParms);
 		if (!shader->fogParms)
 		{//bad shader!!
 			out->parms.color[0] = 1.0f;
 			out->parms.color[1] = 0.0f;
 			out->parms.color[2] = 0.0f;
 			out->parms.depthForOpaque = 250.0f;
+
+#ifdef _DEBUG
+			Com_Printf("WARNING: Shader '%s' has NULL fogParms\n", shader->name);
+#endif
 		}
 		else
 		{

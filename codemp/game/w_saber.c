@@ -3712,6 +3712,11 @@ int wp_saber_must_bolt_block(gentity_t* self, const gentity_t* atk, const qboole
 		return 0;
 	}
 
+	if (PM_SaberInMassiveBounce(self->client->ps.torsoAnim) || PM_SaberInBashedAnim(self->client->ps.torsoAnim))
+	{
+		return 0;
+	}
+
 	if (!(self->client->ps.ManualBlockingFlags & 1 << HOLDINGBLOCK))
 	{
 		if (self->r.svFlags & SVF_BOT)
@@ -3775,12 +3780,6 @@ int wp_saber_must_bolt_block(gentity_t* self, const gentity_t* atk, const qboole
 	if (!WalkCheck(self) && self->client->ps.fd.forcePowersActive & 1 << FP_SPEED)
 	{
 		//can't block while running in force speed.
-		return 0;
-	}
-
-	if (PM_SaberInMassiveBounce(self->client->ps.torsoAnim) || PM_SaberInBashedAnim(self->client->ps.torsoAnim))
-	{
-		// can't block in a stagger animation
 		return 0;
 	}
 
@@ -8517,7 +8516,23 @@ qboolean saberKnockOutOfHand(gentity_t* saberent, gentity_t* saber_owner, vec3_t
 	G_SetOrigin(saberent, saber_owner->client->lastSaberBase_Always); //use this as opposed to the right hand bolt,
 	//because I don't want to risk reconstructing the skel again to get it here. And it isn't worth storing.
 	WP_saberKnockDown(saberent, saber_owner, saber_owner);
+	saber_owner->client->ps.ManualBlockingFlags &= ~(1 << HOLDINGBLOCK);
+	saber_owner->client->ps.ManualBlockingFlags &= ~(1 << HOLDINGBLOCKANDATTACK);
+	saber_owner->client->ps.ManualBlockingFlags &= ~(1 << PERFECTBLOCKING);
+	saber_owner->client->ps.ManualBlockingFlags &= ~(1 << MBF_BLOCKWALKING);
+	saber_owner->client->ps.userInt3 &= ~(1 << FLAG_BLOCKING);
+	saber_owner->client->ps.ManualBlockingTime = 0; //Blocking time 1 on
+	saber_owner->client->ps.ManualMBlockingTime = 0;
 	VectorCopy(velocity, saberent->s.pos.trDelta); //override the velocity on the knocked away saber.
+
+	//don't pull it back on the next frame
+	if (saber_owner->client && level.time - saber_owner->client->saberKnockedTime <= MAX_LEAVE_TIME)
+	{
+		saber_owner->client->pers.cmd.buttons &= ~BUTTON_ATTACK;
+	}
+
+	WP_BlockPointsRegenerate(saber_owner, BLOCKPOINTS_FATIGUE); //BP Reward blocker
+
 
 	return qtrue;
 }
