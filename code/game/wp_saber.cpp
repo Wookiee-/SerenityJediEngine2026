@@ -850,7 +850,6 @@ void WP_SaberAddG2SaberModels(gentity_t* ent, const int specific_saber_num)
 			}
 		}
 
-
 		//---------------------------
 		// Create the saber model
 		//---------------------------
@@ -873,7 +872,6 @@ void WP_SaberAddG2SaberModels(gentity_t* ent, const int specific_saber_num)
 			//if this saber has a customSkin, use it
 			// lets see if it's out there
 			const int saberSkin = gi.RE_RegisterSkin(ent->client->ps.saber[saberNum].skin);
-
 
 			if (saberSkin > 0)
 			{

@@ -260,5 +260,6 @@ XCVAR_DEF(cg_oversizedview, "110", NULL, CVAR_ARCHIVE)
 XCVAR_DEF(cg_undersizedview, "60", NULL, CVAR_ARCHIVE)
 XCVAR_DEF(com_rend2, "0", NULL, CVAR_ARCHIVE)
 XCVAR_DEF(cg_textprintscale, "0.5f", NULL, CVAR_ARCHIVE)
+XCVAR_DEF(g_noIgniteTwirl, "0", NULL, CVAR_ARCHIVE)
 
 #undef XCVAR_DEF

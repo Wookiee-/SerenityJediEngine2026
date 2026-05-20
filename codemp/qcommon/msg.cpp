@@ -2523,7 +2523,6 @@ void MSG_CheckNETFPSFOverrides(const qboolean psfOverrides)
 	}
 }
 
-
 //MAKE SURE THIS MATCHES THE ENUM IN BG_PUBLIC.H!!!
 //This is in caps, because it is important.
 #define STAT_WEAPONS 4

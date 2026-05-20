@@ -1313,7 +1313,6 @@ void NPC_Begin(gentity_t* ent)
 	}
 	else if (ent->NPC->stats.health) // Was health supplied in NPC.cfg?
 	{
-
 		// Affect all NPCs - 75% on easy, 100% on medium, 125% on hard
 		ent->NPC->stats.health = ceil(static_cast<float>(ent->NPC->stats.health) * 0.75f + static_cast<float>(ent->NPC->stats.health) / 4.0f * g_spskill->value);
 

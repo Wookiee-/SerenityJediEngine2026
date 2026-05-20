@@ -8533,7 +8533,6 @@ qboolean saberKnockOutOfHand(gentity_t* saberent, gentity_t* saber_owner, vec3_t
 
 	WP_BlockPointsRegenerate(saber_owner, BLOCKPOINTS_FATIGUE); //BP Reward blocker
 
-
 	return qtrue;
 }
 

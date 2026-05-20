@@ -3834,11 +3834,11 @@ void Cmd_SaberAttackCycle_f(gentity_t* ent)
 			{
 				if (select_level == SS_DUAL)
 				{
-					G_SetAnim(ent, &ent->client->pers.cmd, SETANIM_TORSO, BOTH_STAND2TO1, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
+					G_SetAnim(ent, &ent->client->pers.cmd, SETANIM_TORSO, BOTH_GRIEVOUS_SABERON, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
 				}
 				else if (select_level == SS_STAFF)
 				{
-					G_SetAnim(ent, &ent->client->pers.cmd, SETANIM_TORSO, BOTH_STAND2TO1, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
+					G_SetAnim(ent, &ent->client->pers.cmd, SETANIM_TORSO, BOTH_SABER_BACKHAND_IGNITION, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
 				}
 				else
 				{

@@ -682,7 +682,7 @@ void G_SetEnemy(gentity_t* self, gentity_t* enemy)
 		if (Q_stricmp("STCommander", self->NPC_type) != 0 &&
 			Q_stricmp("ImpCommander", self->NPC_type) != 0)
 		{
-			if (self->client &&                      
+			if (self->client &&
 				!(self->client->ps.eFlags & EF_FORCE_GRIPPED) &&
 				!(self->client->ps.eFlags & EF_FORCE_GRABBED))
 			{
@@ -1444,7 +1444,6 @@ void WeaponThink()
 	ucmd.weapon = ps->weapon;
 	ShootThink();
 }
-
 
 /*
 HaveWeapon

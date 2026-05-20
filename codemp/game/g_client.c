@@ -6612,7 +6612,6 @@ static void ClassAmmoSetup(gentity_t* ent)
 	}
 }
 
-
 static void ClassItemHealthSetup(gentity_t* ent)
 {
 	if (!ent || !ent->client)

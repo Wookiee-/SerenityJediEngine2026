@@ -841,33 +841,48 @@ static void sentryExpire(gentity_t* self)
 }
 
 //---------------------------------
-void pas_think(gentity_t* ent)
+// Turret think function (PAS turret)
 //---------------------------------
+void pas_think(gentity_t* ent)
 {
-	vec3_t frontAngles, backAngles;
-	int iEntityList[MAX_GENTITIES];
+	// NOTE: MAX_GENTITIES is large; using static storage avoids huge stack usage.
+	static int iEntityList[MAX_GENTITIES];
+
+	vec3_t frontAngles;
+	vec3_t backAngles;
+	vec3_t testMins = { 0, 0, 0 };
+	vec3_t testMaxs = { 0, 0, 0 };
+
 	int i = 0;
 	qboolean clTrapped = qfalse;
-	vec3_t testMins = { 0 }, testMaxs = { 0 };
+	int num_listed_entities;
 
-	testMins[0] = ent->r.currentOrigin[0] + ent->r.mins[0] + 4;
-	testMins[1] = ent->r.currentOrigin[1] + ent->r.mins[1] + 4;
-	testMins[2] = ent->r.currentOrigin[2] + ent->r.mins[2] + 4;
+	// ---------------------------------------------------------
+	// BUILD TEST BOUNDS AROUND THE TURRET
+	// ---------------------------------------------------------
+	testMins[0] = ent->r.currentOrigin[0] + ent->r.mins[0] + 4.0f;
+	testMins[1] = ent->r.currentOrigin[1] + ent->r.mins[1] + 4.0f;
+	testMins[2] = ent->r.currentOrigin[2] + ent->r.mins[2] + 4.0f;
 
-	testMaxs[0] = ent->r.currentOrigin[0] + ent->r.maxs[0] - 4;
-	testMaxs[1] = ent->r.currentOrigin[1] + ent->r.maxs[1] - 4;
-	testMaxs[2] = ent->r.currentOrigin[2] + ent->r.maxs[2] - 4;
+	testMaxs[0] = ent->r.currentOrigin[0] + ent->r.maxs[0] - 4.0f;
+	testMaxs[1] = ent->r.currentOrigin[1] + ent->r.maxs[1] - 4.0f;
+	testMaxs[2] = ent->r.currentOrigin[2] + ent->r.maxs[2] - 4.0f;
 
-	int num_listed_entities = trap->EntitiesInBox(testMins, testMaxs, iEntityList, MAX_GENTITIES);
+	// Find entities inside the turret bounds
+	num_listed_entities = trap->EntitiesInBox(testMins, testMaxs, iEntityList, MAX_GENTITIES);
 
+	// ---------------------------------------------------------
+	// CHECK IF A CLIENT IS TRAPPED INSIDE THE TURRET
+	// ---------------------------------------------------------
 	while (i < num_listed_entities)
 	{
 		if (iEntityList[i] < MAX_CLIENTS)
 		{
-			//client stuck inside me. go nonsolid.
+			// Client stuck inside me: go nonsolid.
 			const int clNum = iEntityList[i];
 
-			num_listed_entities = trap->EntitiesInBox(g_entities[clNum].r.absmin, g_entities[clNum].r.absmax,
+			num_listed_entities = trap->EntitiesInBox(g_entities[clNum].r.absmin,
+				g_entities[clNum].r.absmax,
 				iEntityList,
 				MAX_GENTITIES);
 
@@ -889,23 +904,32 @@ void pas_think(gentity_t* ent)
 
 	if (clTrapped)
 	{
+		// Make turret nonsolid while a client is trapped inside
 		ent->r.contents = 0;
 		ent->s.fireflag = 0;
 		ent->nextthink = level.time + FRAMETIME;
 		return;
 	}
+
+	// No client trapped: turret is solid
 	ent->r.contents = CONTENTS_SOLID;
 
-	if (!g_entities[ent->genericValue3].inuse || !g_entities[ent->genericValue3].client ||
-		g_entities[ent->genericValue3].client->sess.sessionTeam != ent->genericValue2)
+	// ---------------------------------------------------------
+	// OWNER / TEAM VALIDATION
+	// ---------------------------------------------------------
+	if (!g_entities[ent->genericValue3].inuse
+		|| !g_entities[ent->genericValue3].client
+		|| g_entities[ent->genericValue3].client->sess.sessionTeam != ent->genericValue2)
 	{
+		// Owner invalid or wrong team: remove turret
 		ent->think = G_FreeEntity;
 		ent->nextthink = level.time;
 		return;
 	}
 
-	//	G_RunObject(ent);
-
+	// ---------------------------------------------------------
+	// INITIAL DAMAGE FLAG SETUP
+	// ---------------------------------------------------------
 	if (!ent->damage)
 	{
 		ent->damage = 1;
@@ -913,6 +937,9 @@ void pas_think(gentity_t* ent)
 		return;
 	}
 
+	// ---------------------------------------------------------
+	// LIFETIME CHECK
+	// ---------------------------------------------------------
 	if (ent->genericValue8 + TURRET_LIFETIME < level.time)
 	{
 		G_Sound(ent, CHAN_BODY, G_SoundIndex("sound/chars/turret/shutdown.wav"));
@@ -924,11 +951,15 @@ void pas_think(gentity_t* ent)
 		return;
 	}
 
+	// Default next think
 	ent->nextthink = level.time + FRAMETIME;
 
+	// ---------------------------------------------------------
+	// ENEMY VALIDATION / ACQUISITION
+	// ---------------------------------------------------------
 	if (ent->enemy)
 	{
-		// make sure that the enemy is still valid
+		// Make sure that the enemy is still valid
 		pas_adjust_enemy(ent);
 	}
 
@@ -962,6 +993,9 @@ void pas_think(gentity_t* ent)
 		ent->s.bolt2 = ENTITYNUM_NONE;
 	}
 
+	// ---------------------------------------------------------
+	// AIM / ROTATION LOGIC
+	// ---------------------------------------------------------
 	qboolean moved = qfalse;
 	float diff_yaw;
 	float diffPitch = 0.0f;
@@ -974,7 +1008,7 @@ void pas_think(gentity_t* ent)
 		vec3_t desiredAngles;
 		vec3_t org;
 		vec3_t enemyDir;
-		// ...then we'll calculate what new aim adjustments we should attempt to make this frame
+
 		// Aim at enemy
 		if (ent->enemy->client)
 		{
@@ -993,49 +1027,50 @@ void pas_think(gentity_t* ent)
 	}
 	else
 	{
-		// no enemy, so make us slowly sweep back and forth as if searching for a new one
-		diff_yaw = sin(level.time * 0.0001f + ent->count) * 2.0f;
+		// No enemy: sweep back and forth as if searching
+		diff_yaw = sinf(level.time * 0.0001f + ent->count) * 2.0f;
 	}
 
-	if (fabs(diff_yaw) > 0.25f)
+	if (fabsf(diff_yaw) > 0.25f)
 	{
 		moved = qtrue;
 
-		if (fabs(diff_yaw) > 10.0f)
+		if (fabsf(diff_yaw) > 10.0f)
 		{
-			// cap max speed
-			ent->speed += diff_yaw > 0.0f ? -10.0f : 10.0f;
+			// Cap max yaw speed
+			ent->speed += (diff_yaw > 0.0f) ? -10.0f : 10.0f;
 		}
 		else
 		{
-			// small enough
+			// Small enough: directly correct
 			ent->speed -= diff_yaw;
 		}
 	}
 
-	if (fabs(diffPitch) > 0.25f)
+	if (fabsf(diffPitch) > 0.25f)
 	{
 		moved = qtrue;
 
-		if (fabs(diffPitch) > 4.0f)
+		if (fabsf(diffPitch) > 4.0f)
 		{
-			// cap max speed
-			ent->random += diffPitch > 0.0f ? -4.0f : 4.0f;
+			// Cap max pitch speed
+			ent->random += (diffPitch > 0.0f) ? -4.0f : 4.0f;
 		}
 		else
 		{
-			// small enough
+			// Small enough: directly correct
 			ent->random -= diffPitch;
 		}
 	}
 
-	// the bone axes are messed up, so hence some dumbness here
+	// The bone axes are messed up, so hence some dumbness here
 	VectorSet(frontAngles, -ent->random, 0.0f, 0.0f);
 	VectorSet(backAngles, 0.0f, 0.0f, ent->speed);
 
 	if (moved)
 	{
-		//ent->s.loopSound = G_SoundIndex( "sound/chars/turret/move.wav" );
+		// Optional: play movement sound if desired
+		// ent->s.loopSound = G_SoundIndex("sound/chars/turret/move.wav");
 	}
 	else
 	{
@@ -1043,6 +1078,9 @@ void pas_think(gentity_t* ent)
 		ent->s.loopIsSoundset = qfalse;
 	}
 
+	// ---------------------------------------------------------
+	// FIRING LOGIC / LIFETIME COUNTDOWN
+	// ---------------------------------------------------------
 	if (ent->enemy && ent->attackDebounceTime < level.time)
 	{
 		ent->count--;
@@ -1055,7 +1093,6 @@ void pas_think(gentity_t* ent)
 		}
 		else
 		{
-			//ent->nextthink = 0;
 			G_Sound(ent, CHAN_BODY, G_SoundIndex("sound/chars/turret/shutdown.wav"));
 			ent->s.bolt2 = ENTITYNUM_NONE;
 			ent->s.fireflag = 2;
@@ -3038,26 +3075,68 @@ static int Pickup_Armor(const gentity_t* ent, const gentity_t* other)
 ===============
 RespawnItem
 ===============
-*/
-void RespawnItem(gentity_t* ent)
+*/void RespawnItem(gentity_t* ent)
 {
-	// randomly select from teamed entities
-	if (ent->team)
+	// Safety: ent must never be NULL
+	if (!ent)
 	{
-		int count;
-
-		if (!ent->teammaster)
-		{
-			trap->Error(ERR_DROP, "RespawnItem: bad teammaster");
-		}
-		gentity_t* master = ent->teammaster;
-		for (count = 0, ent = master; ent; ent = ent->teamchain, count++);
-
-		const int choice = rand() % count;
-
-		for (count = 0, ent = master; count < choice; ent = ent->teamchain, count++);
+#ifdef _DEBUG
+		Com_Printf("RespawnItem WARNING: ent was NULL\n");
+#endif
+		return;
 	}
 
+	// ---------------------------------------------------------
+	// TEAMED ITEM RESPAWN LOGIC
+	// ---------------------------------------------------------
+	if (ent->team)
+	{
+		// A teamed entity MUST have a valid teammaster
+		if (!ent->teammaster)
+		{
+#ifdef _DEBUG
+			Com_Printf("RespawnItem WARNING: entity with team '%s' has NULL teammaster\n", ent->team);
+#endif
+			return; // safest behaviour: do not continue with invalid team
+		}
+
+		gentity_t* master = ent->teammaster;
+
+		// Count team members safely
+		int count = 0;
+		gentity_t* scan = master;
+
+		while (scan)
+		{
+			count++;
+			scan = scan->teamchain;
+		}
+
+		// Prevent divide-by-zero and invalid team setups
+		if (count <= 0)
+		{
+#ifdef _DEBUG
+			Com_Printf("RespawnItem WARNING: team '%s' has zero members\n", ent->team);
+#endif
+			return;
+		}
+
+		// Choose a random teammate
+		const int choice = rand() % count;
+
+		scan = master;
+		for (int i = 0; i < choice; i++)
+		{
+			scan = scan->teamchain;
+		}
+
+		// Use the randomly selected teammate as the respawn target
+		ent = scan;
+	}
+
+	// ---------------------------------------------------------
+	// PUSHABLE ITEMS: RESET POSITION TO ORIGINAL ORIGIN
+	// ---------------------------------------------------------
 	if (g_pushitems.integer)
 	{
 		VectorCopy(ent->origOrigin, ent->s.origin);
@@ -3066,17 +3145,23 @@ void RespawnItem(gentity_t* ent)
 		VectorCopy(ent->origOrigin, ent->r.currentOrigin);
 	}
 
+	// ---------------------------------------------------------
+	// MAKE ITEM VISIBLE + SOLID AGAIN
+	// ---------------------------------------------------------
 	ent->r.contents = CONTENTS_TRIGGER;
 	ent->s.eFlags &= ~(EF_NODRAW | EF_ITEMPLACEHOLDER);
 	ent->r.svFlags &= ~SVF_NOCLIENT;
+
 	trap->LinkEntity((sharedEntity_t*)ent);
 
+	// ---------------------------------------------------------
+	// POWERUP RESPAWN SOUND (GLOBAL OR LOCAL)
+	// ---------------------------------------------------------
 	if (ent->item->giType == IT_POWERUP)
 	{
-		// play powerup spawn sound to all clients
 		gentity_t* te;
 
-		// if the powerup respawn sound should Not be global
+		// If ent->speed is non-zero, sound is local; otherwise global
 		if (ent->speed)
 		{
 			te = G_TempEntity(ent->s.pos.trBase, EV_GENERAL_SOUND);
@@ -3085,13 +3170,19 @@ void RespawnItem(gentity_t* ent)
 		{
 			te = G_TempEntity(ent->s.pos.trBase, EV_GLOBAL_SOUND);
 		}
+
 		te->s.eventParm = G_SoundIndex("sound/items/respawn1");
 		te->r.svFlags |= SVF_BROADCAST;
 	}
 
-	// play the normal respawn sound only to nearby clients
+	// ---------------------------------------------------------
+	// NORMAL RESPAWN SOUND (LOCAL ONLY)
+	// ---------------------------------------------------------
 	G_AddEvent(ent, EV_ITEM_RESPAWN, 0);
 
+	// ---------------------------------------------------------
+	// CLEAR THINK FUNCTION
+	// ---------------------------------------------------------
 	ent->nextthink = 0;
 }
 
