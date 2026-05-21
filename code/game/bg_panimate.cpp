@@ -10513,9 +10513,14 @@ qboolean BG_IsAlreadyinTauntAnim(const int anim)
 {
 	switch (anim)
 	{
+	case BOTH_ENGAGETAUNT:
 	case BOTH_GESTURE1:
+	case BOTH_GESTURE2:
+	case BOTH_GESTURE3:
 	case BOTH_DUAL_TAUNT:
 	case BOTH_STAFF_TAUNT:
+	case BOTH_ALORA_TAUNT:
+	case BOTH_ALORA_TAUNT_MD2:
 	case BOTH_BOW:
 	case BOTH_SHOWOFF_FAST:
 	case BOTH_SHOWOFF_MEDIUM:

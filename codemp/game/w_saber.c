@@ -14136,18 +14136,18 @@ static const int block_back_left_sp[8] =
 //  HELPERS
 // ============================================================
 
-static QINLINE int clamp_int(int v, int lo, int hi)
+static int clamp_int(int v, int lo, int hi)
 {
 	return (v < lo) ? lo : (v > hi ? hi : v);
 }
-static QINLINE qboolean WP_BotFallbackBlock(gentity_t* self)
+static qboolean WP_BotFallbackBlock(gentity_t* self)
 {
 	return (self->health > 0 &&
 		(self->r.svFlags & SVF_BOT) &&
 		self->client->ps.weapon == WP_SABER);
 }
 
-static QINLINE void WP_PlayBlockAnim(gentity_t* self, const int* table)
+static void WP_PlayBlockAnim(gentity_t* self, const int* table)
 {
 	const int style = clamp_int(self->client->ps.fd.saberAnimLevel, 0, SS_STAFF);
 	const int anim = table[style];

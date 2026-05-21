@@ -263,6 +263,8 @@ void G_Beskar_Attack_Bounce(const gentity_t* self, gentity_t* other);
 extern void jet_fly_stop(gentity_t* self);
 extern qboolean PM_InSlowBounce(const playerState_t* ps);
 extern qboolean PM_InSlopeAnim(int anim);
+extern qboolean PM_BoltBlockingAnim(const int anim);
+extern qboolean PM_SaberDrawPutawayAnim(int anim);
 
 qboolean g_saberNoEffects = qfalse;
 qboolean g_noClashFlare = qfalse;
@@ -4096,141 +4098,13 @@ static qboolean g_in_cinematic_lightning_anim(const gentity_t* self)
 
 static qboolean G_DrawSaberTrailForAnimation(const gentity_t* self)
 {
-	// These animations will do saber trail (for JKA, CW and Maul cg_sfxsabers)
-	switch (self->client->ps.torsoAnim)
+	if (PM_SaberInMassiveBounce(self->client->ps.torsoAnim) ||
+		PM_SaberInBashedAnim(self->client->ps.torsoAnim) ||
+		PM_BoltBlockingAnim(self->client->ps.torsoAnim) ||
+		PM_SaberDrawPutawayAnim(self->client->ps.torsoAnim) ||
+		BG_IsAlreadyinTauntAnim(self->client->ps.torsoAnim))
 	{
-	case BOTH_P7_S1_B_:
-	case BOTH_P6_S1_B_:
-	case BOTH_P1_S1_B_:
-	case BOTH_R7_TR_S7:
-	case BOTH_R6_TR_S6:
-	case BOTH_R2_TR_S1:
-	case BOTH_R7_TL_S7:
-	case BOTH_R6_TL_S6:
-	case BOTH_R1_TL_S1:
-	case BOTH_K7_S7_T_:
-	case BOTH_K6_S6_T_:
-	case BOTH_K1_S1_T_:
-		//
-	case BOTH_B7_TR___:
-	case BOTH_B6_TR___:
-	case BOTH_K1_S1_TR_ALT:
-	case BOTH_B7_TL___:
-	case BOTH_B6_TL___:
-	case BOTH_K1_S1_TL_ALT:
-	case BOTH_B7_BR___:
-	case BOTH_B6_BR___:
-	case BOTH_B1_BR___:
-	case BOTH_B7_BL___:
-	case BOTH_B6_BL___:
-	case BOTH_B1_BL___:
-		//
-	case BOTH_V7_T__S7:
-	case BOTH_V6_T__S6:
-	case BOTH_V1_T__S1:
-	case BOTH_V7_TR_S7:
-	case BOTH_V6_TR_S6:
-	case BOTH_V1_TR_S1:
-	case BOTH_V7_TL_S7:
-	case BOTH_V6_TL_S6:
-	case BOTH_V1_TL_S1:
-	case BOTH_V7_BR_S7:
-	case BOTH_V6_BR_S6:
-	case BOTH_V1_BR_S1:
-	case BOTH_V7_BL_S7:
-	case BOTH_V6_BL_S6:
-	case BOTH_V1_BL_S1:
-		//Saber/Dual/staff back block
-	case BOTH_P1_S1_B1_:
-	case BOTH_P6_S1_B1_:
-	case BOTH_P7_S1_B1_:
-		//New Bolt block anims
-	case BOTH_BOLT_BLOCK_BACKHAND_BOTTOM_LEFT:
-	case BOTH_BOLT_BLOCK_BACKHAND_BOTTOM_RIGHT:
-	case BOTH_BOLT_BLOCK_BACKHAND_MIDDLE_LEFT:
-	case BOTH_BOLT_BLOCK_BACKHAND_MIDDLE_RIGHT:
-	case BOTH_BOLT_BLOCK_BACKHAND_TOP_LEFT:
-	case BOTH_BOLT_BLOCK_BACKHAND_TOP_MIDDLE:
-	case BOTH_BOLT_BLOCK_BACKHAND_TOP_RIGHT:
-		//
-	case BOTH_BOLT_BLOCK_DUAL_BOTTOM_LEFT:
-	case BOTH_BOLT_BLOCK_DUAL_BOTTOM_RIGHT:
-	case BOTH_BOLT_BLOCK_DUAL_MIDDLE_LEFT:
-	case BOTH_BOLT_BLOCK_DUAL_MIDDLE_RIGHT:
-	case BOTH_BOLT_BLOCK_DUAL_TOP_LEFT:
-	case BOTH_BOLT_BLOCK_DUAL_TOP_MIDDLE:
-	case BOTH_BOLT_BLOCK_DUAL_TOP_RIGHT:
-		//
-	case BOTH_BOLT_BLOCK_STAFF_BOTTOM_LEFT:
-	case BOTH_BOLT_BLOCK_STAFF_BOTTOM_RIGHT:
-	case BOTH_BOLT_BLOCK_STAFF_MIDDLE_LEFT:
-	case BOTH_BOLT_BLOCK_STAFF_MIDDLE_RIGHT:
-	case BOTH_BOLT_BLOCK_STAFF_TOP_LEFT:
-	case BOTH_BOLT_BLOCK_STAFF_TOP_MIDDLE:
-	case BOTH_BOLT_BLOCK_STAFF_TOP_RIGHT:
-		//
-	case BOTH_BOLT_BLOCK_SINGLE_HAND_BOTTOM_LEFT:
-	case BOTH_BOLT_BLOCK_SINGLE_HAND_BOTTOM_RIGHT:
-	case BOTH_BOLT_BLOCK_SINGLE_HAND_MIDDLE_LEFT:
-	case BOTH_BOLT_BLOCK_SINGLE_HAND_MIDDLE_RIGHT:
-	case BOTH_BOLT_BLOCK_SINGLE_HAND_TOP_LEFT:
-	case BOTH_BOLT_BLOCK_SINGLE_HAND_TOP_MIDDLE:
-	case BOTH_BOLT_BLOCK_SINGLE_HAND_TOP_RIGHT:
-		//
-	case BOTH_BOLT_BLOCK_TWO_HAND_BOTTOM_LEFT:
-	case BOTH_BOLT_BLOCK_TWO_HAND_BOTTOM_RIGHT:
-	case BOTH_BOLT_BLOCK_TWO_HAND_MIDDLE_LEFT:
-	case BOTH_BOLT_BLOCK_TWO_HAND_MIDDLE_RIGHT:
-	case BOTH_BOLT_BLOCK_TWO_HAND_TOP_LEFT:
-	case BOTH_BOLT_BLOCK_TWO_HAND_TOP_MIDDLE:
-	case BOTH_BOLT_BLOCK_TWO_HAND_TOP_RIGHT:
-
-		//Saber parry broken
-	case BOTH_H1_S1_T_:
-	case BOTH_H1_S1_TR:
-	case BOTH_H1_S1_TL:
-	case BOTH_H1_S1_BL:
-	case BOTH_H1_S1_B_:
-	case BOTH_H1_S1_BR:
-		//Dual Saber parry broken
-	case BOTH_H6_S6_T_:
-	case BOTH_H6_S6_TR:
-	case BOTH_H6_S6_TL:
-	case BOTH_H6_S6_BL:
-	case BOTH_H6_S6_B_:
-	case BOTH_H6_S6_BR:
-		//SaberStaff parry broken
-	case BOTH_H7_S7_T_:
-	case BOTH_H7_S7_TR:
-	case BOTH_H7_S7_TL:
-	case BOTH_H7_S7_BL:
-	case BOTH_H7_S7_B_:
-	case BOTH_H7_S7_BR:
-
-	case BOTH_SABER_BLOCKBOLT:
-
-		// Taunts
-	case BOTH_ENGAGETAUNT:
-	case BOTH_DUAL_TAUNT:
-	case BOTH_STAFF_TAUNT:
-	case BOTH_ALORA_TAUNT:
-	case BOTH_ALORA_TAUNT_MD2:
-	case BOTH_VADERTAUNT:
-	case BOTH_GESTURE1:
-	case BOTH_GESTURE2:
-	case BOTH_GESTURE3:
-	case BOTH_SHOWOFF_FAST:
-	case BOTH_SHOWOFF_MEDIUM:
-	case BOTH_SHOWOFF_STRONG:
-	case BOTH_SHOWOFF_DUAL:
-	case BOTH_SHOWOFF_STAFF:
-	case BOTH_VICTORY_FAST:
-	case BOTH_VICTORY_MEDIUM:
-	case BOTH_VICTORY_STRONG:
-	case BOTH_VICTORY_DUAL:
-	case BOTH_VICTORY_STAFF:
 		return qtrue;
-	default:;
 	}
 	return qfalse;
 }
@@ -6333,12 +6207,12 @@ static void WP_SaberRadiusDamage(gentity_t* ent, vec3_t point, const float radiu
 //  SHARED HELPERS
 // ============================================================
 
-static QINLINE int clamp_int(int v, int lo, int hi)
+static int clamp_int(int v, int lo, int hi)
 {
 	return (v < lo) ? lo : (v > hi ? hi : v);
 }
 
-static QINLINE void G_HandleMassiveBounce_SP(gentity_t* ent)
+static void G_HandleMassiveBounce_SP(gentity_t* ent)
 {
 	if (PM_SaberInMassiveBounce(ent->client->ps.torsoAnim))
 	{
@@ -14612,25 +14486,28 @@ void wp_saber_update(gentity_t* self, const usercmd_t* ucmd)
 	}
 
 	// Cinematic fake blocking
-	if (G_InCinematicSaberAnim(self))
+	if (self->client->ps.weapon == WP_SABER && self->client->ps.saber[0].Active() && !self->client->ps.saber[0].blade[0].trail.inAction)
 	{
-		self->client->ps.saberBlocking = BLK_TIGHT;
-
-		if (self->client->ps.saber[0].Active())
-			self->client->ps.saber[0].ActivateTrail(150);
-
-		if (self->client->ps.saber[1].Active())
-			self->client->ps.saber[1].ActivateTrail(150);
-	}
-	else if (G_DrawSaberTrailForAnimation(self))
-	{
-		if (self->client->ps.saber[0].Active())
+		if (G_InCinematicSaberAnim(self))
 		{
-			self->client->ps.saber[0].ActivateTrail(300);
+			self->client->ps.saberBlocking = BLK_TIGHT;
+
+			if (self->client->ps.saber[0].Active())
+				self->client->ps.saber[0].ActivateTrail(150);
+
+			if (self->client->ps.saber[1].Active())
+				self->client->ps.saber[1].ActivateTrail(150);
 		}
-		if (self->client->ps.saber[1].Active())
+		else if (G_DrawSaberTrailForAnimation(self))
 		{
-			self->client->ps.saber[1].ActivateTrail(300);
+			if (self->client->ps.saber[0].Active())
+			{
+				self->client->ps.saber[0].ActivateTrail(200);
+			}
+			if (self->client->ps.saber[1].Active())
+			{
+				self->client->ps.saber[1].ActivateTrail(200);
+			}
 		}
 	}
 
@@ -14908,7 +14785,7 @@ qboolean G_CheckEnemyPresence(const gentity_t* ent, int dir, float radius, float
 	// ----------------------------------------------------
 	// Build bounding box
 	// ----------------------------------------------------
-	vec3_t mins, maxs;
+	vec3_t mins={0}, maxs={0};
 	for (int i = 0; i < 3; i++)
 	{
 		mins[i] = ent->currentOrigin[i] - radius;
@@ -19725,7 +19602,7 @@ void ForceGripAdvanced(gentity_t* self)
 			VectorNormalize(forward);
 			traceEnt = &g_entities[tr.entityNum];
 
-			vec3_t center, mins, maxs, v;
+			vec3_t center, mins = {0}, maxs = {0}, v={0};
 			constexpr float radius = 512;
 			gentity_t* entity_list[MAX_GENTITIES];
 			int i;

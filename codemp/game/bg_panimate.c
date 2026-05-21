@@ -1070,141 +1070,13 @@ qboolean PM_InKataAnim(const int anim)
 
 qboolean G_DrawSaberTrailForAnimation(const int anim)
 {
-	// These animations will do saber trail (for JKA, CW and Maul cg_sfxsabers)
-	switch (anim)
+	if (PM_SaberInMassiveBounce(anim) ||
+		PM_SaberInBashedAnim(anim) ||
+		PM_BoltBlockingAnim(anim) ||
+		PM_SaberDrawPutawayAnim(anim) ||
+		BG_IsAlreadyinTauntAnim(anim))
 	{
-	case BOTH_P7_S1_B_:
-	case BOTH_P6_S1_B_:
-	case BOTH_P1_S1_B_:
-	case BOTH_R7_TR_S7:
-	case BOTH_R6_TR_S6:
-	case BOTH_R2_TR_S1:
-	case BOTH_R7_TL_S7:
-	case BOTH_R6_TL_S6:
-	case BOTH_R1_TL_S1:
-	case BOTH_K7_S7_T_:
-	case BOTH_K6_S6_T_:
-	case BOTH_K1_S1_T_:
-		//
-	case BOTH_B7_TR___:
-	case BOTH_B6_TR___:
-	case BOTH_K1_S1_TR_ALT:
-	case BOTH_B7_TL___:
-	case BOTH_B6_TL___:
-	case BOTH_K1_S1_TL_ALT:
-	case BOTH_B7_BR___:
-	case BOTH_B6_BR___:
-	case BOTH_B1_BR___:
-	case BOTH_B7_BL___:
-	case BOTH_B6_BL___:
-	case BOTH_B1_BL___:
-		//
-	case BOTH_V7_T__S7:
-	case BOTH_V6_T__S6:
-	case BOTH_V1_T__S1:
-	case BOTH_V7_TR_S7:
-	case BOTH_V6_TR_S6:
-	case BOTH_V1_TR_S1:
-	case BOTH_V7_TL_S7:
-	case BOTH_V6_TL_S6:
-	case BOTH_V1_TL_S1:
-	case BOTH_V7_BR_S7:
-	case BOTH_V6_BR_S6:
-	case BOTH_V1_BR_S1:
-	case BOTH_V7_BL_S7:
-	case BOTH_V6_BL_S6:
-	case BOTH_V1_BL_S1:
-		//Saber/Dual/staff back block
-	case BOTH_P1_S1_B1_:
-	case BOTH_P6_S1_B1_:
-	case BOTH_P7_S1_B1_:
-		//New Bolt block anims
-	case BOTH_BOLT_BLOCK_BACKHAND_BOTTOM_LEFT:
-	case BOTH_BOLT_BLOCK_BACKHAND_BOTTOM_RIGHT:
-	case BOTH_BOLT_BLOCK_BACKHAND_MIDDLE_LEFT:
-	case BOTH_BOLT_BLOCK_BACKHAND_MIDDLE_RIGHT:
-	case BOTH_BOLT_BLOCK_BACKHAND_TOP_LEFT:
-	case BOTH_BOLT_BLOCK_BACKHAND_TOP_MIDDLE:
-	case BOTH_BOLT_BLOCK_BACKHAND_TOP_RIGHT:
-		//
-	case BOTH_BOLT_BLOCK_DUAL_BOTTOM_LEFT:
-	case BOTH_BOLT_BLOCK_DUAL_BOTTOM_RIGHT:
-	case BOTH_BOLT_BLOCK_DUAL_MIDDLE_LEFT:
-	case BOTH_BOLT_BLOCK_DUAL_MIDDLE_RIGHT:
-	case BOTH_BOLT_BLOCK_DUAL_TOP_LEFT:
-	case BOTH_BOLT_BLOCK_DUAL_TOP_MIDDLE:
-	case BOTH_BOLT_BLOCK_DUAL_TOP_RIGHT:
-		//
-	case BOTH_BOLT_BLOCK_STAFF_BOTTOM_LEFT:
-	case BOTH_BOLT_BLOCK_STAFF_BOTTOM_RIGHT:
-	case BOTH_BOLT_BLOCK_STAFF_MIDDLE_LEFT:
-	case BOTH_BOLT_BLOCK_STAFF_MIDDLE_RIGHT:
-	case BOTH_BOLT_BLOCK_STAFF_TOP_LEFT:
-	case BOTH_BOLT_BLOCK_STAFF_TOP_MIDDLE:
-	case BOTH_BOLT_BLOCK_STAFF_TOP_RIGHT:
-		//
-	case BOTH_BOLT_BLOCK_SINGLE_HAND_BOTTOM_LEFT:
-	case BOTH_BOLT_BLOCK_SINGLE_HAND_BOTTOM_RIGHT:
-	case BOTH_BOLT_BLOCK_SINGLE_HAND_MIDDLE_LEFT:
-	case BOTH_BOLT_BLOCK_SINGLE_HAND_MIDDLE_RIGHT:
-	case BOTH_BOLT_BLOCK_SINGLE_HAND_TOP_LEFT:
-	case BOTH_BOLT_BLOCK_SINGLE_HAND_TOP_MIDDLE:
-	case BOTH_BOLT_BLOCK_SINGLE_HAND_TOP_RIGHT:
-		//
-	case BOTH_BOLT_BLOCK_TWO_HAND_BOTTOM_LEFT:
-	case BOTH_BOLT_BLOCK_TWO_HAND_BOTTOM_RIGHT:
-	case BOTH_BOLT_BLOCK_TWO_HAND_MIDDLE_LEFT:
-	case BOTH_BOLT_BLOCK_TWO_HAND_MIDDLE_RIGHT:
-	case BOTH_BOLT_BLOCK_TWO_HAND_TOP_LEFT:
-	case BOTH_BOLT_BLOCK_TWO_HAND_TOP_MIDDLE:
-	case BOTH_BOLT_BLOCK_TWO_HAND_TOP_RIGHT:
-
-		//Saber parry broken
-	case BOTH_H1_S1_T_:
-	case BOTH_H1_S1_TR:
-	case BOTH_H1_S1_TL:
-	case BOTH_H1_S1_BL:
-	case BOTH_H1_S1_B_:
-	case BOTH_H1_S1_BR:
-		//Dual Saber parry broken
-	case BOTH_H6_S6_T_:
-	case BOTH_H6_S6_TR:
-	case BOTH_H6_S6_TL:
-	case BOTH_H6_S6_BL:
-	case BOTH_H6_S6_B_:
-	case BOTH_H6_S6_BR:
-		//SaberStaff parry broken
-	case BOTH_H7_S7_T_:
-	case BOTH_H7_S7_TR:
-	case BOTH_H7_S7_TL:
-	case BOTH_H7_S7_BL:
-	case BOTH_H7_S7_B_:
-	case BOTH_H7_S7_BR:
-
-	case BOTH_SABER_BLOCKBOLT:
-
-		// Taunts
-	case BOTH_ENGAGETAUNT:
-	case BOTH_DUAL_TAUNT:
-	case BOTH_STAFF_TAUNT:
-	case BOTH_ALORA_TAUNT:
-	case BOTH_ALORA_TAUNT_MD2:
-	case BOTH_VADERTAUNT:
-	case BOTH_GESTURE1:
-	case BOTH_GESTURE2:
-	case BOTH_GESTURE3:
-	case BOTH_SHOWOFF_FAST:
-	case BOTH_SHOWOFF_MEDIUM:
-	case BOTH_SHOWOFF_STRONG:
-	case BOTH_SHOWOFF_DUAL:
-	case BOTH_SHOWOFF_STAFF:
-	case BOTH_VICTORY_FAST:
-	case BOTH_VICTORY_MEDIUM:
-	case BOTH_VICTORY_STRONG:
-	case BOTH_VICTORY_DUAL:
-	case BOTH_VICTORY_STAFF:
 		return qtrue;
-	default:;
 	}
 	return qfalse;
 }
@@ -4737,9 +4609,14 @@ qboolean BG_IsAlreadyinTauntAnim(const int anim)
 {
 	switch (anim)
 	{
+	case BOTH_ENGAGETAUNT:
 	case BOTH_GESTURE1:
+	case BOTH_GESTURE2:
+	case BOTH_GESTURE3:
 	case BOTH_DUAL_TAUNT:
 	case BOTH_STAFF_TAUNT:
+	case BOTH_ALORA_TAUNT:
+	case BOTH_ALORA_TAUNT_MD2:
 	case BOTH_BOW:
 	case BOTH_SHOWOFF_FAST:
 	case BOTH_SHOWOFF_MEDIUM:

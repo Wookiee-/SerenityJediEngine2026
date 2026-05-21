@@ -12443,7 +12443,7 @@ CheckTrail:
 			}
 			else if (G_DrawSaberTrailForAnimation(cent->currentState.torsoAnim))
 			{// Certain saber animations get a longer trail.
-				trail_dur = 300.0f;
+				trail_dur = 200.0f;
 			}
 			else
 			{
