@@ -3277,7 +3277,6 @@ static void force_lightning_damage(gentity_t* self, gentity_t* traceEnt, vec3_t 
 					}
 				}
 
-
 				if (traceEnt->client)
 				{
 					if (!Q_irand(0, 2))

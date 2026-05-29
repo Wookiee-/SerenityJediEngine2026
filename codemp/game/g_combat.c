@@ -6698,9 +6698,10 @@ void G_Damage(gentity_t* targ, gentity_t* inflictor, gentity_t* attacker, vec3_t
 		knockback = 200;
 	}
 
-	if (targ->client
-		&& (targ->client->ps.fd.forcePowersActive & 1 << FP_PROTECT
-			&& targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_3))
+	if (targ->client &&
+		(targ->client->ps.fd.forcePowersActive & (1 << FP_PROTECT)) &&
+		targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_3)
+
 	{
 		//pretend there was no damage?
 		knockback = 0;
@@ -6719,7 +6720,6 @@ void G_Damage(gentity_t* targ, gentity_t* inflictor, gentity_t* attacker, vec3_t
 	}
 	else if (attacker->s.number >= MAX_CLIENTS //an NPC fired
 		&& targ->client //hit a client
-		&& attacker->client //attacker is a client
 		&& targ->client->playerTeam == attacker->client->playerTeam) //on same team
 	{
 		//crap, ignore knockback

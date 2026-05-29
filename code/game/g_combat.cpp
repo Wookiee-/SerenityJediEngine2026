@@ -7141,8 +7141,7 @@ dflags		these flags are used to control how T_Damage works
 	DAMAGE_NO_HIT_LOC		Damage not based on hit location
 ============
 */
-void G_Damage(gentity_t* targ, gentity_t* inflictor, gentity_t* attacker, const vec3_t dir, const vec3_t point,
-	int damage, int dflags, int mod, int hit_loc)
+void G_Damage(gentity_t* targ, gentity_t* inflictor, gentity_t* attacker, const vec3_t dir, const vec3_t point, int damage, int dflags, int mod, int hit_loc)
 {
 	gclient_t* client;
 	int take;
@@ -7528,7 +7527,7 @@ void G_Damage(gentity_t* targ, gentity_t* inflictor, gentity_t* attacker, const 
 	{
 		if (client)
 		{
-			if (client->NPC_class == CLASS_BOBAFETT)
+			if (client->NPC_class == CLASS_BOBAFETT || client->NPC_class == CLASS_MANDO)
 			{
 				// DEMP2 also disables npc jetpack
 				Boba_FlyStop(targ);
@@ -7766,9 +7765,9 @@ void G_Damage(gentity_t* targ, gentity_t* inflictor, gentity_t* attacker, const 
 		knockback = 200;
 	}
 
-	if (targ->client
-		&& targ->client->ps.forcePowersActive & 1 << FP_PROTECT && targ->client->ps.forcePowerLevel[FP_PROTECT] ==
-		FORCE_LEVEL_3)
+	if (targ->client &&
+		(targ->client->ps.forcePowersActive & (1 << FP_PROTECT)) &&
+		targ->client->ps.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_3)
 	{
 		//pretend there was no damage?
 		knockback = 0;
@@ -7787,7 +7786,6 @@ void G_Damage(gentity_t* targ, gentity_t* inflictor, gentity_t* attacker, const 
 	}
 	else if (attacker->s.number >= MAX_CLIENTS //an NPC fired
 		&& targ->client //hit a client
-		&& attacker->client //attacker is a client
 		&& targ->client->playerTeam == attacker->client->playerTeam) //on same team
 	{
 		//crap, ignore knockback
@@ -7919,7 +7917,15 @@ void G_Damage(gentity_t* targ, gentity_t* inflictor, gentity_t* attacker, const 
 		if (targ->client->NPC_class != CLASS_VEHICLE)
 		{
 			//vehicles don't have personal shields
-			targ->client->ps.powerups[PW_BATTLESUIT] = level.time + ARMOR_EFFECT_TIME;
+			if (mod == MOD_DEMP2
+				|| mod == MOD_DEMP2_ALT
+				|| mod == MOD_CONC
+				|| mod == MOD_CONC_ALT
+				|| mod == MOD_ENERGY
+				|| mod == MOD_ENERGY_SPLASH)
+			{
+				targ->client->ps.powerups[PW_BATTLESUIT] = level.time + ARMOR_EFFECT_TIME;
+			}
 
 			if (targ->client->ps.stats[STAT_ARMOR] <= 0)
 			{
@@ -8461,6 +8467,7 @@ void G_Damage(gentity_t* targ, gentity_t* inflictor, gentity_t* attacker, const 
 						if (targ->NPC == nullptr || !(targ->NPC->aiFlags & NPCAI_ROSH) || !Rosh_TwinPresent())
 						{
 							//NOTE: Rosh won't run his deathscript until he doesn't have the twins to heal him
+							targ->client->dismembered = qtrue;
 							G_ActivateBehavior(targ, BSET_DEATH);
 						}
 						targ->health = 1;

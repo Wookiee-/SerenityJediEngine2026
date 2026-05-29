@@ -1538,35 +1538,37 @@ void G_MissileImpacted(gentity_t* ent, gentity_t* other, vec3_t impact_pos, vec3
 				if (other->client->painCooldownTime > level.time)
 				{
 					// Still cooling down → skip pain anim
-					return;// No need to set a new cooldown, since we're skipping the anim entirely
 				}
-				int		pain_anim = -1;
+				else
+				{
+					int pain_anim = -1;
 
-				if (Q_irand(0, 3))
-				{// 75% chance to play pain anim
-					if (PM_CrouchAnim(other->client->ps.legsAnim))
-					{
-						vec3_t dir;
-						VectorSubtract(ent->currentOrigin, other->currentOrigin, dir);
-						VectorNormalize(dir);
-
-						G_Knockdown(other, ent, dir, 50, qtrue);
-					}
-					else
-					{
-						pain_anim = G_PickPainAnim(other, impact_pos, hit_loc);
-
-						int parts = SETANIM_BOTH;
-						if (PM_CrouchAnim(other->client->ps.legsAnim) ||
-							PM_InCartwheel(other->client->ps.legsAnim))
+					if (Q_irand(0, 3))
+					{// 75% chance to play pain anim
+						if (PM_CrouchAnim(other->client->ps.legsAnim))
 						{
-							parts = SETANIM_LEGS;
+							vec3_t dir;
+							VectorSubtract(ent->currentOrigin, other->currentOrigin, dir);
+							VectorNormalize(dir);
+
+							G_Knockdown(other, ent, dir, 50, qtrue);
 						}
-						NPC_SetAnim(other, parts, pain_anim, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-						other->client->ps.torsoAnimTimer = 400;
+						else
+						{
+							pain_anim = G_PickPainAnim(other, impact_pos, hit_loc);
+
+							int parts = SETANIM_BOTH;
+							if (PM_CrouchAnim(other->client->ps.legsAnim) ||
+								PM_InCartwheel(other->client->ps.legsAnim))
+							{
+								parts = SETANIM_LEGS;
+							}
+							NPC_SetAnim(other, parts, pain_anim, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+							other->client->ps.torsoAnimTimer = 400;
+						}
 					}
+					other->client->painCooldownTime = level.time + 2000;// 2 second cooldown on pain anims
 				}
-				other->client->painCooldownTime = level.time + 2000;// 2 second cooldown on pain anims
 			}
 
 			// DEMP2 special behaviour

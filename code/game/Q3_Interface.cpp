@@ -10859,10 +10859,12 @@ int CQuake3GameInterface::GetString(const int entID, const char* name, char** va
 		return false;
 	}
 
-	if (!Q_stricmpn(name, "cvar_", 5) &&
-		strlen(name) > 5)
+	if (!Q_stricmpn(name, "cvar_", 5) && strlen(name) > 5)
 	{
-		gi.Cvar_VariableStringBuffer(name + 5, *value, strlen(*value));
+		if (value == nullptr) return false;
+		static char cvarBuf[256]; // or use a proper string allocator for persistence
+		gi.Cvar_VariableStringBuffer(name + 5, cvarBuf, sizeof(cvarBuf));
+		*value = cvarBuf;
 		return true;
 	}
 

@@ -1885,6 +1885,22 @@ static void JediDirectionalDashDodge(gentity_t* NPC, gentity_t* enemy)
 // RETREAT MODE ENDS HERE
 // ---------------------------------------------------------
 
+static qboolean Jedi_Track(void)
+{
+	//if we're at all interested in fighting, go after him
+	if (NPCInfo->stats.aggression > 1)
+	{//approach enemy
+		NPCInfo->combatMove = qtrue;
+		NPC_SetMoveGoal(NPC, NPCInfo->enemyLastSeenLocation, 16, qtrue);
+		if (NPC_MoveToGoal(qfalse))
+		{
+			NPC_UpdateAngles(qtrue, qtrue);
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
 static qboolean Jedi_Retreat()
 {
 	if (!TIMER_Done(NPC, "noRetreat"))
@@ -8779,6 +8795,10 @@ static void Jedi_Combat()
 						Boba_FireDecide();
 					}
 
+					return;
+				}
+				else if (Jedi_Track())
+				{
 					return;
 				}
 				if (NPC->s.weapon == WP_SABER && (g_spskill != NULL && g_spskill->integer != 0))
