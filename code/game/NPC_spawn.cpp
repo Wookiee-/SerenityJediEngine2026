@@ -342,8 +342,11 @@ static void NPC_SetMiscDefaultData(gentity_t* ent)
 	}
 	else if (ent->client->NPC_class == CLASS_SHADOWTROOPER)
 	{
-		ent->flags |= FL_DINDJARIN; //low-level shots bounce off, no knockback
-		ent->flags |= FL_SABERDAMAGE_RESIST; //Partially resistant to sabers
+		if (Q_stricmpn("shadowtrooper", ent->NPC_type, 13) == 0 || Q_stricmpn("ShadowTrooper2", ent->NPC_type, 13) == 0)
+		{
+			ent->flags |= FL_DINDJARIN; //low-level shots bounce off, no knockback
+			ent->flags |= FL_SABERDAMAGE_RESIST; //Partially resistant to sabers
+		}
 	}
 	else if (ent->client->NPC_class == CLASS_ROCKETTROOPER)
 	{

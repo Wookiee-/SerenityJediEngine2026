@@ -433,15 +433,17 @@ static void CG_CalcIdealThirdPersonViewTarget()
 	// Now, if the player is crouching, do a little special tweak.  The problem is that the player's head is way out of his bbox.
 	if (cg.predictedPlayerState.pm_flags & PMF_DUCKED)
 	{
-		// Nudge to focus location up a tad.
 		vec3_t nudgepos;
 		trace_t trace;
 
 		VectorCopy(cameraFocusLoc, nudgepos);
 		nudgepos[2] += CAMERA_CROUCH_NUDGE;
+
 		CG_Trace(&trace, cameraFocusLoc, cameramins, cameramaxs, nudgepos,
-			uses_view_entity ? cg.snap->ps.viewEntity : cg.predictedPlayerState.clientNum, MASK_CAMERACLIP);
-		if (trace.fraction < 1.0)
+			uses_view_entity ? cg.snap->ps.viewEntity : cg.predictedPlayerState.clientNum,
+			MASK_CAMERACLIP);
+
+		if (trace.fraction < 1.0f)
 		{
 			VectorCopy(trace.endpos, cameraFocusLoc);
 		}
@@ -482,57 +484,82 @@ CG_CalcIdealThirdPersonViewLocation
 */
 static void CG_CalcIdealThirdPersonViewLocation()
 {
+	// Ensure snapshot exists before dereferencing.
+	if (cg.snap == NULL)
+	{
+		return;
+	}
 	const qboolean doing_dash_action = cg.predictedPlayerState.communicatingflags & 1 << DASHING ? qtrue : qfalse;
 
+	// Override: explicit range
 	if (cg.overrides.active & CG_OVERRIDE_3RD_PERSON_RNG)
 	{
 		VectorMA(cameraIdealTarget, -cg.overrides.thirdPersonRange, camerafwd, cameraIdealLoc);
 	}
-	else if (cg.snap
-		&& cg.snap->ps.eFlags & EF_HELD_BY_RANCOR
-		&& cg_entities[cg.snap->ps.clientNum].gent->activator)
+	// Held by rancor
+	else if ((cg.snap->ps.eFlags & EF_HELD_BY_RANCOR) &&
+		cg_entities[cg.snap->ps.clientNum].gent &&
+		cg_entities[cg.snap->ps.clientNum].gent->activator)
 	{
-		//stay back
-		VectorMA(cameraIdealTarget, -180.0f * cg_entities[cg.snap->ps.clientNum].gent->activator->s.modelScale[0],
-			camerafwd, cameraIdealLoc);
+		VectorMA(cameraIdealTarget,
+			-180.0f * cg_entities[cg.snap->ps.clientNum].gent->activator->s.modelScale[0],
+			camerafwd,
+			cameraIdealLoc);
 	}
-	else if (cg.snap
-		&& cg.snap->ps.eFlags & EF_HELD_BY_WAMPA
-		&& cg_entities[cg.snap->ps.clientNum].gent->activator
-		&& cg_entities[cg.snap->ps.clientNum].gent->activator->inuse)
+	// Held by wampa
+	else if ((cg.snap->ps.eFlags & EF_HELD_BY_WAMPA) &&
+		cg_entities[cg.snap->ps.clientNum].gent &&
+		cg_entities[cg.snap->ps.clientNum].gent->activator &&
+		cg_entities[cg.snap->ps.clientNum].gent->activator->inuse)
 	{
-		//stay back
-		VectorMA(cameraIdealTarget, -120.0f * cg_entities[cg.snap->ps.clientNum].gent->activator->s.modelScale[0],
-			camerafwd, cameraIdealLoc);
+		VectorMA(cameraIdealTarget,
+			-120.0f * cg_entities[cg.snap->ps.clientNum].gent->activator->s.modelScale[0],
+			camerafwd,
+			cameraIdealLoc);
 	}
-	else if (cg.snap
-		&& cg.snap->ps.eFlags & EF_HELD_BY_SAND_CREATURE
-		&& cg_entities[cg.snap->ps.clientNum].gent->activator)
+	// Held by sand creature
+	else if ((cg.snap->ps.eFlags & EF_HELD_BY_SAND_CREATURE) &&
+		cg_entities[cg.snap->ps.clientNum].gent &&
+		cg_entities[cg.snap->ps.clientNum].gent->activator)
 	{
-		//stay back
-		VectorMA(cg_entities[cg_entities[cg.snap->ps.clientNum].gent->activator->s.number].lerpOrigin, -180.0f,
-			camerafwd, cameraIdealLoc);
+		const int sandEnt =
+			cg_entities[cg.snap->ps.clientNum].gent->activator->s.number;
+
+		VectorMA(cg_entities[sandEnt].lerpOrigin,
+			-180.0f,
+			camerafwd,
+			cameraIdealLoc);
 	}
 	else
 	{
 		VectorMA(cameraIdealTarget, -cg_thirdPersonRange.value, camerafwd, cameraIdealLoc);
 	}
 
-	if ((!doing_dash_action) && cg.renderingThirdPerson && cg.snap->ps.forcePowersActive & 1 << FP_SPEED && player->client->ps.forcePowerDuration[FP_SPEED])
+	// Force speed camera modulation
+	if (doing_dash_action == qfalse &&
+		cg.renderingThirdPerson &&
+		(cg.snap->ps.forcePowersActive & (1 << FP_SPEED)) &&
+		player->client->ps.forcePowerDuration[FP_SPEED])
 	{
-		const float time_left = player->client->ps.forcePowerDuration[FP_SPEED] - cg.time;
-		const float length = FORCE_SPEED_DURATION_FORCE_LEVEL_3 * forceSpeedValue[player->client->ps.forcePowerLevel[FP_SPEED]];
-		const float amt = forceSpeedRangeMod[player->client->ps.forcePowerLevel[FP_SPEED]];
+		const float time_left =
+			player->client->ps.forcePowerDuration[FP_SPEED] - cg.time;
 
-		if (time_left < 500)
+		const float length =
+			FORCE_SPEED_DURATION_FORCE_LEVEL_3 *
+			forceSpeedValue[player->client->ps.forcePowerLevel[FP_SPEED]];
+
+		const float amt =
+			forceSpeedRangeMod[player->client->ps.forcePowerLevel[FP_SPEED]];
+
+		if (time_left < 500.0f)
 		{
-			//start going back
-			VectorMA(cameraIdealLoc, time_left / 500 * amt, camerafwd, cameraIdealLoc);
+			// Start going back
+			VectorMA(cameraIdealLoc, (time_left / 500.0f) * amt, camerafwd, cameraIdealLoc);
 		}
-		else if (length - time_left < 1000)
+		else if ((length - time_left) < 1000.0f)
 		{
-			//start zooming in
-			VectorMA(cameraIdealLoc, (length - time_left) / 1000 * amt, camerafwd, cameraIdealLoc);
+			// Start zooming in
+			VectorMA(cameraIdealLoc, ((length - time_left) / 1000.0f) * amt, camerafwd, cameraIdealLoc);
 		}
 		else
 		{
@@ -792,30 +819,54 @@ extern qboolean MatrixMode;
 
 static void CG_OffsetThirdPersonView()
 {
+	// Ensure snapshot exists before dereferencing.
+	if (cg.snap == NULL)
+	{
+		return;
+	}
+
 	vec3_t diff;
 
 	camWaterAdjust = 0;
-	cameraStiffFactor = 0.0;
+	cameraStiffFactor = 0.0f;
 
 	// Set camera viewing direction.
 	VectorCopy(cg.refdefViewAngles, cameraFocusAngles);
 
-	if (cg.snap
-		&& cg.snap->ps.eFlags & EF_HELD_BY_RANCOR
-		&& cg_entities[cg.snap->ps.clientNum].gent->activator)
+	// Held by rancor
+	if ((cg.snap->ps.eFlags & EF_HELD_BY_RANCOR) &&
+		cg_entities[cg.snap->ps.clientNum].gent &&
+		cg_entities[cg.snap->ps.clientNum].gent->activator)
 	{
-		const centity_t* monster = &cg_entities[cg_entities[cg.snap->ps.clientNum].gent->activator->s.number];
-		VectorSet(cameraFocusAngles, 0, AngleNormalize180(monster->lerpAngles[YAW] + 180), 0);
+		const centity_t* monster =
+			&cg_entities[cg_entities[cg.snap->ps.clientNum].gent->activator->s.number];
+
+		VectorSet(cameraFocusAngles,
+			0,
+			AngleNormalize180(monster->lerpAngles[YAW] + 180),
+			0);
 	}
-	else if (cg.snap && cg.snap->ps.eFlags & EF_HELD_BY_SAND_CREATURE)
+	// Held by sand creature
+	else if ((cg.snap->ps.eFlags & EF_HELD_BY_SAND_CREATURE) &&
+		cg_entities[cg.snap->ps.clientNum].gent &&
+		cg_entities[cg.snap->ps.clientNum].gent->activator)
 	{
-		const centity_t* monster = &cg_entities[cg_entities[cg.snap->ps.clientNum].gent->activator->s.number];
-		VectorSet(cameraFocusAngles, 0, AngleNormalize180(monster->lerpAngles[YAW] + 180), 0);
-		cameraFocusAngles[PITCH] = 0.0f; //flatten it out
+		const centity_t* monster =
+			&cg_entities[cg_entities[cg.snap->ps.clientNum].gent->activator->s.number];
+
+		VectorSet(cameraFocusAngles,
+			0,
+			AngleNormalize180(monster->lerpAngles[YAW] + 180),
+			0);
+
+		cameraFocusAngles[PITCH] = 0.0f;
 	}
+	// Riding vehicle
 	else if (G_IsRidingVehicle(&g_entities[0]))
 	{
-		cameraFocusAngles[YAW] = cg_entities[g_entities[0].owner->s.number].lerpAngles[YAW];
+		cameraFocusAngles[YAW] =
+			cg_entities[g_entities[0].owner->s.number].lerpAngles[YAW];
+
 		if (cg.overrides.active & CG_OVERRIDE_3RD_PERSON_ANG)
 		{
 			cameraFocusAngles[YAW] += cg.overrides.thirdPersonAngle;
@@ -825,9 +876,9 @@ static void CG_OffsetThirdPersonView()
 			cameraFocusAngles[YAW] += cg_thirdPersonAngle.value;
 		}
 	}
+	// Dead
 	else if (cg.predictedPlayerState.stats[STAT_HEALTH] <= 0)
 	{
-		//if dead, look at killer
 		if (MatrixMode)
 		{
 			if (cg.overrides.active & CG_OVERRIDE_3RD_PERSON_ANG)
@@ -845,14 +896,17 @@ static void CG_OffsetThirdPersonView()
 			cameraFocusAngles[YAW] = cg.predictedPlayerState.stats[STAT_DEAD_YAW];
 		}
 	}
-	else if (cg.renderingThirdPerson && cg.predictedPlayerState.communicatingflags & (1 << CF_SABERLOCKING) && cg_saberLockCinematicCamera.integer)
+	// Saber lock cinematic
+	else if (cg.renderingThirdPerson &&
+		(cg.predictedPlayerState.communicatingflags & (1 << CF_SABERLOCKING)) &&
+		cg_saberLockCinematicCamera.integer)
 	{
-		cameraFocusAngles[YAW] += cg.overrides.thirdPersonAngle = 32.5f;
-		cameraFocusAngles[PITCH] += cg.overrides.thirdPersonPitchOffset = -11.25f;
+		cameraFocusAngles[YAW] += (cg.overrides.thirdPersonAngle = 40.5f);
+		cameraFocusAngles[PITCH] += (cg.overrides.thirdPersonPitchOffset = -11.25f);
 	}
+	// Normal third‑person angle
 	else
 	{
-		// Add in the third Person Angle.
 		if (cg.overrides.active & CG_OVERRIDE_3RD_PERSON_ANG)
 		{
 			cameraFocusAngles[YAW] += cg.overrides.thirdPersonAngle;
@@ -861,6 +915,7 @@ static void CG_OffsetThirdPersonView()
 		{
 			cameraFocusAngles[YAW] += cg_thirdPersonAngle.value;
 		}
+
 		if (cg.overrides.active & CG_OVERRIDE_3RD_PERSON_POF)
 		{
 			cameraFocusAngles[PITCH] += cg.overrides.thirdPersonPitchOffset;
@@ -871,101 +926,130 @@ static void CG_OffsetThirdPersonView()
 		}
 	}
 
-	if ((cg.snap->ps.weapon == WP_SABER || cg.snap->ps.weapon == WP_MELEE) && !cg.renderingThirdPerson)
+	// First‑person saber handling
+	if ((cg.snap->ps.weapon == WP_SABER || cg.snap->ps.weapon == WP_MELEE) &&
+		cg.renderingThirdPerson == qfalse)
 	{
-		// First person saber
-		// FIXME: use something network-friendly
-		vec3_t org, viewDir;
+		vec3_t org, view_dir;
+
 		VectorCopy(cg_entities[0].gent->client->renderInfo.eyePoint, org);
+
 		const float blend = 1.0f - fabs(cg.refdefViewAngles[PITCH]) / 90.0f;
-		AngleVectors(cg.refdefViewAngles, viewDir, nullptr, nullptr);
-		VectorMA(org, -8, viewDir, org);
+
+		AngleVectors(cg.refdefViewAngles, view_dir, NULL, NULL);
+		VectorMA(org, -8, view_dir, org);
 		VectorScale(org, 1.0f - blend, org);
 		VectorMA(org, blend, cg.refdef.vieworg, cg.refdef.vieworg);
+
 		return;
 	}
-	// The next thing to do is to see if we need to calculate a new camera target location.
 
-	// If we went back in time for some reason, or if we just started, reset the sample.
+	// Reset dampers if time jumped
 	if (cameraLastFrame == 0 || cameraLastFrame > cg.time)
 	{
 		CG_ResetThirdPersonViewDamp();
 	}
 	else
 	{
-		// Cap the pitch within reasonable limits
-		if (cameraFocusAngles[PITCH] > 89.0)
+		// Clamp pitch
+		if (cameraFocusAngles[PITCH] > 89.0f)
 		{
-			cameraFocusAngles[PITCH] = 89.0;
+			cameraFocusAngles[PITCH] = 89.0f;
 		}
-		else if (cameraFocusAngles[PITCH] < -89.0)
+		else if (cameraFocusAngles[PITCH] < -89.0f)
 		{
-			cameraFocusAngles[PITCH] = -89.0;
+			cameraFocusAngles[PITCH] = -89.0f;
 		}
 
-		AngleVectors(cameraFocusAngles, camerafwd, nullptr, cameraup);
+		AngleVectors(cameraFocusAngles, camerafwd, NULL, cameraup);
 
 		float deltayaw = fabs(cameraFocusAngles[YAW] - cameraLastYaw);
+
 		if (deltayaw > 180.0f)
 		{
-			// Normalize this angle so that it is between 0 and 180.
 			deltayaw = fabs(deltayaw - 360.0f);
 		}
-		cameraStiffFactor = deltayaw / static_cast<float>(cg.time - cameraLastFrame);
-		if (cameraStiffFactor < 1.0)
+
+		cameraStiffFactor =
+			deltayaw / static_cast<float>(cg.time - cameraLastFrame);
+
+		if (cameraStiffFactor < 1.0f)
 		{
-			cameraStiffFactor = 0.0;
+			cameraStiffFactor = 0.0f;
 		}
-		else if (cameraStiffFactor > 2.5)
+		else if (cameraStiffFactor > 2.5f)
 		{
-			cameraStiffFactor = 0.75;
+			cameraStiffFactor = 0.75f;
 		}
 		else
 		{
-			// 1 to 2 scales from 0.0 to 0.5
 			cameraStiffFactor = (cameraStiffFactor - 1.0f) * 0.5f;
 		}
+
 		cameraLastYaw = cameraFocusAngles[YAW];
 
-		// Move the target to the new location.
 		CG_UpdateThirdPersonTargetDamp();
 		CG_UpdateThirdPersonCameraDamp();
 	}
 
-	// Now interestingly, the Quake method is to calculate a target focus point above the player, and point the camera at it.
-	// We won't do that for now.
-
-	// We must now take the angle taken from the camera target and location.
+	// Compute view angles from camera position
 	VectorSubtract(cameraCurTarget, cameraCurLoc, diff);
-	//Com_Printf( "%s\n", vtos(diff) );
+
 	const float dist = VectorNormalize(diff);
+
 	if (dist < 1.0f)
 	{
-		//must be hitting something, need some value to calc angles, so use cam forward
 		VectorCopy(camerafwd, diff);
 	}
+
 	vectoangles(diff, cg.refdefViewAngles);
 
-	// Temp: just move the camera to the side a bit
+	// Horizontal offset
+	float horz = 0.0f;
 	if (cg.overrides.active & CG_OVERRIDE_3RD_PERSON_HOF)
 	{
-		AnglesToAxis(cg.refdefViewAngles, cg.refdef.viewaxis);
-		VectorMA(cameraCurLoc, cg.overrides.thirdPersonHorzOffset, cg.refdef.viewaxis[1], cameraCurLoc);
+		horz = cg.overrides.thirdPersonHorzOffset;
 	}
-	else if (cg_thirdPersonHorzOffset.value != 0.0f)
+	else
 	{
-		AnglesToAxis(cg.refdefViewAngles, cg.refdef.viewaxis);
-		VectorMA(cameraCurLoc, cg_thirdPersonHorzOffset.value, cg.refdef.viewaxis[1], cameraCurLoc);
+		horz = cg_thirdPersonHorzOffset.value;
 	}
 
-	// ...and of course we should copy the new view location to the proper spot too.
+	if (fabs(horz) > 0.0001f)
+	{
+		// build view axis from final view angles
+		AnglesToAxis(cg.refdefViewAngles, cg.refdef.viewaxis);
+
+		// desired camera location after applying horizontal offset
+		vec3_t desiredCamLoc;
+		VectorMA(cameraCurLoc, horz, cg.refdef.viewaxis[1], desiredCamLoc);
+
+		// trace from the camera target to the desired location so we don't end inside walls
+		trace_t trace;
+		CG_Trace(&trace, cameraCurTarget, cameramins, cameramaxs, desiredCamLoc,
+			cg.predictedPlayerState.clientNum, MASK_CAMERACLIP);
+
+		if (trace.fraction < 1.0f)
+		{
+			// hit something — clamp camera to safe position
+			VectorCopy(trace.endpos, cameraCurLoc);
+		}
+		else
+		{
+			// clear path — use desired location
+			VectorCopy(desiredCamLoc, cameraCurLoc);
+		}
+	}
+
+	// Copy final camera position
 	VectorCopy(cameraCurLoc, cg.refdef.vieworg);
 
-	//if we hit the water, do a last-minute adjustment
+	// Water adjustment
 	if (camWaterAdjust)
 	{
 		cg.refdef.vieworg[2] += camWaterAdjust;
 	}
+
 	cameraLastFrame = cg.time;
 }
 
@@ -1427,7 +1511,8 @@ static qboolean CG_CalcFov()
 		{
 			fov_x = cg.overrides.fov;
 		}
-		else if ((!cg.renderingThirdPerson && !cg.zoomMode) && (cg_trueguns.integer || cg.snap->ps.weapon == WP_SABER || cg.snap->ps.weapon == WP_MELEE) && cg_truefov.value)
+		else if (!cg.renderingThirdPerson && (cg_trueguns.integer || cg.predictedPlayerState.weapon == WP_SABER
+			|| cg.predictedPlayerState.weapon == WP_MELEE) && cg_truefov.value)
 		{
 			fov_x = cg_truefov.value;
 		}
@@ -1909,6 +1994,7 @@ static void CG_DrawSkyBoxPortal()
 
 	const refdef_t backuprefdef = cg.refdef;
 
+	// asdf
 	COM_BeginParseSession();
 	const char* token = COM_ParseExt(&cstr, qfalse);
 	if (!token || !token[0])
@@ -2141,63 +2227,121 @@ void CG_DrawActiveFrame(const int serverTime, const stereoFrame_t stereoView)
 	{
 		cg.zoomMode = 0;
 	}
-	// decide on third person view
-	cg.renderingThirdPerson = static_cast<qboolean>(cg_thirdPerson.integer
-		|| cg.snap->ps.stats[STAT_HEALTH] <= 0
-		|| cg.snap->ps.eFlags & EF_HELD_BY_SAND_CREATURE
-		|| (g_entities[0].client && g_entities[0].client->NPC_class == CLASS_ATST || g_entities[0].client->NPC_class == CLASS_DROIDEKA
-			|| (cg.snap->ps.weapon == WP_SABER || cg.snap->ps.weapon == WP_MELEE) && !cg_fpls.integer
-			|| cg.snap->ps.weapon == WP_EMPLACED_GUN && !(cg.snap->ps.eFlags & EF_LOCKED_TO_WEAPON)
-			|| !cg_trueguns.integer && (cg.snap->ps.weapon == WP_TUSKEN_RIFLE || cg.snap->ps.weapon == WP_NOGHRI_STICK)
-			&&
-			cg.snap->ps.torsoAnim >= BOTH_TUSKENATTACK1 && cg.snap->ps.torsoAnim <= BOTH_TUSKENATTACK3));
 
-	if (cg_fpls.integer && cg_trueinvertsaber.integer == 2 && (cg.snap->ps.weapon == WP_SABER || cg.snap->ps.weapon ==
-		WP_MELEE))
+	// -------------------------------------------------------------------------
+	// Decide on third‑person vs first‑person rendering.
+	// -------------------------------------------------------------------------
+
+	qboolean third_person = qfalse;
+
+	// Base conditions for third person.
+	if (cg_thirdPerson.integer != 0 ||
+		cg.snap->ps.stats[STAT_HEALTH] <= 0 ||
+		(cg.snap->ps.eFlags & EF_HELD_BY_SAND_CREATURE))
 	{
-		//force thirdperson for sabers/melee if in cg_trueinvertsaber.integer == 2
-		cg.renderingThirdPerson = qtrue;
+		third_person = qtrue;
 	}
-	else if (cg_fpls.integer && cg_trueinvertsaber.integer == 1 && !cg_thirdPerson.integer && (cg.snap->ps.weapon ==
-		WP_SABER || cg.snap->ps.weapon == WP_MELEE))
+	else
 	{
-		cg.renderingThirdPerson = qtrue;
-	}
-	else if (cg_fpls.integer && cg_trueinvertsaber.integer == 1 && cg_thirdPerson.integer && (cg.snap->ps.weapon ==
-		WP_SABER || cg.snap->ps.weapon == WP_MELEE))
-	{
-		cg.renderingThirdPerson = qfalse;
+		// NPC class‑based third person (ATST, DROIDEKA, etc.).
+		if (g_entities[0].client != NULL)
+		{
+			if (g_entities[0].client->NPC_class == CLASS_ATST ||
+				g_entities[0].client->NPC_class == CLASS_DROIDEKA)
+			{
+				third_person = qtrue;
+			}
+		}
+
+		// Weapon‑based third person rules.
+		if (third_person == qfalse)
+		{
+			const int weapon = cg.snap->ps.weapon;
+
+			// Saber/melee in third person unless forced first‑person saber is active.
+			if ((weapon == WP_SABER || weapon == WP_MELEE) && cg_fpls.integer == 0)
+			{
+				third_person = qtrue;
+			}
+			// Emplaced gun in third person unless locked to weapon.
+			else if (weapon == WP_EMPLACED_GUN &&
+				!(cg.snap->ps.eFlags & EF_LOCKED_TO_WEAPON))
+			{
+				third_person = qtrue;
+			}
+			// Tusken rifle / Noghri stick special attack third person when trueguns is off.
+			else if (cg_trueguns.integer == 0 &&
+				(weapon == WP_TUSKEN_RIFLE || weapon == WP_NOGHRI_STICK) &&
+				cg.snap->ps.torsoAnim >= BOTH_TUSKENATTACK1 &&
+				cg.snap->ps.torsoAnim <= BOTH_TUSKENATTACK3)
+			{
+				third_person = qtrue;
+			}
+		}
 	}
 
-	if (cg.zoomMode)
+	// Saber/melee inversion rules.
+	if (cg_fpls.integer != 0 &&
+		cg_trueinvertsaber.integer == 2 &&
+		(cg.snap->ps.weapon == WP_SABER || cg.snap->ps.weapon == WP_MELEE))
 	{
-		//always force first person when zoomed
-		cg.renderingThirdPerson = qfalse;
+		// Force third person for sabers/melee if cg_trueinvertsaber == 2.
+		third_person = qtrue;
 	}
+	else if (cg_fpls.integer != 0 &&
+		cg_trueinvertsaber.integer == 1 &&
+		cg_thirdPerson.integer == 0 &&
+		(cg.snap->ps.weapon == WP_SABER || cg.snap->ps.weapon == WP_MELEE))
+	{
+		// Force third person when normally first person.
+		third_person = qtrue;
+	}
+	else if (cg_fpls.integer != 0 &&
+		cg_trueinvertsaber.integer == 1 &&
+		cg_thirdPerson.integer != 0 &&
+		(cg.snap->ps.weapon == WP_SABER || cg.snap->ps.weapon == WP_MELEE))
+	{
+		// Force first person when normally third person.
+		third_person = qfalse;
+	}
+
+	// Zoomed characters should never do third person stuff.
+	if (cg.zoomMode != 0)
+	{
+		third_person = qfalse;
+	}
+
+	cg.renderingThirdPerson = (third_person == qtrue) ? qtrue : qfalse;
+
+	// -------------------------------------------------------------------------
+	// Camera / view calculation.
+	// -------------------------------------------------------------------------
 
 	if (in_camera)
 	{
-		// The camera takes over the view
+		// The scripted camera takes over the view.
 		CGCam_RenderScene();
 	}
 	else
 	{
-		//Finish any fading that was happening
+		// Finish any fading that was happening.
 		CGCam_UpdateFade();
-		// build cg.refdef
+
+		// Build cg.refdef (view origin, angles, FOV, etc.).
 		inwater = CG_CalcViewValues();
 	}
 
-	if (cg.zoomMode)
+	// Zoom‑based fog handling.
+	if (cg.zoomMode != 0)
 	{
-		//zooming with binoculars or sniper, set the fog range based on the zoom level -rww
+		// Zooming with binoculars or sniper: set the fog range based on the zoom level.
 		cg_rangedFogging = qtrue;
-		//smaller the fov the less fog we have between the view and cull dist
+		// Smaller FOV means less fog between the view and cull distance.
 		cgi_R_SetRangeFog(cg.refdef.fov_x * 64.0f);
 	}
-	else if (cg_rangedFogging)
+	else if (cg_rangedFogging == qtrue)
 	{
-		//disable it
+		// Disable ranged fog when no longer zoomed.
 		cg_rangedFogging = qfalse;
 		cgi_R_SetRangeFog(0.0f);
 	}

@@ -601,244 +601,620 @@ void NPC_BSST_Sleep()
 	}
 }
 
-/*
--------------------------
-NPC_CheckEnemyStealth
--------------------------
-*/
-
-static qboolean NPC_CheckEnemyStealth(gentity_t* target)
+// -----------------------------------------------------------------------------
+// NPC_CheckEnemyStealth_Smart
+// Enhanced stealth detection with:
+//  - Slightly increased FOV
+//  - Sound-based detection (footsteps, saber, blaster)
+//  - Reduced detection if target is crouching *behind* the NPC,
+//    but only when farther than a minimum distance.
+// -----------------------------------------------------------------------------
+static qboolean NPC_CheckEnemyStealth_Smart(gentity_t* target)
 {
-	float min_dist = 40; //any closer than 40 and we definitely notice
+	// Any closer than this and we definitely notice (base distance).
+	float min_dist = 80.0f;
 
-	//In case we aquired one some other way
+	// Already have an enemy from some other logic.
 	if (NPC->enemy != nullptr)
+	{
 		return qtrue;
+	}
 
-	//Ignore notarget
-	if (target->flags & FL_NOTARGET)
+	// Ignore notarget.
+	if ((target->flags & FL_NOTARGET) != 0)
+	{
 		return qfalse;
+	}
 
+	// Dead targets are not valid enemies.
 	if (target->health <= 0)
 	{
 		return qfalse;
 	}
 
-	if (target->client->ps.weapon == WP_SABER && target->client->ps.SaberActive() && !target->client->ps.saberInFlight)
+	// If target has saber in hand and activated, we wake up even sooner.
+	if (target->client->ps.weapon == WP_SABER &&
+		target->client->ps.SaberActive() &&
+		target->client->ps.saberInFlight == qfalse)
 	{
-		//if target has saber in hand and activated, we wake up even sooner even if not facing him
-		min_dist = 100;
+		min_dist = 100.0f;
 	}
 
-	float target_dist = DistanceSquared(target->currentOrigin, NPC->currentOrigin);
-	//If the target is this close, then wake up regardless
-	if (!(target->client->ps.pm_flags & PMF_DUCKED) //not ducking
-		&& NPCInfo->scriptFlags & SCF_LOOK_FOR_ENEMIES //looking for enemies
-		&& target_dist < min_dist * min_dist) //closer than minDist
+	// Distance squared from NPC to target.
+	float target_dist_sq = DistanceSquared(target->currentOrigin, NPC->currentOrigin);
+
+	// If the target is this close, then wake up regardless (if we're looking).
+	if ((target->client->ps.pm_flags & PMF_DUCKED) == 0 &&
+		(NPCInfo->scriptFlags & SCF_LOOK_FOR_ENEMIES) &&
+		target_dist_sq < (min_dist * min_dist))
 	{
 		G_SetEnemy(NPC, target);
 		NPCInfo->enemyLastSeenTime = level.time;
-		TIMER_Set(NPC, "attackDelay", Q_irand(500, 1500));
+		TIMER_Set(NPC, "attackDelay", Q_irand(500, 2500));
 		return qtrue;
 	}
 
-	float max_view_dist = MAX_VIEW_DIST;
+	// Base maximum view distance from NPC stats.
+	float max_view_dist = NPCInfo->stats.visrange;
 
-	if (NPCInfo->stats.visrange > max_view_dist)
+	// Out of possible visual range.
+	if (target_dist_sq > (max_view_dist * max_view_dist))
 	{
-		//FIXME: should we always just set maxViewDist to this?
-		max_view_dist = NPCInfo->stats.visrange;
-	}
-
-	if (target_dist > max_view_dist * max_view_dist)
-	{
-		//out of possible visRange
 		return qfalse;
 	}
 
-	//Check FOV first
-	if (InFOV(target, NPC, NPCInfo->stats.hfov, NPCInfo->stats.vfov) == qfalse)
-		return qfalse;
+	// Slightly increase FOV to make NPCs more aware.
+	const float hfov = NPCInfo->stats.hfov * 1.25f;
+	const float vfov = NPCInfo->stats.vfov * 1.25f;
 
-	const qboolean clear_los = target->client->ps.leanofs
-		? NPC_ClearLOS(target->client->renderInfo.eyePoint)
-		: NPC_ClearLOS(target);
+	// Clamp FOV to reasonable limits.
+	const float clamped_hfov = (hfov > 180.0f) ? 180.0f : hfov;
+	const float clamped_vfov = (vfov > 180.0f) ? 180.0f : vfov;
 
-	//Now check for clear line of vision
-	if (clear_los)
+	// Check FOV first.
+	if (InFOV(target, NPC, clamped_hfov, clamped_vfov) == qfalse)
 	{
+		// Might still detect via sound later.
+	}
+
+	// Clear line of sight check (eyePoint vs origin depending on lean).
+	qboolean clear_los = qfalse;
+	if (target->client->ps.leanofs != 0)
+	{
+		clear_los = (NPC_ClearLOS(target->client->renderInfo.eyePoint) == qtrue) ? qtrue : qfalse;
+	}
+	else
+	{
+		clear_los = (NPC_ClearLOS(target) == qtrue) ? qtrue : qfalse;
+	}
+
+	// Basic "hearing" radius for loud actions.
+	const float hear_radius = 512.0f;
+	const float hear_radius_sq = hear_radius * hear_radius;
+
+	// Assess loud actions: footsteps, saber, blaster fire.
+	const float target_speed = VectorLength(target->client->ps.velocity);
+	const qboolean target_moving_fast = (target_speed > 120.0f) ? qtrue : qfalse;
+
+	const qboolean saber_loud =
+		(target->client->ps.weapon == WP_SABER &&
+			target->client->ps.SaberActive() &&
+			target->client->ps.saberInFlight == qfalse)
+		? qtrue : qfalse;
+
+	const qboolean blaster_firing =
+		(target->client->ps.weapon != WP_SABER &&
+			target->client->ps.weaponstate == WEAPON_FIRING)
+		? qtrue : qfalse;
+
+	const qboolean loud_action =
+		(target_moving_fast == qtrue || saber_loud == qtrue || blaster_firing == qtrue)
+		? qtrue : qfalse;
+
+	// If target is loud and within hearing radius, detect even without good FOV.
+	if (loud_action == qtrue &&
+		target_dist_sq < hear_radius_sq &&
+		clear_los == qtrue &&
+		(NPCInfo->scriptFlags & SCF_LOOK_FOR_ENEMIES))
+	{
+		G_SetEnemy(NPC, target);
+		NPCInfo->enemyLastSeenTime = level.time;
+		TIMER_Set(NPC, "attackDelay", Q_irand(300, 1500));
+		return qtrue;
+	}
+
+	// Now proceed with full visual/stealth evaluation.
+	if (clear_los == qtrue)
+	{
+		// AT-STs basically can't miss.
 		if (target->client->NPC_class == CLASS_ATST)
 		{
-			//can't miss 'em!
 			G_SetEnemy(NPC, target);
-			TIMER_Set(NPC, "attackDelay", Q_irand(500, 1500));
+			TIMER_Set(NPC, "attackDelay", Q_irand(500, 2500));
 			return qtrue;
 		}
+
 		vec3_t targ_org = {
-			target->currentOrigin[0], target->currentOrigin[1], target->currentOrigin[2] + target->maxs[2] - 4
+			target->currentOrigin[0],
+			target->currentOrigin[1],
+			target->currentOrigin[2] + target->maxs[2] - 4.0f
 		};
-		float h_angle_perc = NPC_GetHFOVPercentage(targ_org, NPC->client->renderInfo.eyePoint,
-			NPC->client->renderInfo.eyeAngles, NPCInfo->stats.hfov);
-		float v_angle_perc = NPC_GetVFOVPercentage(targ_org, NPC->client->renderInfo.eyePoint,
-			NPC->client->renderInfo.eyeAngles, NPCInfo->stats.vfov);
 
-		//Scale them vertically some, and horizontally pretty harshly
-		v_angle_perc *= v_angle_perc; //( vAngle_perc * vAngle_perc );
-		h_angle_perc *= h_angle_perc * h_angle_perc;
+		float h_angle_perc = NPC_GetHFOVPercentage(
+			targ_org,
+			NPC->client->renderInfo.eyePoint,
+			NPC->client->renderInfo.eyeAngles,
+			clamped_hfov);
 
-		//Assess the player's current status
-		target_dist = Distance(target->currentOrigin, NPC->currentOrigin);
+		float vAngle_perc = NPC_GetVFOVPercentage(
+			targ_org,
+			NPC->client->renderInfo.eyePoint,
+			NPC->client->renderInfo.eyeAngles,
+			clamped_vfov);
 
-		const float target_speed = VectorLength(target->client->ps.velocity);
-		const int target_crouching = target->client->usercmd.upmove < 0;
+		// Scale vertically and horizontally.
+		vAngle_perc *= vAngle_perc;
+		h_angle_perc *= (h_angle_perc * h_angle_perc);
+
+		// Actual distance.
+		const float target_dist = Distance(target->currentOrigin, NPC->currentOrigin);
+
+		const int target_crouching = (target->client->usercmd.upmove < 0) ? 1 : 0;
 		const float dist_rating = target_dist / max_view_dist;
 		float speed_rating = target_speed / MAX_VIEW_SPEED;
-		const float turning_rating = AngleDelta(target->client->ps.viewangles[PITCH], target->lastAngles[PITCH]) /
-			180.0f + AngleDelta(target->client->ps.viewangles[YAW], target->lastAngles[YAW]) / 180.0f;
+
+		const float turning_rating =
+			AngleDelta(target->client->ps.viewangles[PITCH], target->lastAngles[PITCH]) / 180.0f +
+			AngleDelta(target->client->ps.viewangles[YAW], target->lastAngles[YAW]) / 180.0f;
+
 		const float light_level = target->lightLevel / MAX_LIGHT_INTENSITY;
-		const float fov_perc = 1.0f - (h_angle_perc + v_angle_perc) * 0.5f; //FIXME: Dunno about the average...
+		const float fov_perc = 1.0f - (h_angle_perc + vAngle_perc) * 0.5f;
+
 		float vis_rating = 0.0f;
 
-		//Too dark
+		// Too dark.
 		if (light_level < MIN_LIGHT_THRESHOLD)
+		{
 			return qfalse;
+		}
 
-		//Too close?
+		// Too close? Always see them.
 		if (dist_rating < DISTANCE_THRESHOLD)
 		{
 			G_SetEnemy(NPC, target);
-			TIMER_Set(NPC, "attackDelay", Q_irand(500, 1500));
+			NPCInfo->enemyLastSeenTime = level.time;
+			TIMER_Set(NPC, "attackDelay", Q_irand(500, 2500));
 			return qtrue;
 		}
 
-		//Out of range
+		// Out of range.
 		if (dist_rating > 1.0f)
+		{
 			return qfalse;
+		}
 
-		//Cap our speed checks
+		// Cap speed checks.
 		if (speed_rating > 1.0f)
+		{
 			speed_rating = 1.0f;
+		}
 
-		//Calculate the distance, fov and light influences
-		//...Visibilty linearly wanes over distance
+		// Distance influence.
 		const float dist_influence = DISTANCE_SCALE * (1.0f - dist_rating);
-		//...As the percentage out of the FOV increases, straight perception suffers on an exponential scale
+
+		// FOV influence.
 		const float fov_influence = FOV_SCALE * (1.0f - fov_perc);
-		//...Lack of light hides, abundance of light exposes
+
+		// Light influence.
 		const float light_influence = (light_level - 0.5f) * LIGHT_SCALE;
 
-		//Calculate our base rating
+		// Base rating.
 		float target_rating = dist_influence + fov_influence + light_influence;
 
-		//Now award any final bonuses to this number
+		// Environment visibility modifiers (water/fog).
 		const int contents = gi.pointcontents(targ_org, target->s.number);
-		if (contents & CONTENTS_WATER)
+		if ((contents & CONTENTS_WATER) != 0)
 		{
-			const int my_contents = gi.pointcontents(NPC->client->renderInfo.eyePoint, NPC->s.number);
-			if (!(my_contents & CONTENTS_WATER))
+			const int myContents = gi.pointcontents(NPC->client->renderInfo.eyePoint, NPC->s.number);
+			if ((myContents & CONTENTS_WATER) == 0)
 			{
-				//I'm not in water
-				if (NPC->client->NPC_class == CLASS_SWAMPTROOPER || NPC->client->NPC_class == CLASS_CLONETROOPER)
+				if (NPC->client->NPC_class == CLASS_SWAMPTROOPER)
 				{
-					//these guys can see in in/through water pretty well
-					vis_rating = 0.10f; //10% bonus
+					vis_rating = 0.10f;
 				}
 				else
 				{
-					vis_rating = 0.35f; //35% bonus
+					vis_rating = 0.35f;
 				}
 			}
 			else
 			{
-				//else, if we're both in water
-				if (NPC->client->NPC_class == CLASS_SWAMPTROOPER || NPC->client->NPC_class == CLASS_CLONETROOPER)
+				if (NPC->client->NPC_class != CLASS_SWAMPTROOPER)
 				{
-					//I can see him just fine
-				}
-				else
-				{
-					vis_rating = 0.15f; //15% bonus
+					vis_rating = 0.15f;
 				}
 			}
 		}
-		else
+		else if ((contents & CONTENTS_FOG) != 0)
 		{
-			//not in water
-			if (contents & CONTENTS_FOG)
-			{
-				vis_rating = 0.15f; //15% bonus
-			}
+			vis_rating = 0.15f;
 		}
 
-		target_rating *= 1.0f - vis_rating;
+		// Apply visibility penalty.
+		target_rating *= (1.0f - vis_rating);
 
-		//...Motion draws the eye quickly
+		// Motion draws the eye quickly.
 		target_rating += speed_rating * SPEED_SCALE;
 		target_rating += turning_rating * TURNING_SCALE;
-		//FIXME: check to see if they're animating, too?  But can we do something as simple as frame != oldframe?
 
-		//...Smaller targets are harder to indentify
-		if (target_crouching)
+		// ---------------------------------------------------------------------
+		// NEW STEALTH LOGIC (your request)
+		// Reduce detection if crouching AND behind NPC AND farther than threshold.
+		// ---------------------------------------------------------------------
+		if (target_crouching != 0)
 		{
-			target_rating *= 0.9f; //10% bonus
+			// Base crouch penalty.
+			target_rating *= 0.9f;
+
+			// Distance threshold for crouch-behind stealth.
+			const float behind_crouch_distance = 96.0f;
+
+			if (target_dist > behind_crouch_distance)
+			{
+				// Compute yaw difference.
+				float npc_yaw = NPC->client->ps.viewangles[YAW];
+
+				vec3_t dir;
+				VectorSubtract(target->currentOrigin, NPC->currentOrigin, dir);
+				float yaw_to_target = vectoyaw(dir);
+
+				float yaw_diff = AngleDelta(npc_yaw, yaw_to_target);
+
+				// If target is behind NPC (>90 degrees off center).
+				if (fabsf(yaw_diff) > 90.0f)
+				{
+					target_rating *= 0.85f; // 15% harder to detect.
+				}
+
+				// Deep behind (>135 degrees).
+				if (fabsf(yaw_diff) > 135.0f)
+				{
+					target_rating *= 0.80f; // 20% harder to detect.
+				}
+			}
 		}
 
-		//If he's violated the threshold, then realize him
-		float realize, cautious;
-		if (NPC->client->NPC_class == CLASS_SWAMPTROOPER || NPC->client->NPC_class == CLASS_CLONETROOPER)
+		// Swamptroopers see better.
+		float realize;
+		float cautious;
+		if (NPC->client->NPC_class == CLASS_SWAMPTROOPER)
 		{
-			//swamptroopers can see much better
-			realize = static_cast<float>(CAUTIOUS_THRESHOLD
-				/**difficulty_scale*/)/**difficulty_scale*/;
-			cautious = static_cast<float>(CAUTIOUS_THRESHOLD) * 0.75f/**difficulty_scale*/;
+			realize = (float)CAUTIOUS_THRESHOLD;
+			cautious = (float)CAUTIOUS_THRESHOLD * 0.75f;
 		}
 		else
 		{
-			realize = static_cast<float>(REALIZE_THRESHOLD/**difficulty_scale*/)/**difficulty_scale*/;
-			cautious = static_cast<float>(CAUTIOUS_THRESHOLD) * 0.75f/**difficulty_scale*/;
+			realize = (float)REALIZE_THRESHOLD;
+			cautious = (float)CAUTIOUS_THRESHOLD * 0.75f;
 		}
 
-		if (target_rating > realize && NPCInfo->scriptFlags & SCF_LOOK_FOR_ENEMIES)
+		// Immediate realization.
+		if (target_rating > realize && (NPCInfo->scriptFlags & SCF_LOOK_FOR_ENEMIES))
 		{
 			G_SetEnemy(NPC, target);
 			NPCInfo->enemyLastSeenTime = level.time;
-			TIMER_Set(NPC, "attackDelay", Q_irand(500, 1500));
+			TIMER_Set(NPC, "attackDelay", Q_irand(500, 2500));
 			return qtrue;
 		}
 
-		//If he's above the caution threshold, then realize him in a few seconds unless he moves to cover
-		if (target_rating > cautious && !(NPCInfo->scriptFlags & SCF_IGNORE_ALERTS))
+		// Cautious / suspicious state.
+		if (target_rating > cautious && (NPCInfo->scriptFlags & SCF_IGNORE_ALERTS) == 0)
 		{
-			//FIXME: ambushing guys should never talk
 			if (TIMER_Done(NPC, "enemyLastVisible"))
 			{
-				//If we haven't already, start the counter
 				const int look_time = Q_irand(4500, 8500);
-				//NPCInfo->timeEnemyLastVisible = level.time + 2000;
 				TIMER_Set(NPC, "enemyLastVisible", look_time);
 				ST_Speech(NPC, SPEECH_SIGHT, 0);
 				NPC_TempLookTarget(NPC, target->s.number, look_time, look_time);
-				//FIXME: set desired yaw and pitch towards this guy?
 			}
-			else if (TIMER_Get(NPC, "enemyLastVisible") <= level.time + 500 && NPCInfo->scriptFlags &
-				SCF_LOOK_FOR_ENEMIES) //FIXME: Is this reliable?
+			else if (TIMER_Get(NPC, "enemyLastVisible") <= level.time + 500 &&
+				(NPCInfo->scriptFlags & SCF_LOOK_FOR_ENEMIES))
 			{
-				if (NPCInfo->rank < RANK_LT && !Q_irand(0, 2))
+				if (NPCInfo->rank < RANK_LT && Q_irand(0, 2) == 0)
 				{
-					const int interrogate_time = Q_irand(2000, 4000);
+					const int interrogateTime = Q_irand(2000, 4000);
 					ST_Speech(NPC, SPEECH_SUSPICIOUS, 0);
-					TIMER_Set(NPC, "interrogating", interrogate_time);
+					TIMER_Set(NPC, "interrogating", interrogateTime);
 					G_SetEnemy(NPC, target);
 					NPCInfo->enemyLastSeenTime = level.time;
-					TIMER_Set(NPC, "attackDelay", interrogate_time);
-					TIMER_Set(NPC, "stand", interrogate_time);
+					TIMER_Set(NPC, "attackDelay", interrogateTime);
+					TIMER_Set(NPC, "stand", interrogateTime);
 				}
 				else
 				{
 					G_SetEnemy(NPC, target);
 					NPCInfo->enemyLastSeenTime = level.time;
-					//FIXME: ambush guys (like those popping out of water) shouldn't delay...
-					TIMER_Set(NPC, "attackDelay", Q_irand(500, 1500));
+					TIMER_Set(NPC, "attackDelay", Q_irand(500, 2500));
+					TIMER_Set(NPC, "stand", Q_irand(500, 2500));
+				}
+				return qtrue;
+			}
+
+			return qfalse;
+		}
+	}
+
+	return qfalse;
+}
+
+// -----------------------------------------------------------------------------
+// NPC_CheckEnemyStealth
+// Determines whether an NPC should detect a potential enemy (player or NPC)
+// based on distance, FOV, LOS, light level, movement, and environment.
+// NOTE: This version is a cleaned, modernized rewrite with identical behaviour.
+// -----------------------------------------------------------------------------
+static qboolean NPC_CheckEnemyStealth(gentity_t* target)
+{
+	// Any closer than 40 and we definitely notice.
+	float min_dist = 40.0f;
+
+	// In case we acquired an enemy some other way.
+	if (NPC->enemy != nullptr)
+	{
+		return qtrue;
+	}
+
+	// Ignore notarget.
+	if ((target->flags & FL_NOTARGET) != 0)
+	{
+		return qfalse;
+	}
+
+	// Dead targets are not valid enemies.
+	if (target->health <= 0)
+	{
+		return qfalse;
+	}
+
+	// If target has saber in hand and activated, we wake up even sooner even if not facing him.
+	if (target->client->ps.weapon == WP_SABER &&
+		target->client->ps.SaberActive() &&
+		target->client->ps.saberInFlight == qfalse)
+	{
+		min_dist = 100.0f;
+	}
+
+	// Distance squared from NPC to target.
+	float target_dist = DistanceSquared(target->currentOrigin, NPC->currentOrigin);
+
+	// If the target is this close, then wake up regardless.
+	if (((target->client->ps.pm_flags & PMF_DUCKED) == 0) && // not ducking
+		((NPCInfo->scriptFlags & SCF_LOOK_FOR_ENEMIES) != 0) && // looking for enemies
+		(target_dist < (min_dist * min_dist))) // closer than min_dist
+	{
+		G_SetEnemy(NPC, target);
+		NPCInfo->enemyLastSeenTime = level.time;
+		TIMER_Set(NPC, "attackDelay", Q_irand(500, 2500));
+		return qtrue;
+	}
+
+	// Max view distance from NPC stats.
+	float max_view_dist = NPCInfo->stats.visrange;
+
+	// Out of possible visRange.
+	if (target_dist > (max_view_dist * max_view_dist))
+	{
+		return qfalse;
+	}
+
+	// Check FOV first.
+	if (InFOV(target, NPC, NPCInfo->stats.hfov, NPCInfo->stats.vfov) == qfalse)
+	{
+		return qfalse;
+	}
+
+	// Clear line of sight: use eyePoint if leaning, otherwise origin.
+	const qboolean clear_los = (target->client->ps.leanofs != 0)
+		? (NPC_ClearLOS(target->client->renderInfo.eyePoint) == qtrue ? qtrue : qfalse)
+		: (NPC_ClearLOS(target) == qtrue ? qtrue : qfalse);
+
+	// Now check for clear line of vision.
+	if (clear_los == qtrue)
+	{
+		// AT-STs basically can't miss.
+		if (target->client->NPC_class == CLASS_ATST)
+		{
+			G_SetEnemy(NPC, target);
+			TIMER_Set(NPC, "attackDelay", Q_irand(500, 2500));
+			return qtrue;
+		}
+
+		// Target upper origin (near head).
+		vec3_t targ_org = {
+			target->currentOrigin[0],
+			target->currentOrigin[1],
+			target->currentOrigin[2] + target->maxs[2] - 4.0f
+		};
+
+		// Horizontal and vertical FOV percentages.
+		float h_angle_perc = NPC_GetHFOVPercentage(
+			targ_org,
+			NPC->client->renderInfo.eyePoint,
+			NPC->client->renderInfo.eyeAngles,
+			NPCInfo->stats.hfov);
+
+		float vAngle_perc = NPC_GetVFOVPercentage(
+			targ_org,
+			NPC->client->renderInfo.eyePoint,
+			NPC->client->renderInfo.eyeAngles,
+			NPCInfo->stats.vfov);
+
+		// Scale them vertically some, and horizontally pretty harshly.
+		vAngle_perc *= vAngle_perc;
+		h_angle_perc *= (h_angle_perc * h_angle_perc);
+
+		// Assess the player's current status.
+		target_dist = Distance(target->currentOrigin, NPC->currentOrigin);
+
+		const float target_speed = VectorLength(target->client->ps.velocity);
+		const int target_crouching = (target->client->usercmd.upmove < 0) ? 1 : 0;
+		const float dist_rating = target_dist / max_view_dist;
+		float speed_rating = target_speed / MAX_VIEW_SPEED;
+
+		const float turning_rating =
+			AngleDelta(target->client->ps.viewangles[PITCH], target->lastAngles[PITCH]) / 180.0f +
+			AngleDelta(target->client->ps.viewangles[YAW], target->lastAngles[YAW]) / 180.0f;
+
+		const float light_level = target->lightLevel / MAX_LIGHT_INTENSITY;
+		const float fov_perc = 1.0f - (h_angle_perc + vAngle_perc) * 0.5f; // average FOV factor.
+
+		float vis_rating = 0.0f;
+
+		// Too dark.
+		if (light_level < MIN_LIGHT_THRESHOLD)
+		{
+			return qfalse;
+		}
+
+		// Too close? Always see them.
+		if (dist_rating < DISTANCE_THRESHOLD)
+		{
+			G_SetEnemy(NPC, target);
+			TIMER_Set(NPC, "attackDelay", Q_irand(500, 2500));
+			return qtrue;
+		}
+
+		// Out of range.
+		if (dist_rating > 1.0f)
+		{
+			return qfalse;
+		}
+
+		// Cap our speed checks.
+		if (speed_rating > 1.0f)
+		{
+			speed_rating = 1.0f;
+		}
+
+		// Calculate the distance, FOV and light influences.
+		// Visibility linearly wanes over distance.
+		const float dist_influence = DISTANCE_SCALE * (1.0f - dist_rating);
+		// As the percentage out of the FOV increases, perception suffers on an exponential scale.
+		const float fov_influence = FOV_SCALE * (1.0f - fov_perc);
+		// Lack of light hides, abundance of light exposes.
+		const float light_influence = (light_level - 0.5f) * LIGHT_SCALE;
+
+		// Calculate our base rating.
+		float target_rating = dist_influence + fov_influence + light_influence;
+
+		// Now award any final bonuses to this number (water/fog visibility).
+		const int contents = gi.pointcontents(targ_org, target->s.number);
+		if ((contents & CONTENTS_WATER) != 0)
+		{
+			const int myContents = gi.pointcontents(NPC->client->renderInfo.eyePoint, NPC->s.number);
+			if ((myContents & CONTENTS_WATER) == 0)
+			{
+				// I'm not in water.
+				if (NPC->client->NPC_class == CLASS_SWAMPTROOPER)
+				{
+					// These guys can see in/through water pretty well.
+					vis_rating = 0.10f; // 10% bonus.
+				}
+				else
+				{
+					vis_rating = 0.35f; // 35% bonus.
+				}
+			}
+			else
+			{
+				// Else, if we're both in water.
+				if (NPC->client->NPC_class == CLASS_SWAMPTROOPER)
+				{
+					// I can see him just fine.
+				}
+				else
+				{
+					vis_rating = 0.15f; // 15% bonus.
+				}
+			}
+		}
+		else
+		{
+			// Not in water.
+			if ((contents & CONTENTS_FOG) != 0)
+			{
+				vis_rating = 0.15f; // 15% bonus.
+			}
+		}
+
+		// Apply visibility modifier.
+		target_rating *= (1.0f - vis_rating);
+
+		// Motion draws the eye quickly.
+		target_rating += speed_rating * SPEED_SCALE;
+		target_rating += turning_rating * TURNING_SCALE;
+
+		// Smaller targets are harder to identify.
+		if (target_crouching != 0)
+		{
+			target_rating *= 0.9f; // 10% harder to see.
+		}
+
+		// If he's violated the threshold, then realize him.
+		float realize;
+		float cautious;
+
+		if (NPC->client->NPC_class == CLASS_SWAMPTROOPER)
+		{
+			// Swamptroopers can see much better.
+			realize = (float)CAUTIOUS_THRESHOLD;
+			cautious = (float)CAUTIOUS_THRESHOLD * 0.75f;
+		}
+		else
+		{
+			realize = (float)REALIZE_THRESHOLD;
+			cautious = (float)CAUTIOUS_THRESHOLD * 0.75f;
+		}
+
+		if ((target_rating > realize) &&
+			((NPCInfo->scriptFlags & SCF_LOOK_FOR_ENEMIES) != 0))
+		{
+			G_SetEnemy(NPC, target);
+			NPCInfo->enemyLastSeenTime = level.time;
+			TIMER_Set(NPC, "attackDelay", Q_irand(500, 2500));
+			return qtrue;
+		}
+
+		// If he's above the caution threshold, then realize him in a few seconds unless he moves to cover.
+		if ((target_rating > cautious) &&
+			((NPCInfo->scriptFlags & SCF_IGNORE_ALERTS) == 0))
+		{
+			if (TIMER_Done(NPC, "enemyLastVisible"))
+			{
+				// If we haven't already, start the counter.
+				const int look_time = Q_irand(4500, 8500);
+				TIMER_Set(NPC, "enemyLastVisible", look_time);
+				ST_Speech(NPC, SPEECH_SIGHT, 0);
+				NPC_TempLookTarget(NPC, target->s.number, look_time, look_time);
+			}
+			else if ((TIMER_Get(NPC, "enemyLastVisible") <= level.time + 500) &&
+				((NPCInfo->scriptFlags & SCF_LOOK_FOR_ENEMIES) != 0))
+			{
+				if ((NPCInfo->rank < RANK_LT) && (Q_irand(0, 2) == 0))
+				{
+					const int interrogateTime = Q_irand(2000, 4000);
+					ST_Speech(NPC, SPEECH_SUSPICIOUS, 0);
+					TIMER_Set(NPC, "interrogating", interrogateTime);
+					G_SetEnemy(NPC, target);
+					NPCInfo->enemyLastSeenTime = level.time;
+					TIMER_Set(NPC, "attackDelay", interrogateTime);
+					TIMER_Set(NPC, "stand", interrogateTime);
+				}
+				else
+				{
+					G_SetEnemy(NPC, target);
+					NPCInfo->enemyLastSeenTime = level.time;
+					TIMER_Set(NPC, "attackDelay", Q_irand(500, 2500));
 					TIMER_Set(NPC, "stand", Q_irand(500, 2500));
 				}
 				return qtrue;
@@ -853,16 +1229,33 @@ static qboolean NPC_CheckEnemyStealth(gentity_t* target)
 
 qboolean NPC_CheckPlayerTeamStealth()
 {
+	gentity_t* enemy;
+	const qboolean cairn_dock1 = (Q_stricmp(level.mapname, "cairn_dock1") == 0) ? qtrue : qfalse;
+	const qboolean isYavin1b = (Q_stricmp(level.mapname, "yavin1b") == 0) ? qtrue : qfalse;
+
 	for (int i = 0; i < ENTITYNUM_WORLD; i++)
 	{
 		if (!PInUse(i))
 			continue;
-		gentity_t* enemy = &g_entities[i];
-		if (enemy && enemy->client && NPC_ValidEnemy(enemy))
+		enemy = &g_entities[i];
+
+		if (enemy
+			&& enemy->client
+			&& NPC_ValidEnemy(enemy))
 		{
-			if (NPC_CheckEnemyStealth(enemy)) //Change this pointer to assess other entities
+			if (g_spskill->integer > 1 && cairn_dock1 == qfalse && isYavin1b == qfalse)
 			{
-				return qtrue;
+				if (NPC_CheckEnemyStealth_Smart(enemy))
+				{
+					return qtrue;
+				}
+			}
+			else
+			{
+				if (NPC_CheckEnemyStealth(enemy))
+				{
+					return qtrue;
+				}
 			}
 		}
 	}
@@ -872,6 +1265,7 @@ qboolean NPC_CheckPlayerTeamStealth()
 static qboolean NPC_CheckEnemiesInSpotlight()
 {
 	const qboolean isYavin1b = (Q_stricmp(level.mapname, "yavin1b") == 0) ? qtrue : qfalse;
+	const qboolean cairn_dock1 = (Q_stricmp(level.mapname, "cairn_dock1") == 0) ? qtrue : qfalse;
 
 	if (!NPC || !NPC->client || !NPCInfo)
 	{
@@ -889,7 +1283,7 @@ static qboolean NPC_CheckEnemiesInSpotlight()
 
 	for (int i = 0; i < 3; i++)
 	{
-		if (g_spskill->integer <= 2 || in_camera || isYavin1b)
+		if (g_spskill->integer <= 2 || in_camera || isYavin1b == qtrue || cairn_dock1 == qtrue)
 		{// Normal and easy have a smaller detection radius
 			mins[i] = NPC->client->renderInfo.eyePoint[i] - DETECTION_RADIUS;
 			maxs[i] = NPC->client->renderInfo.eyePoint[i] + DETECTION_RADIUS;
@@ -924,7 +1318,7 @@ static qboolean NPC_CheckEnemiesInSpotlight()
 			continue;
 		}
 
-		if (g_spskill->integer <= 2 || in_camera || isYavin1b)
+		if (g_spskill->integer <= 2 || in_camera || isYavin1b == qtrue || cairn_dock1 == qtrue)
 		{// Normal and easy have a smaller detection radius
 			// Primary cone check with distance limit
 			const float dist_sq = DistanceSquared(NPC->client->renderInfo.eyePoint, enemy->currentOrigin);
@@ -986,7 +1380,8 @@ static qboolean NPC_CheckEnemiesInSpotlight()
 					// 16^2 fudge factor
 					if (dist_sq - 256.0f <= DETECTION_RADIUS_LEVEL_HARD * DETECTION_RADIUS_LEVEL_HARD)
 					{
-						if (G_ClearLOS(NPC, enemy)) {
+						if (G_ClearLOS(NPC, enemy))
+						{
 							G_SetEnemy(NPC, enemy);
 							TIMER_Set(NPC, "attackDelay", Q_irand(500, 2500));
 							return qtrue;

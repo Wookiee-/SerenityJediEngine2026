@@ -756,7 +756,7 @@ void CG_TestModelPrevFrame_f();
 void CG_TestModelNextSkin_f();
 void CG_TestModelPrevSkin_f();
 
-void CG_DrawActiveFrame(int serverTime, stereoFrame_t stereoView);
+void CG_DrawActiveFrame(const int serverTime, const stereoFrame_t stereoView);
 /*
 Ghoul2 Insert Start
 */
@@ -1309,8 +1309,8 @@ void* cgi_UI_GetMenuByName(const char* menu);
 
 void SetWeaponSelectTime();
 
-void CG_PlayEffectBolted(const char* fx_name, const int modelIndex, const int boltIndex, const int entNum, vec3_t origin, const int i_loop_time = 0,const bool is_relative = false);
-void CG_PlayEffectIDBolted(int fx_id, int modelIndex, int boltIndex, int entNum, vec3_t origin, int i_loop_time = 0,bool is_relative = false);
+void CG_PlayEffectBolted(const char* fx_name, const int modelIndex, const int boltIndex, const int entNum, vec3_t origin, const int i_loop_time = 0, const bool is_relative = false);
+void CG_PlayEffectIDBolted(int fx_id, int modelIndex, int boltIndex, int entNum, vec3_t origin, int i_loop_time = 0, bool is_relative = false);
 void CG_PlayEffectOnEnt(const char* fx_name, int clientNum, vec3_t origin, const vec3_t fwd);
 void CG_PlayEffectIDOnEnt(int fx_id, int clientNum, vec3_t origin, const vec3_t fwd);
 void CG_PlayEffect(const char* fx_name, vec3_t origin, const vec3_t fwd);
