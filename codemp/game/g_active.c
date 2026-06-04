@@ -100,7 +100,6 @@ extern char cinematicSkipScript[1024];
 extern qboolean skippingCutscene;
 extern qboolean inGameCinematic;
 
-
 static void P_SetTwitchInfo(gclient_t* client)
 {
 	client->ps.painTime = level.time;
@@ -598,7 +597,7 @@ void DoImpact(gentity_t* self, gentity_t* other, const qboolean damageSelf)
 					else
 					{
 						//Hmm, maybe knockdown?
-						g_throw(other, dir2, force);
+						G_Throw(other, dir2, force);
 					}
 					if (other->health > 0)
 					{

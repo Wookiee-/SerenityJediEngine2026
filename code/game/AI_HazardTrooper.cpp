@@ -1197,7 +1197,7 @@ static bool Trooper_UpdateSmackAway(gentity_t* actor, gentity_t* target)
 
 			if (ActorToTgtDist < 100.0f)
 			{
-				g_throw(target, ActorToTgt.v, 200.0f);
+				G_Throw(target, ActorToTgt.v, 200.0f);
 			}
 		}
 		return true;

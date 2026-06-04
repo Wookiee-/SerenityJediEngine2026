@@ -566,7 +566,7 @@ void Boba_FireFlameThrower(gentity_t* self)
 
 		if (traceEnt->health > 0 && traceEnt->painDebounceTime > level.time)
 		{
-			g_throw(traceEnt, dir, 30);
+			G_Throw(traceEnt, dir, 30);
 
 			if (traceEnt->client)
 			{

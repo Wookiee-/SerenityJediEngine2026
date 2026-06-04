@@ -8401,7 +8401,7 @@ static void PM_GroundTrace(void)
 				VectorSubtract(g_entities[pm->ps->clientNum].client->ps.origin, trEnt->client->ps.origin, pushdir);
 				G_Knockdown(trEnt, &g_entities[pm->ps->clientNum], pushdir, 0, qfalse);
 				G_Knockdown(&g_entities[pm->ps->clientNum], trEnt, pushdir, 5, qfalse);
-				g_throw(&g_entities[pm->ps->clientNum], pushdir, 5);
+				G_Throw(&g_entities[pm->ps->clientNum], pushdir, 5);
 				g_entities[pm->ps->clientNum].client->ps.velocity[2] = 10;
 			}
 		}

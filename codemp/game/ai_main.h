@@ -82,7 +82,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define BWEAPONRANGE_SABER			4
 
 #define MELEE_ATTACK_RANGE			256
-#define SABER_ATTACK_RANGE			128
+#define SABER_ATTACK_RANGE			300
 #define SABER_KICK_RANGE			64
 
 #define MAX_CHICKENWUSS_TIME		10000 //wait 10 secs between checking which run-away path to take
@@ -549,6 +549,11 @@ typedef struct bot_state_s
 	int strafeTime;
 	int nextBuyTime;
 	qboolean startingCreditsGiven;
+	int DashInTime;
+	int DashOutTime;
+	vec3_t dashVel;
+	int Dash_BOT_Count;      // how many dashes used
+
 	//end rww
 } bot_state_t;
 

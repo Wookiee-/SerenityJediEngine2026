@@ -2358,7 +2358,7 @@ static qboolean pm_check_jump()
 										{
 											NPC_SetAnim(traceEnt, SETANIM_BOTH, BOTH_KNOCKDOWN2,
 												SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-											g_throw(traceEnt, opp_dir, strength);
+											G_Throw(traceEnt, opp_dir, strength);
 										}
 									}
 								}
@@ -6190,7 +6190,7 @@ static void PM_GroundTrace()
 				VectorSubtract(g_entities[pm->ps->clientNum].client->ps.origin, trEnt->client->ps.origin, pushdir);
 				G_Knockdown(trEnt, &g_entities[pm->ps->clientNum], pushdir, 0, qfalse);
 				G_Knockdown(&g_entities[pm->ps->clientNum], trEnt, pushdir, 5, qfalse);
-				g_throw(&g_entities[pm->ps->clientNum], pushdir, 5);
+				G_Throw(&g_entities[pm->ps->clientNum], pushdir, 5);
 				g_entities[pm->ps->clientNum].client->ps.velocity[2] = 50;
 			}
 		}

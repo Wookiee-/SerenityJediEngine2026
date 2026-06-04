@@ -2193,7 +2193,6 @@ qboolean SaberAttacking(const gentity_t* self)
 	if (PM_SaberInAttack(self->client->ps.saberMove))
 	{
 		if (self->client->ps.weaponstate == WEAPON_FIRING && self->client->ps.saberBlocked == BLOCKED_ATK_BOUNCE)
-			// edit was BLOCKED_NONE
 		{
 			//if we're firing and not blocking, then we're attacking.
 			return qtrue;

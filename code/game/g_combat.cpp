@@ -4473,7 +4473,7 @@ int G_CheckLedgeDive(gentity_t* self, const float check_dist, const vec3_t check
 	if (fall_dist >= 128)
 	{
 		VectorClear(self->client->ps.velocity);
-		g_throw(self, fall_forward_dir, 85);
+		G_Throw(self, fall_forward_dir, 85);
 		self->client->ps.velocity[2] = 100;
 		self->client->ps.groundEntityNum = ENTITYNUM_NONE;
 	}
@@ -4484,7 +4484,7 @@ int G_CheckLedgeDive(gentity_t* self, const float check_dist, const vec3_t check
 		if (fall_dist >= 128)
 		{
 			VectorClear(self->client->ps.velocity);
-			g_throw(self, fall_forward_dir, 85);
+			G_Throw(self, fall_forward_dir, 85);
 			self->client->ps.velocity[2] = 100;
 			self->client->ps.groundEntityNum = ENTITYNUM_NONE;
 		}
@@ -4497,7 +4497,7 @@ int G_CheckLedgeDive(gentity_t* self, const float check_dist, const vec3_t check
 		if (fall_dist >= 128)
 		{
 			VectorClear(self->client->ps.velocity);
-			g_throw(self, fall_right_dir, 85);
+			G_Throw(self, fall_right_dir, 85);
 			self->client->ps.velocity[2] = 100;
 		}
 		else
@@ -4507,7 +4507,7 @@ int G_CheckLedgeDive(gentity_t* self, const float check_dist, const vec3_t check
 			if (fall_dist >= 128)
 			{
 				VectorClear(self->client->ps.velocity);
-				g_throw(self, fall_right_dir, 85);
+				G_Throw(self, fall_right_dir, 85);
 				self->client->ps.velocity[2] = 100;
 			}
 		}
@@ -4726,7 +4726,7 @@ void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, cons
 							{
 								throw_dir[1] = Q_flrand(-0.5f, 0.5f);
 							}
-							g_throw(self, throw_dir, cur_speed);
+							G_Throw(self, throw_dir, cur_speed);
 						}
 					}
 				}

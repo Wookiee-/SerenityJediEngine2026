@@ -71,9 +71,9 @@ extern vmCvar_t ui_rgb_saber2_green;
 extern vmCvar_t ui_rgb_saber2_blue;
 
 extern vmCvar_t ui_char_model_angle;
-
+extern vmCvar_t ui_com_outcast;
+void Menu_HandleMouseMove(menuDef_t* menu, float x, float y);
 void* UI_Alloc(int size);
-
 void Controls_GetConfig();
 void Fade(int* flags, float* f, const float clamp, int* nextTime, const int offsetTime, const qboolean bFlags, const float fadeAmount);
 void Item_Init(itemDef_t* item);
@@ -5202,20 +5202,36 @@ void Menu_SetupKeywordHash()
 Menus_ActivateByName
 ===============
 */
-void Menu_HandleMouseMove(menuDef_t* menu, float x, float y);
-
 menuDef_t* Menus_ActivateByName(const char* p)
 {
+	// Nina override
+	if (ui_com_outcast.integer == 7 && Q_stricmp(p, "ingameWpnSelect") == 0)
+	{
+		p = "ingameWpnSelect_nina";
+	}
+	if (ui_com_outcast.integer == 7 && Q_stricmp(p, "ingameWpnSelectHelp") == 0)
+	{
+		p = "ingameWpnSelectHelp_nina";
+	}
+	if (ui_com_outcast.integer == 7 && Q_stricmp(p, "ingameForceSelect") == 0)
+	{
+		p = "ingameForceSelect_nina";
+	}
+	if (ui_com_outcast.integer == 7 && Q_stricmp(p, "ingameForceHelp") == 0)
+	{
+		p = "ingameForceHelp_nina";
+	}
+
 	menuDef_t* m = nullptr;
 	menuDef_t* focus = Menu_GetFocused();
 
 	for (int i = 0; i < menuCount; i++)
 	{
-		// Look for the name in the current list of windows
 		if (Q_stricmp(Menus[i].window.name, p) == 0)
 		{
 			m = &Menus[i];
 			Menus_Activate(m);
+
 			if (openMenuCount < MAX_OPEN_MENUS && focus != nullptr)
 			{
 				menuStack[openMenuCount++] = focus;
@@ -5229,7 +5245,6 @@ menuDef_t* Menus_ActivateByName(const char* p)
 
 	if (!m)
 	{
-		// A hack so we don't have to load all three mission menus before we know what tier we're on
 		if (!Q_stricmp(p, "ingameMissionSelect1"))
 		{
 			UI_LoadMenus("ui/tier1.txt", qfalse);
@@ -5254,29 +5269,38 @@ menuDef_t* Menus_ActivateByName(const char* p)
 		}
 	}
 
-	// First time, show force select instructions
+	// Force select help
 	if (!Q_stricmp(p, "ingameForceSelect"))
 	{
-		const int tier_storyinfo = Cvar_VariableIntegerValue("tier_storyinfo");
-
-		if (tier_storyinfo == 1)
+		if (Cvar_VariableIntegerValue("tier_storyinfo") == 1)
 		{
-			Menus_OpenByName("ingameForceHelp");
+			if (ui_com_outcast.integer == 7)
+			{
+				Menus_OpenByName("ingameForceHelp_nina");
+			}
+			else
+			{
+				Menus_OpenByName("ingameForceHelp");
+			}
 		}
 	}
 
-	// First time, show weapons select instructions
+	// Weapon select help (Nina override already handled above)
 	if (!Q_stricmp(p, "ingameWpnSelect"))
 	{
-		const int tier_storyinfo = Cvar_VariableIntegerValue("tier_storyinfo");
-
-		if (tier_storyinfo == 1)
+		if (Cvar_VariableIntegerValue("tier_storyinfo") == 1)
 		{
-			Menus_OpenByName("ingameWpnSelectHelp");
+			if (ui_com_outcast.integer == 7)
+			{
+				Menus_OpenByName("ingameWpnSelectHelp_nina");
+			}
+			else
+			{
+				Menus_OpenByName("ingameWpnSelectHelp");
+			}
 		}
 	}
 
-	// Want to handle a mouse move on the new menu in case your already over an item
 	Menu_HandleMouseMove(m, DC->cursorx, DC->cursory);
 
 	return m;
@@ -5462,7 +5486,9 @@ static const char* g_bindCommands[] =
 	"use_barrier",
 	"use_jetpack",
 	"scale",
-	"r_weather"
+	"r_weather",
+	"reload_strings",
+	"g_char_model"
 };
 
 #define g_bindCount ARRAY_LEN(g_bindCommands)

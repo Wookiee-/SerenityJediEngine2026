@@ -881,7 +881,7 @@ static void AnimateRiders(Vehicle_t* p_veh)
 
 			// Now Throw Him Out
 			//-------------------
-			g_throw(oldPilot, throwDir, VectorLength(p_veh->m_pParentEntity->client->ps.velocity) / 10.0f);
+			G_Throw(oldPilot, throwDir, VectorLength(p_veh->m_pParentEntity->client->ps.velocity) / 10.0f);
 			NPC_SetAnim(oldPilot, SETANIM_BOTH, BOTH_DEATHBACKWARD1, SETANIM_FLAG_OVERRIDE, i_blend);
 		}
 #endif

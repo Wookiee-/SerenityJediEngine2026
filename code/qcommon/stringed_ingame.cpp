@@ -58,6 +58,8 @@ using vInts_t = std::vector<int>;
 cvar_t* se_language = nullptr;
 cvar_t* se_debug = nullptr;
 cvar_t* sp_leet = nullptr; // kept as 'sp_' for JK2 compat.
+extern cvar_t* com_outcast;
+extern cvar_t* com_buildScript;
 
 #define __DEBUGOUT(_string)	OutputDebugString(_string)
 #define __ASSERT(_blah)		assert(_blah)
@@ -284,7 +286,7 @@ const char* CStringEdPackage::ConvertCRLiterals_Read(const char* psString)
 	while ((iLoc = str.find("\\n")) != -1)
 	{
 		str[iLoc] = '\n';
-		str.erase(iLoc + 1, 1);
+		str.erase(static_cast<std::basic_string<char, std::char_traits<char>, std::allocator<char>>::size_type>(iLoc) + 1, 1);
 	}
 
 	return str.c_str();
@@ -900,41 +902,48 @@ static const char* SE_GetFoundFile(std::string& strResult)
 //
 static const char* SE_Load(const char* psFileName, SE_BOOL bLoadDebug = SE_TRUE, SE_BOOL bFailIsCritical = SE_TRUE)
 {
-	////////////////////////////////////////////////////
-	//
-	// ingame here tends to pass in names without paths, but I expect them when doing a language load, so...
-	//
 	char sTemp[1000] = { 0 };
+
 	if (!strchr(psFileName, '/'))
 	{
-		strcpy(sTemp, sSE_STRINGS_DIR);
-		strcat(sTemp, "/");
+		if (com_outcast->integer == 3) // yavin override
+		{
+			Q_strncpyz(sTemp, sSE_STRINGS_DIR_YAVIN, sizeof(sTemp));
+		}
+		else if (com_outcast->integer == 7) // Nina override
+		{
+			Q_strncpyz(sTemp, sSE_STRINGS_DIR_NINA, sizeof(sTemp));
+		}
+		else
+		{
+			Q_strncpyz(sTemp, sSE_STRINGS_DIR, sizeof(sTemp));
+		}
+
+		Q_strcat(sTemp, sizeof(sTemp), "/");
+
 		if (se_language)
 		{
-			strcat(sTemp, se_language->string);
-			strcat(sTemp, "/");
+			Q_strcat(sTemp, sizeof(sTemp), se_language->string);
+			Q_strcat(sTemp, sizeof(sTemp), "/");
 		}
 	}
-	strcat(sTemp, psFileName);
-	COM_DefaultExtension(sTemp, sizeof sTemp, sSE_INGAME_FILE_EXTENSION);
-	psFileName = &sTemp[0];
-	//
-	////////////////////////////////////////////////////
 
-	const char* psErrorMessage = SE_Load_Actual(psFileName, bLoadDebug, SE_FALSE);
+	Q_strcat(sTemp, sizeof(sTemp), psFileName);
+	COM_DefaultExtension(sTemp, sizeof(sTemp), sSE_INGAME_FILE_EXTENSION);
 
-	// check for any corresponding / overriding .STE files and load them afterwards...
-	//
+	const char* finalName = sTemp;
+
+	const char* psErrorMessage = SE_Load_Actual(finalName, bLoadDebug, SE_FALSE);
+
 	if (!psErrorMessage)
 	{
 		char sFileName[iSE_MAX_FILENAME_LENGTH];
-		strncpy(sFileName, psFileName, sizeof sFileName - 1);
-		sFileName[sizeof sFileName - 1] = '\0';
+		Q_strncpyz(sFileName, finalName, sizeof(sFileName));
+
 		char* p = strrchr(sFileName, '.');
 		if (p && strlen(p) == strlen(sSE_EXPORT_FILE_EXTENSION))
 		{
-			strcpy(p, sSE_EXPORT_FILE_EXTENSION);
-
+			Q_strncpyz(p, sSE_EXPORT_FILE_EXTENSION, sizeof(sFileName) - (p - sFileName));
 			psErrorMessage = SE_Load_Actual(sFileName, bLoadDebug, SE_TRUE);
 		}
 	}
@@ -943,10 +952,9 @@ static const char* SE_Load(const char* psFileName, SE_BOOL bLoadDebug = SE_TRUE,
 	{
 		if (bFailIsCritical)
 		{
-			//		TheStringPackage.Clear(TRUE);	// Will we want to do this?  Any errors that arise should be fixed immediately
-			Com_Error(ERR_DROP, "SE_Load(): Couldn't load \"%s\"!\n\nError: \"%s\"\n", psFileName, psErrorMessage);
+			Com_Error(ERR_DROP, "SE_Load(): Couldn't load \"%s\"!\n\nError: \"%s\"\n", finalName, psErrorMessage);
 		}
-		Com_DPrintf(S_COLOR_YELLOW "SE_Load(): Couldn't load \"%s\"!\n", psFileName);
+		Com_DPrintf(S_COLOR_YELLOW "SE_Load(): Couldn't load \"%s\"!\n", finalName);
 	}
 
 	return psErrorMessage;
@@ -966,7 +974,7 @@ const char* SE_GetString(const char* psPackageReference, const char* psStringRef
 const char* SE_GetString(const char* psPackageAndStringReference)
 {
 #ifdef JK2_MODE
-	// Hacky but saves me from fixing 1000000 references 
+	// Hacky but saves me from fixing 1000000 references
 	extern const char* JK2SP_GetStringTextString(const char* Reference);
 	return JK2SP_GetStringTextString((const char*)psPackageAndStringReference);
 #else
@@ -1061,26 +1069,46 @@ int SE_GetNumLanguages()
 	if (gvLanguagesAvailable.empty())
 	{
 		std::string strResults;
-		/*int iFilesFound = */
-		SE_BuildFileList(
+
+		if (com_outcast->integer == 3) // yavin override
+		{
+			SE_BuildFileList(
 #ifdef _STRINGED
-			va("C:\\Source\\Tools\\StringEd\\test_data\\%s", sSE_STRINGS_DIR)
+				va("C:\\Source\\Tools\\StringEd\\test_data\\%s", sSE_STRINGS_DIR_YAVIN)
 #else
-			sSE_STRINGS_DIR
+				sSE_STRINGS_DIR_YAVIN
 #endif
-			, strResults
-		);
+				, strResults
+			);
+		}
+		else if (com_outcast->integer == 7) // Nina override
+		{
+			SE_BuildFileList(
+#ifdef _STRINGED
+				va("C:\\Source\\Tools\\StringEd\\test_data\\%s", sSE_STRINGS_DIR_NINA)
+#else
+				sSE_STRINGS_DIR_NINA
+#endif
+				, strResults
+			);
+		}
+		else
+		{
+			SE_BuildFileList(
+#ifdef _STRINGED
+				va("C:\\Source\\Tools\\StringEd\\test_data\\%s", sSE_STRINGS_DIR)
+#else
+				sSE_STRINGS_DIR
+#endif
+				, strResults
+			);
+		}
 
 		std::set<std::string> strUniqueStrings; // laziness <g>
 		const char* p;
 		while ((p = SE_GetFoundFile(strResults)) != nullptr)
 		{
 			const char* psLanguage = TheStringPackage.ExtractLanguageFromPath(p);
-
-			//		__DEBUGOUT( p );
-			//		__DEBUGOUT( "\n" );
-			//		__DEBUGOUT( psLanguage );
-			//		__DEBUGOUT( "\n" );
 
 			if (!strUniqueStrings.count(psLanguage))
 			{
@@ -1122,7 +1150,18 @@ const char* SE_GetLanguageDir(const int iLangIndex)
 {
 	if (iLangIndex < static_cast<int>(gvLanguagesAvailable.size()))
 	{
-		return va("%s/%s", sSE_STRINGS_DIR, gvLanguagesAvailable[iLangIndex].c_str());
+		if (com_outcast->integer == 3) // yavin override
+		{
+			return va("%s/%s", sSE_STRINGS_DIR_YAVIN, gvLanguagesAvailable[iLangIndex].c_str());
+		}
+		else if (com_outcast->integer == 7) // Nina override
+		{
+			return va("%s/%s", sSE_STRINGS_DIR_NINA, gvLanguagesAvailable[iLangIndex].c_str());
+		}
+		else
+		{
+			return va("%s/%s", sSE_STRINGS_DIR, gvLanguagesAvailable[iLangIndex].c_str());
+		}
 	}
 
 	__ASSERT(0);
@@ -1153,7 +1192,6 @@ void SE_Init()
 
 	// if doing a buildscript, load all languages...
 	//
-	extern cvar_t* com_buildScript;
 	if (com_buildScript->integer == 2)
 	{
 		const int iLanguages = SE_GetNumLanguages();
@@ -1182,7 +1220,7 @@ void SE_ShutDown()
 //
 // Any errors that result from this should probably be treated as game-fatal, since an asset file is fuxored.
 //
-const char* SE_LoadLanguage(const char* psLanguage, SE_BOOL bLoadDebug /* = SE_TRUE */)
+const char* SE_LoadLanguage(const char* psLanguage, SE_BOOL bLoadDebug)
 {
 	const char* psErrorMessage = nullptr;
 
@@ -1191,15 +1229,40 @@ const char* SE_LoadLanguage(const char* psLanguage, SE_BOOL bLoadDebug /* = SE_T
 		SE_NewLanguage();
 
 		std::string strResults;
-		/*int iFilesFound = */
-		SE_BuildFileList(
+
+		if (com_outcast->integer == 3) // yavin override
+		{
+			SE_BuildFileList(
 #ifdef _STRINGED
-			va("C:\\Source\\Tools\\StringEd\\test_data\\%s", sSE_STRINGS_DIR)
+				va("C:\\Source\\Tools\\StringEd\\test_data\\%s", sSE_STRINGS_DIR_YAVIN)
 #else
-			sSE_STRINGS_DIR
+				sSE_STRINGS_DIR_YAVIN
 #endif
-			, strResults
-		);
+				, strResults
+			);
+		}
+		else if (com_outcast->integer == 7) // Nina override
+		{
+			SE_BuildFileList(
+#ifdef _STRINGED
+				va("C:\\Source\\Tools\\StringEd\\test_data\\%s", sSE_STRINGS_DIR_NINA)
+#else
+				sSE_STRINGS_DIR_NINA
+#endif
+				, strResults
+			);
+		}
+		else
+		{
+			SE_BuildFileList(
+#ifdef _STRINGED
+				va("C:\\Source\\Tools\\StringEd\\test_data\\%s", sSE_STRINGS_DIR)
+#else
+				sSE_STRINGS_DIR
+#endif
+				, strResults
+			);
+		}
 
 		const char* p;
 		while ((p = SE_GetFoundFile(strResults)) != nullptr && !psErrorMessage)

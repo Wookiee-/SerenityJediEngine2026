@@ -2584,7 +2584,7 @@ extern void G_KnockOver(gentity_t* self, gentity_t* attacker, const vec3_t push_
 static void barrier_push_ent(gentity_t* ent, gentity_t* pushed, vec3_t smack_dir)
 {
 	G_Damage(pushed, ent, ent, smack_dir, ent->currentOrigin, (g_spskill->integer + 1) * Q_irand(5, 10), DAMAGE_EXTRA_KNOCKBACK, MOD_ELECTROCUTE);
-	//g_throw(pushed, smack_dir, 10);
+	//G_Throw(pushed, smack_dir, 10);
 	G_KnockOver(pushed, ent, smack_dir, 25, qfalse);
 
 	// Make Em Electric

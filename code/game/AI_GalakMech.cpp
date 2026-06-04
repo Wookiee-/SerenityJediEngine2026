@@ -738,14 +738,14 @@ static void NPC_BSGM_Attack()
 					//throw them
 					smack_dir[2] = 1;
 					VectorNormalize(smack_dir);
-					g_throw(NPC->enemy, smack_dir, 50);
+					G_Throw(NPC->enemy, smack_dir, 50);
 					NPC_SetAnim(NPC->enemy, SETANIM_BOTH, knockAnim, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 				}
 				else
 				{
 					//uppercut
 					//throw them
-					g_throw(NPC->enemy, smack_dir, 100);
+					G_Throw(NPC->enemy, smack_dir, 100);
 					//make them backflip
 					NPC_SetAnim(NPC->enemy, SETANIM_BOTH, BOTH_KNOCKDOWN5, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 				}
@@ -1245,7 +1245,7 @@ static void NPC_BSGM_Attack()
 			G_Damage(NPC->enemy, NPC, NPC, smack_dir, NPC->currentOrigin, (g_spskill->integer + 1) * Q_irand(5, 10),
 				DAMAGE_NO_KNOCKBACK, MOD_ELECTROCUTE);
 			//throw them
-			g_throw(NPC->enemy, smack_dir, 100);
+			G_Throw(NPC->enemy, smack_dir, 100);
 			NPC->enemy->s.powerups |= 1 << PW_SHOCKED;
 			if (NPC->enemy->client)
 			{

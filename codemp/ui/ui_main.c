@@ -1739,7 +1739,6 @@ static void UI_DrawNetGameType(rectDef_t* rect, float scale, vec4_t color, int t
 		0, 0, textStyle, i_menu_font);
 }
 
-
 static void UI_DrawAutoSwitch(rectDef_t* rect, float scale, vec4_t color, int textStyle, int i_menu_font)
 {
 	const int switchVal = trap->Cvar_VariableValue("cg_autoswitch");
@@ -1785,7 +1784,6 @@ static void UI_DrawJoinGameType(rectDef_t* rect, float scale, vec4_t color, int 
 		UI_GetGameTypeName(uiInfo.joinGameTypes[gt].gtEnum),
 		0, 0, textStyle, i_menu_font);
 }
-
 
 static int UI_TeamIndexFromName(const char* name)
 {
@@ -4418,7 +4416,6 @@ static qboolean UI_NetSource_HandleKey(int flags, float* special, int key)
 	return qfalse;
 }
 
-
 static qboolean UI_NetFilter_HandleKey(int flags, float* special, int key)
 { //SERVER FILTER
 	//Only show SerenityJediEngine2026 as the filter option, since that's the only one that works for MP
@@ -5840,14 +5837,14 @@ static void UI_UpdateSaberHilt(qboolean second_saber)
 	char* saberCvarName;
 	int animRunLength;
 
-	const menuDef_t* menu = Menu_GetFocused(); // Get current menu (either video or ingame video, I would assume)
+	const menuDef_t* menu = Menu_GetFocused();
 
 	if (!menu)
 	{
 		return;
 	}
 
-	if (second_saber)
+	if (second_saber == qtrue)
 	{
 		itemName = "saber2";
 		saberCvarName = "ui_saber2";
@@ -5862,29 +5859,30 @@ static void UI_UpdateSaberHilt(qboolean second_saber)
 
 	if (!item)
 	{
-		Com_Error(ERR_FATAL, "UI_UpdateSaberHilt: Could not find item (%s) in menu (%s)", itemName,
-			menu->window.name);
+#ifndef FINAL_BUILD
+		Com_Printf(S_COLOR_RED
+			"UI_UpdateSaberHilt: Could not find item (%s) in menu (%s)\n",
+			itemName, menu->window.name);
+#endif
 	}
 
 	trap->Cvar_VariableStringBuffer(saberCvarName, model, sizeof model);
 
 	item->text = model;
-	//read this from the sabers.cfg
-	if (UI_SaberModelForSaber(model, modelPath))
+
+	if (UI_SaberModelForSaber(model, modelPath) == qtrue)
 	{
 		char skinPath[MAX_QPATH];
-		//successfully found a model
-		ItemParse_asset_model_go(item, modelPath, &animRunLength); //set the model
-		//get the customSkin, if any
-		//COM_StripExtension( modelPath, skinPath );
-		//COM_DefaultExtension( skinPath, sizeof( skinPath ), ".skin" );
-		if (UI_SaberSkinForSaber(model, skinPath))
+
+		ItemParse_asset_model_go(item, modelPath, &animRunLength);
+
+		if (UI_SaberSkinForSaber(model, skinPath) == qtrue)
 		{
-			ItemParse_model_g2skin_go(item, skinPath); //apply the skin
+			ItemParse_model_g2skin_go(item, skinPath);
 		}
 		else
 		{
-			ItemParse_model_g2skin_go(item, NULL); //apply the skin
+			ItemParse_model_g2skin_go(item, NULL);
 		}
 	}
 }
@@ -8230,7 +8228,6 @@ static void UI_BuildServerDisplayList(int force) {
 				// get the ping for this server
 		ping = trap->LAN_GetServerPing(lanSource, i);
 		if (ping > 0 || ui_netSource.integer == UIAS_FAVORITES) {
-
 			trap->LAN_GetServerInfo(lanSource, i, info, MAX_STRING_CHARS);
 
 			// don't list servers with invalid info
@@ -10180,7 +10177,6 @@ static void UI_ParseGameInfo(const char* teamFile) {
 		}
 
 		if (Q_stricmp(token, "gametypes") == 0) {
-
 			if (GameType_Parse(&p, qfalse)) {
 				continue;
 			}
@@ -10190,7 +10186,6 @@ static void UI_ParseGameInfo(const char* teamFile) {
 		}
 
 		if (Q_stricmp(token, "joingametypes") == 0) {
-
 			if (GameType_Parse(&p, qtrue)) {
 				continue;
 			}
@@ -10203,7 +10198,6 @@ static void UI_ParseGameInfo(const char* teamFile) {
 			// start a new menu
 			MapList_Parse(&p);
 		}
-
 	}
 }
 
@@ -10582,8 +10576,8 @@ static void UI_BuildPlayerModel_List(const qboolean inGameLoad)
 	static const size_t DIR_LIST_SIZE = 16384;
 
 	size_t dirListSize = DIR_LIST_SIZE;
-	char stackDirList[8192]={0};
-	int dirlen={0};
+	char stackDirList[8192] = { 0 };
+	int dirlen = { 0 };
 
 	char* dirlist = malloc(DIR_LIST_SIZE);
 	if (!dirlist)

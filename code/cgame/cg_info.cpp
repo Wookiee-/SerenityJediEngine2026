@@ -734,44 +734,48 @@ static void CG_DrawLoadForcePowers(const int force_bits)
 // Get the player weapons and force power info
 static void CG_GetLoadScreenInfo(int* weapon_bits, int* force_bits)
 {
-	char s[MAX_STRING_CHARS];
-	int i_dummy;
+	char  s[MAX_STRING_CHARS];
+	int   i_dummy;
 	float f_dummy;
 
+	// Read the saved player state string
 	gi.Cvar_VariableStringBuffer(sCVARNAME_PLAYERSAVE, s, sizeof s);
 
-	// Get player weapons and force powers known
-	if (s[0])
+	// Get player weapons and force powers known from the save string
+	if (s[0] != '\0')
 	{
-		//				|general info				  |-force powers
-		sscanf(s, "%i %i %i %i %i %i %i %f %f %f %i %i",
-			&i_dummy, //	&client->ps.stats[STAT_HEALTH],
-			&i_dummy, //	&client->ps.stats[STAT_ARMOR],
-			&*weapon_bits, //	&client->ps.stats[STAT_WEAPONS],
-			&i_dummy, //	&client->ps.stats[STAT_ITEMS],
-			&i_dummy, //	&client->ps.weapon,
-			&i_dummy, //	&client->ps.weaponstate,
-			&i_dummy, //	&client->ps.batteryCharge,
-			&f_dummy, //	&client->ps.viewangles[0],
-			&f_dummy, //	&client->ps.viewangles[1],
-			&f_dummy, //	&client->ps.viewangles[2],
-			//force power data
-			&*force_bits, //	&client->ps.forcePowersKnown,
-			&i_dummy //	&client->ps.forcePower,
-
+		//              | general info                 | - force powers
+		const int parsed = sscanf(
+			s,
+			"%i %i %i %i %i %i %i %f %f %f %i %i",
+			&i_dummy,        // health
+			&i_dummy,        // armor
+			weapon_bits,     // weapons bitfield
+			&i_dummy,        // items
+			&i_dummy,        // current weapon
+			&i_dummy,        // weapon state
+			&i_dummy,        // battery charge
+			&f_dummy,        // viewangles[0]
+			&f_dummy,        // viewangles[1]
+			&f_dummy,        // viewangles[2]
+			force_bits,      // force powers known bitfield
+			&i_dummy         // force power
 		);
+
+		(void)parsed; // suppress static analysis warning about ignored return value
 	}
 
-	// the new JK2 stuff - force powers, etc...
-	//
+	// The new JK2 stuff - force power levels, etc.
 	gi.Cvar_VariableStringBuffer("playerfplvl", s, sizeof s);
+
 	int i = 0;
 	const char* var = strtok(s, " ");
 	while (var != nullptr)
 	{
-		/* While there are tokens in "s" */
+		// While there are tokens in "s"
 		loadForcePowerLevel[i++] = atoi(var);
-		/* Get next token: */
+
+		// Get next token
 		var = strtok(nullptr, " ");
 	}
 }
@@ -795,7 +799,13 @@ static void CG_DrawLoadingScreen(const qhandle_t levelshot, const char* map_name
 		// Get mission briefing for load screen
 		if (cgi_SP_GetStringTextString(va("BRIEFINGS_%s", map_name), nullptr, 0) == 0)
 		{
-			cgi_Cvar_Set("ui_missiontext", "@BRIEFINGS_NONE");
+			if (cg.loadLCARSStage >= 7)
+			{
+				if (cg_com_rend2.integer == 0)
+				{
+					cgi_Cvar_Set("ui_missiontext", "@BRIEFINGS_NONE");
+				}
+			}
 		}
 		else
 		{

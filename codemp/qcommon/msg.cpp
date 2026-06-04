@@ -1151,6 +1151,7 @@ netField_t entityStateFields[] =
 	{NETF(dashstartTime), 32},
 	{NETF(dashlaststartTime), 32},
 	{NETF(Dash_Count), 32},
+	{NETF(Dash_BOT_Count), 32 },
 
 	{NETF(kickstartTime), 32},
 	{NETF(kicklaststartTime), 32},
@@ -1704,6 +1705,7 @@ netField_t playerStateFields[] =
 	{PSF(dashstartTime), 32},
 	{PSF(dashlaststartTime), 32},
 	{PSF(Dash_Count), 32},
+	{PSF(Dash_BOT_Count), 32 },
 
 	{PSF(kickstartTime), 32},
 	{PSF(kicklaststartTime), 32},
@@ -1930,6 +1932,7 @@ netField_t pilotPlayerStateFields[] =
 	{PSF(dashstartTime), 32},
 	{PSF(dashlaststartTime), 32},
 	{PSF(Dash_Count), 32},
+	{PSF(Dash_BOT_Count), 32 },
 
 	{PSF(kickstartTime), 32},
 	{PSF(kicklaststartTime), 32},
@@ -2064,6 +2067,7 @@ netField_t vehPlayerStateFields[] =
 	{PSF(dashstartTime), 32},
 	{PSF(dashlaststartTime), 32},
 	{PSF(Dash_Count), 32},
+	{PSF(Dash_BOT_Count), 32 },
 
 	{PSF(kickstartTime), 32},
 	{PSF(kicklaststartTime), 32},
@@ -2278,6 +2282,7 @@ netField_t	playerStateFields[] =
 { PSF(dashstartTime), 32 },
 { PSF(dashlaststartTime), 32 },
 { PSF(Dash_Count), 32 },
+{ PSF(Dash_BOT_Count), 32 },
 
 { PSF(kickstartTime), 32 },
 { PSF(kicklaststartTime), 32 },

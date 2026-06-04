@@ -293,7 +293,7 @@ static void SandCreature_Attack(const qboolean miss)
 					{
 						throwStr = 45;
 					}
-					g_throw(NPC->enemy, dir2Enemy, throwStr);
+					G_Throw(NPC->enemy, dir2Enemy, throwStr);
 					if (g_spskill->integer > 1)
 					{
 						//knock them down, too
@@ -768,7 +768,7 @@ static void SandCreature_PushEnts()
 		const float smackDist = VectorNormalize(smack_dir);
 		if (smackDist < radius)
 		{
-			g_throw(radius_ents[ent_index], smack_dir, 90);
+			G_Throw(radius_ents[ent_index], smack_dir, 90);
 		}
 	}
 }

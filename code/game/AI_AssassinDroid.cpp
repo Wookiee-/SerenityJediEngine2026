@@ -68,7 +68,7 @@ static void BubbleShield_PushEnt(gentity_t* pushed, vec3_t smack_dir)
 {
 	G_Damage(pushed, NPC, NPC, smack_dir, NPC->currentOrigin, (g_spskill->integer + 1) * Q_irand(5, 10),
 		DAMAGE_NO_KNOCKBACK, MOD_ELECTROCUTE);
-	g_throw(pushed, smack_dir, 10);
+	G_Throw(pushed, smack_dir, 10);
 
 	// Make Em Electric
 	//------------------
@@ -82,7 +82,7 @@ static void BubbleShield_PushEnt(gentity_t* pushed, vec3_t smack_dir)
 static void deka_bubble_shield_push_ent(gentity_t* pushed, vec3_t smack_dir)
 {
 	G_Damage(pushed, NPC, NPC, smack_dir, NPC->currentOrigin, Q_irand(10, 20), DAMAGE_EXTRA_KNOCKBACK, MOD_ELECTROCUTE);
-	g_throw(pushed, smack_dir, 50);
+	G_Throw(pushed, smack_dir, 50);
 
 	// Make Em Electric
 	//------------------

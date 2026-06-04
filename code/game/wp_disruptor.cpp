@@ -33,7 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 extern qboolean WP_DoingForcedAnimationForForcePowers(const gentity_t* self);
 extern int wp_saber_must_block(gentity_t* self, const gentity_t* atk, qboolean check_b_box_block, vec3_t point, int rSaberNum, int rBladeNum);
 extern qboolean WP_SaberBlockBolt(gentity_t* self, vec3_t hitloc, qboolean missileBlock);
-extern void g_missile_reflect_effect(const gentity_t* ent, vec3_t dir);
+extern void G_MissileReflectEffect(const gentity_t* ent, vec3_t dir);
 extern void WP_ForcePowerDrain(const gentity_t* self, forcePowers_t force_power, int override_amt);
 extern int WP_SaberBlockCost(gentity_t* defender, const gentity_t* attacker, vec3_t hitLocs);
 
@@ -88,7 +88,7 @@ static void WP_DisruptorMainFire(gentity_t* ent)
 			{
 				//saber can be used to block the shot.
 
-				g_missile_reflect_effect(traceEnt, tr.plane.normal);
+				G_MissileReflectEffect(traceEnt, tr.plane.normal);
 				WP_ForcePowerDrain(traceEnt, FP_SABER_DEFENSE, WP_SaberBlockCost(traceEnt, ent, tr.endpos));
 
 				//force player into a projective block move.
@@ -275,7 +275,7 @@ void WP_DisruptorAltFire(gentity_t* ent)
 			{
 				//saber can be used to block the shot.
 
-				g_missile_reflect_effect(traceEnt, tr.plane.normal);
+				G_MissileReflectEffect(traceEnt, tr.plane.normal);
 				WP_ForcePowerDrain(traceEnt, FP_SABER_DEFENSE, WP_SaberBlockCost(traceEnt, ent, tr.endpos));
 
 				//force player into a projective block move.

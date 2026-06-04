@@ -973,7 +973,7 @@ void DoImpact(gentity_t* self, gentity_t* other, const qboolean damage_self, con
 				}
 				if (!(victim->flags & FL_NO_KNOCKBACK))
 				{
-					g_throw(victim, victim_right, 250);
+					G_Throw(victim, victim_right, 250);
 				}
 				if (victim_veh->m_pVehicleInfo->iImpactFX)
 				{
@@ -1251,7 +1251,7 @@ void DoImpact(gentity_t* self, gentity_t* other, const qboolean damage_self, con
 						//Hmm, maybe knockdown?
 						if (!(other->flags & FL_NO_KNOCKBACK))
 						{
-							g_throw(other, dir2, force);
+							G_Throw(other, dir2, force);
 						}
 						G_Knockdown(other, self, dir2, force, qtrue);
 
@@ -1289,7 +1289,7 @@ void DoImpact(gentity_t* self, gentity_t* other, const qboolean damage_self, con
 						{
 							if (!(other->flags & FL_NO_KNOCKBACK))
 							{
-								g_throw(other, dir2, force);
+								G_Throw(other, dir2, force);
 							}
 						}
 					}
@@ -1324,7 +1324,7 @@ void DoImpact(gentity_t* self, gentity_t* other, const qboolean damage_self, con
 					{
 						if (!(other->flags & FL_NO_KNOCKBACK))
 						{
-							g_throw(other, dir2, force);
+							G_Throw(other, dir2, force);
 						}
 					}
 				}
@@ -1409,63 +1409,68 @@ void DoImpact(gentity_t* self, gentity_t* other, const qboolean damage_self, con
 			}
 			else
 			{
-				if (magnitude >= 100 + self->health
-					&& self->s.number >= MAX_CLIENTS
-					&& self->s.weapon != WP_SABER
-					|| self->client->NPC_class == CLASS_VEHICLE
-					|| magnitude >= 700) //health here is used to simulate structural integrity
-				{
-					if ((self->s.weapon == WP_SABER || self->s.number < MAX_CLIENTS || self->client && (self->client->
-						NPC_class == CLASS_BOBAFETT || self->client->NPC_class == CLASS_ROCKETTROOPER)) && self->
-						client
-						&& self->client->ps.groundEntityNum < ENTITYNUM_NONE && magnitude < 1000)
+				if (((magnitude >= (100.0f + self->health)) &&
+					(self->s.number >= MAX_CLIENTS) &&
+					(self->s.weapon != WP_SABER)) ||
+					((self->client != nullptr) &&
+						(self->client->NPC_class == CLASS_VEHICLE)) ||
+					(magnitude >= 700.0f))
+				{// players and jedi take less impact damage
+					if (((self->s.weapon == WP_SABER) ||
+						(self->s.number < MAX_CLIENTS) ||
+						((self->client != nullptr) &&
+							(self->client->NPC_class == CLASS_BOBAFETT ||
+								self->client->NPC_class == CLASS_ROCKETTROOPER))) &&
+						(self->client != nullptr) &&
+						(self->client->ps.groundEntityNum < ENTITYNUM_NONE) &&
+						(magnitude < 1000.0f))
 					{
-						//players and jedi take less impact damage
-						magnitude /= 2;
+						magnitude /= 2.0f;
 					}
-					magnitude /= 40;
 
-					if (other->bmodel && other->material != MAT_GLASS)
+					magnitude /= 40.0f;
+
+					if (other->bmodel == qtrue && other->material != MAT_GLASS)
 					{
-						//take off only a little because we broke architecture (not including glass), that should hurt
-						magnitude = magnitude - force / 8;
+						magnitude = magnitude - (force / 8.0f);
 					}
 					else
 					{
-						//take off half damage we did to it
-						magnitude = magnitude - force / 2;
+						magnitude = magnitude - (force / 2.0f);
 					}
 
-					if (p_self_veh)
+					if (p_self_veh != nullptr)
 					{
-						magnitude /= p_self_veh->m_pVehicleInfo->toughness * 1000.0f;
+						magnitude /= (p_self_veh->m_pVehicleInfo->toughness * 1000.0f);
 
-						if (other->bmodel && other->material != MAT_GLASS)
+						if (p_other_veh == nullptr && (other->bmodel == qfalse || other->material == MAT_GLASS))
 						{
-							//broke through some architecture, take a good amount of damage
-						}
-						else if (p_other_veh)
-						{
-							//they're tougher
-						}
-						else
-						{
-							//take some off because of give
 							magnitude /= 10.0f;
 						}
+
 						if (magnitude < 1.0f)
 						{
-							magnitude = 0;
+							magnitude = 0.0f;
 						}
 					}
-					if (magnitude >= 1)
+
+					if (magnitude >= 1.0f)
 					{
-						if (self->NPC && self->s.weapon == WP_SABER)
+						if (self->NPC != nullptr && self->s.weapon == WP_SABER)
 						{
-							magnitude = 0;
+							magnitude = 0.0f;
 						}
-						G_Damage(self, nullptr, nullptr, nullptr, self->currentOrigin, magnitude / 2, DAMAGE_NO_ARMOR,
-							MOD_FALLING);
+
+						G_Damage(
+							self,
+							nullptr,
+							nullptr,
+							nullptr,
+							self->currentOrigin,
+							magnitude / 2.0f,
+							DAMAGE_NO_ARMOR,
+							MOD_FALLING
+						);
 					}
 				}
 			}
@@ -1526,21 +1531,24 @@ This version checks at 6 unit steps between last and current origins
 */
 static void G_TouchTriggersLerped(gentity_t* ent)
 {
-	int num;
-	float dist;
-	gentity_t* hit;
-	trace_t trace;
-	vec3_t diff;
-	constexpr vec3_t range = { 40, 40, 52 };
-	qboolean touched[MAX_GENTITIES];
-	qboolean done = qfalse;
+	static gentity_t* touchList[MAX_GENTITIES];   // moved off stack
+	static qboolean   touched[MAX_GENTITIES];     // moved off stack
 
-	if (!ent->client)
+	int        num = 0;
+	float      dist = 0.0f;
+	gentity_t* hit = nullptr;
+	trace_t    trace;
+	vec3_t     diff;
+	constexpr vec3_t range = { 40.0f, 40.0f, 52.0f };
+	qboolean   done = qfalse;
+
+	// Only clients can touch triggers
+	if (ent == nullptr || ent->client == nullptr)
 	{
 		return;
 	}
 
-	// dead NPCs don't activate triggers!
+	// Dead NPCs don't activate triggers (except special case for clients)
 	if (ent->client->ps.stats[STAT_HEALTH] <= 0)
 	{
 		if (ent->s.number >= MAX_CLIENTS)
@@ -1552,28 +1560,45 @@ static void G_TouchTriggersLerped(gentity_t* ent)
 #ifdef _DEBUG
 	for (int j = 0; j < 3; j++)
 	{
-		assert(!Q_isnan(ent->currentOrigin[j]));
-		assert(!Q_isnan(ent->lastOrigin[j]));
+		if (Q_isnan(ent->currentOrigin[j]) == qtrue || Q_isnan(ent->lastOrigin[j]) == qtrue)
+		{
+			Com_Printf(S_COLOR_RED "G_TouchTriggersLerped: NaN detected in origin component %d — aborting.\n", j);
+			return;
+		}
 	}
-#endif// _DEBUG
+#endif
+
+	// Compute movement vector between last and current origin
 	VectorSubtract(ent->currentOrigin, ent->lastOrigin, diff);
 	dist = VectorNormalize(diff);
-#ifdef _DEBUG
-	assert(dist < 1024 && "insane distance in G_TouchTriggersLerped!");
-#endif// _DEBUG
 
-	if (dist > 1024)
+#ifdef _DEBUG
+	if (dist >= 1024.0f)
+	{
+		Com_Printf(S_COLOR_RED "G_TouchTriggersLerped: insane distance (%f) — aborting.\n", dist);
+	}
+#endif
+
+	// Hard safety clamp
+	if (dist > 1024.0f)
 	{
 		return;
 	}
-	memset(touched, qfalse, sizeof touched);
 
-	for (float curDist = 0; !done && ent->maxs[1] > 0; curDist += ent->maxs[1] / 2.0f)
+	// Reset touched flags
+	for (int i = 0; i < MAX_GENTITIES; i++)
+	{
+		touched[i] = qfalse;
+	}
+
+	// Step along the movement path
+	for (float curDist = 0.0f; done == qfalse && ent->maxs[1] > 0.0f; curDist += ent->maxs[1] / 2.0f)
 	{
 		vec3_t maxs;
 		vec3_t mins;
 		vec3_t end;
-		gentity_t* touch[MAX_GENTITIES];
+
+		// Determine test point
 		if (curDist >= dist)
 		{
 			VectorCopy(ent->currentOrigin, end);
@@ -1583,48 +1608,63 @@ static void G_TouchTriggersLerped(gentity_t* ent)
 		{
 			VectorMA(ent->lastOrigin, curDist, diff, end);
 		}
+
+		// Broad-phase box
 		VectorSubtract(end, range, mins);
 		VectorAdd(end, range, maxs);
 
-		num = gi.EntitiesInBox(mins, maxs, touch, MAX_GENTITIES);
+		num = gi.EntitiesInBox(mins, maxs, touchList, MAX_GENTITIES);
 
-		// can't use ent->absmin, because that has a one unit pad
+		// Narrow-phase box
 		VectorAdd(end, ent->mins, mins);
 		VectorAdd(end, ent->maxs, maxs);
 
 		for (int i = 0; i < num; i++)
 		{
-			hit = touch[i];
+			hit = touchList[i];
 
+			if (hit == nullptr)
+			{
+				continue;
+			}
+
+			// Skip if neither entity has a touch function
 			if (hit->e_TouchFunc == touchF_NULL && ent->e_TouchFunc == touchF_NULL)
 			{
 				continue;
 			}
-			if (!(hit->contents & CONTENTS_TRIGGER))
+
+			// Only triggers matter
+			if ((hit->contents & CONTENTS_TRIGGER) == 0)
 			{
 				continue;
 			}
 
+			// Already processed this index
 			if (touched[i] == qtrue)
 			{
-				continue; //already touched this move
+				continue;
 			}
+
+			// Dead clients can only touch trigger_teleport with TTSF_DEAD_OK
 			if (ent->client->ps.stats[STAT_HEALTH] <= 0)
 			{
-				if (Q_stricmp("trigger_teleport", hit->classname) || !(hit->spawnflags & 16/*TTSF_DEAD_OK*/))
+				if (Q_stricmp("trigger_teleport", hit->classname) != 0 ||
+					(hit->spawnflags & 16) == 0)
 				{
-					//dead clients can only touch tiogger_teleports that are marked as touchable
 					continue;
 				}
 			}
-			if (!gi.EntityContact(mins, maxs, hit))
+
+			// Precise contact test
+			if (gi.EntityContact(mins, maxs, hit) == qfalse)
 			{
 				continue;
 			}
 
 			touched[i] = qtrue;
 
-			memset(&trace, 0, sizeof trace);
+			memset(&trace, 0, sizeof(trace));
 
 			if (hit->e_TouchFunc != touchF_NULL)
 			{
@@ -1642,68 +1682,73 @@ Find all trigger entities that ent's current position touches.
 Spectators will only interact with teleporters.
 ============
 */
-void G_TouchTriggers(gentity_t* ent)
+static void G_TouchTriggers(gentity_t* ent)
 {
-	gentity_t* touch[MAX_GENTITIES];
-	trace_t trace;
-	vec3_t mins, maxs;
-	constexpr vec3_t range = { 40, 40, 52 };
+	static gentity_t* touchList[MAX_GENTITIES];  // moved off stack
 
-	if (!ent->client)
+	trace_t trace;
+	vec3_t mins;
+	vec3_t maxs;
+	constexpr vec3_t range = { 40.0f, 40.0f, 52.0f };
+
+	// Only clients can touch triggers
+	if (ent == nullptr || ent->client == nullptr)
 	{
 		return;
 	}
 
-	// dead clients don't activate triggers!
+	// Dead clients don't activate triggers
 	if (ent->client->ps.stats[STAT_HEALTH] <= 0)
 	{
 		return;
 	}
 
+	// Broad-phase box around player origin
 	VectorSubtract(ent->client->ps.origin, range, mins);
 	VectorAdd(ent->client->ps.origin, range, maxs);
 
-	const int num = gi.EntitiesInBox(mins, maxs, touch, MAX_GENTITIES);
+	const int num = gi.EntitiesInBox(mins, maxs, touchList, MAX_GENTITIES);
 
-	// can't use ent->absmin, because that has a one unit pad
+	// Narrow-phase box using actual entity bounds
 	VectorAdd(ent->client->ps.origin, ent->mins, mins);
 	VectorAdd(ent->client->ps.origin, ent->maxs, maxs);
 
 	for (int i = 0; i < num; i++)
 	{
-		gentity_t* hit = touch[i];
+		gentity_t* hit = touchList[i];
 
+		if (hit == nullptr)
+		{
+			continue;
+		}
+
+		// Skip if neither entity has a touch function
 		if (hit->e_TouchFunc == touchF_NULL && ent->e_TouchFunc == touchF_NULL)
 		{
 			continue;
 		}
-		if (!(hit->contents & CONTENTS_TRIGGER))
+
+		// Only triggers matter
+		if ((hit->contents & CONTENTS_TRIGGER) == 0)
 		{
 			continue;
 		}
 
-		// use seperate code for determining if an item is picked up
-		// so you don't have to actually contact its bounding box
-		/*
-		if ( hit->s.eType == ET_ITEM ) {
-			if ( !BG_PlayerTouchesItem( &ent->client->ps, &hit->s, level.time ) ) {
-				continue;
-			}
-		} else */
+		// Precise contact test
+		if (gi.EntityContact(mins, maxs, hit) == qfalse)
 		{
-			if (!gi.EntityContact(mins, maxs, hit))
-			{
-				continue;
-			}
+			continue;
 		}
 
-		memset(&trace, 0, sizeof trace);
+		memset(&trace, 0, sizeof(trace));
 
+		// Trigger's touch function
 		if (hit->e_TouchFunc != touchF_NULL)
 		{
 			GEntity_TouchFunc(hit, ent, &trace);
 		}
 
+		// NPCs can also touch back
 		if (ent->NPC != nullptr && ent->e_TouchFunc != touchF_NULL)
 		{
 			GEntity_TouchFunc(ent, hit, &trace);
@@ -1721,68 +1766,87 @@ Spectators will only interact with teleporters.
 */
 void g_mover_touch_push_triggers(gentity_t* ent, vec3_t old_org)
 {
-	trace_t trace;
-	vec3_t dir;
-	vec3_t size;
-	constexpr vec3_t range = { 40, 40, 52 };
+	static gentity_t* touchList[MAX_GENTITIES];   // moved off stack
 
-	// non-moving movers don't hit triggers!
-	if (!VectorLengthSquared(ent->s.pos.trDelta))
+	trace_t trace;
+	vec3_t  dir;
+	vec3_t  size;
+	constexpr vec3_t range = { 40.0f, 40.0f, 52.0f };
+
+	// Non-moving movers don't hit triggers
+	if (VectorLengthSquared(ent->s.pos.trDelta) == 0.0f)
 	{
 		return;
 	}
 
+	// Determine step size based on mover bounds
 	VectorSubtract(ent->mins, ent->maxs, size);
 	float step_size = VectorLength(size);
-	if (step_size < 1)
+	if (step_size < 1.0f)
 	{
-		step_size = 1;
+		step_size = 1.0f;
 	}
 
+	// Compute movement direction
 	VectorSubtract(ent->currentOrigin, old_org, dir);
 	const float dist = VectorNormalize(dir);
-	for (float step = 0; step <= dist; step += step_size)
+
+	// Step along the mover's path
+	for (float step = 0.0f; step <= dist; step += step_size)
 	{
 		vec3_t check_spot;
-		vec3_t maxs;
 		vec3_t mins;
-		gentity_t* touch[MAX_GENTITIES];
+		vec3_t maxs;
+
+		// Compute test point
 		VectorMA(ent->currentOrigin, step, dir, check_spot);
+
+		// Broad-phase box
 		VectorSubtract(check_spot, range, mins);
 		VectorAdd(check_spot, range, maxs);
 
-		const int num = gi.EntitiesInBox(mins, maxs, touch, MAX_GENTITIES);
+		const int num = gi.EntitiesInBox(mins, maxs, touchList, MAX_GENTITIES);
 
-		// can't use ent->absmin, because that has a one unit pad
+		// Narrow-phase box using actual mover bounds
 		VectorAdd(check_spot, ent->mins, mins);
 		VectorAdd(check_spot, ent->maxs, maxs);
 
 		for (int i = 0; i < num; i++)
 		{
-			gentity_t* hit = touch[i];
+			gentity_t* hit = touchList[i];
 
+			if (hit == nullptr)
+			{
+				continue;
+			}
+
+			// Only push triggers
 			if (hit->s.eType != ET_PUSH_TRIGGER)
 			{
 				continue;
 			}
 
+			// Must have a touch function
 			if (hit->e_TouchFunc == touchF_NULL)
 			{
 				continue;
 			}
 
-			if (!(hit->contents & CONTENTS_TRIGGER))
+			// Must be a trigger
+			if ((hit->contents & CONTENTS_TRIGGER) == 0)
 			{
 				continue;
 			}
 
-			if (!gi.EntityContact(mins, maxs, hit))
+			// Precise contact test
+			if (gi.EntityContact(mins, maxs, hit) == qfalse)
 			{
 				continue;
 			}
 
-			memset(&trace, 0, sizeof trace);
+			memset(&trace, 0, sizeof(trace));
 
+			// Call trigger touch function
 			if (hit->e_TouchFunc != touchF_NULL)
 			{
 				GEntity_TouchFunc(hit, ent, &trace);
@@ -4008,7 +4072,7 @@ qboolean G_CheckClampUcmd(gentity_t* ent, usercmd_t* ucmd)
 				AngleVectors(ang, throwDir, nullptr, nullptr);
 				if (!(ent->flags & FL_NO_KNOCKBACK))
 				{
-					g_throw(ent, throwDir, -100);
+					G_Throw(ent, throwDir, -100);
 				}
 				ent->client->ps.legsAnimTimer = ent->client->ps.torsoAnimTimer = 0;
 				NPC_SetAnim(ent, SETANIM_BOTH, BOTH_PLAYER_PA_3_FLY, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
@@ -4023,7 +4087,7 @@ qboolean G_CheckClampUcmd(gentity_t* ent, usercmd_t* ucmd)
 				AngleVectors(ang, throwDir, nullptr, nullptr);
 				if (!(ent->flags & FL_NO_KNOCKBACK))
 				{
-					g_throw(ent, throwDir, -100);
+					G_Throw(ent, throwDir, -100);
 				}
 				ent->client->ps.legsAnimTimer = ent->client->ps.torsoAnimTimer = 0;
 				NPC_SetAnim(ent, SETANIM_BOTH, BOTH_KNOCKDOWN2, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
@@ -7818,7 +7882,7 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 						VectorNormalize(throwDir);
 						if (!(ent->flags & FL_NO_KNOCKBACK))
 						{
-							g_throw(ent, throwDir, Q_flrand(50, 200));
+							G_Throw(ent, throwDir, Q_flrand(50, 200));
 						}
 						if (G_HasKnockdownAnims(ent))
 						{
@@ -8046,12 +8110,12 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 	}
 
 	// Activate the Blocking flags
-	if (!ent->NPC &&
-		(ent->s.number < MAX_CLIENTS || G_ControlledByPlayer(ent)) &&
-		client->ps.weapon == WP_SABER &&
-		!PM_SaberInMassiveBounce(client->ps.torsoAnim) &&
-		!PM_SaberInBashedAnim(client->ps.torsoAnim) &&
-		!PM_Saberinstab(client->ps.saberMove))
+	if ((ent->NPC == nullptr) &&
+		((ent->s.number < MAX_CLIENTS) || (G_ControlledByPlayer(ent) == qtrue)) &&
+		(client->ps.weapon == WP_SABER) &&
+		(PM_SaberInMassiveBounce(client->ps.torsoAnim) == qfalse) &&
+		(PM_SaberInBashedAnim(client->ps.torsoAnim) == qfalse) &&
+		(PM_Saberinstab(client->ps.saberMove) == qfalse))
 	{
 		if (manual_running_and_saberblocking(ent))
 		{
@@ -8063,14 +8127,16 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 			}
 		}
 		else if (manual_saberblocking(ent))
-		{
+		{// only block if not running
 			if (!(client->ps.ManualBlockingFlags & 1 << HOLDINGBLOCK))
 			{
 				client->ps.ManualBlockingFlags |= 1 << HOLDINGBLOCK;
 				client->ps.userInt3 |= 1 << FLAG_BLOCKING;
 				client->ps.ManualBlockingTime = level.time; //Blocking time 1 on
 
-				if (client->ps.weapon == WP_SABER && !client->ps.SaberActive() && client->NPC_class != CLASS_YODA && !manual_running_and_saberblocking(ent)) // not yoda he can block lightning with a saber off in his hand
+				if (client->ps.weapon == WP_SABER && !client->ps.SaberActive() &&
+					client->NPC_class != CLASS_YODA &&
+					!manual_running_and_saberblocking(ent)) // not yoda he can block lightning with a saber off in his hand
 				{
 					//return qfalse;
 					client->ps.SaberActivate();
@@ -8095,71 +8161,39 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 				}
 				client->usercmd.buttons &= ~BUTTON_ATTACK;
 
-				if (g_spskill->integer == 0) //easy blocking
+				// --------------------------------------------------------------
+				// PERFECT BLOCKING WINDOW (difficulty‑based)
+				// --------------------------------------------------------------
+				if (client->ps.ManualblockStartTime <= 0)
 				{
-					// started function
-					if (client->ps.ManualblockStartTime <= 0) //fresh start
-					{
-						// They just pressed block. Mark the time...
-						client->ps.ManualblockStartTime = level.time;
+					client->ps.ManualblockStartTime = level.time;
 
-						if (!(client->ps.ManualBlockingFlags & 1 << PERFECTBLOCKING))
-						{
-							client->ps.ManualBlockingFlags |= 1 << PERFECTBLOCKING; // activate the function
-						}
-					}
-					else
+					if ((client->ps.ManualBlockingFlags & (1 << PERFECTBLOCKING)) == 0)
 					{
-						if (client->ps.ManualBlockingFlags & 1 << PERFECTBLOCKING && level.time - client->ps.
-							ManualblockStartTime >= 500)
-						{
-							// Been holding block for too long....Turn off
-							client->ps.ManualBlockingFlags &= ~(1 << PERFECTBLOCKING);
-						}
+						client->ps.ManualBlockingFlags |= (1 << PERFECTBLOCKING);
 					}
 				}
-				else if (g_spskill->integer == 1) // medium blocking
+				else
 				{
-					if (client->ps.ManualblockStartTime <= 0) //fresh start
-					{
-						// They just pressed block. Mark the time...
-						client->ps.ManualblockStartTime = level.time;
+					int window = 0;
 
-						if (!(client->ps.ManualBlockingFlags & 1 << PERFECTBLOCKING))
-						{
-							client->ps.ManualBlockingFlags |= 1 << PERFECTBLOCKING; // activate the function
-						}
-					}
-					else
+					if (g_spskill->integer == 0)      // Easy
 					{
-						if (client->ps.ManualBlockingFlags & 1 << PERFECTBLOCKING && level.time - client->ps.
-							ManualblockStartTime >= 200)
-						{
-							// Been holding block for too long....Turn off
-							client->ps.ManualBlockingFlags &= ~(1 << PERFECTBLOCKING);
-						}
+						window = 500;
 					}
-				}
-				else // hard blocking
-				{
-					if (client->ps.ManualblockStartTime <= 0) //fresh start
+					else if (g_spskill->integer == 1) // Medium
 					{
-						// They just pressed block. Mark the time...
-						client->ps.ManualblockStartTime = level.time;
+						window = 200;
+					}
+					else                               // Hard
+					{
+						window = 80;
+					}
 
-						if (!(client->ps.ManualBlockingFlags & 1 << PERFECTBLOCKING))
-						{
-							client->ps.ManualBlockingFlags |= 1 << PERFECTBLOCKING; // activate the function
-						}
-					}
-					else
+					if (((client->ps.ManualBlockingFlags & (1 << PERFECTBLOCKING)) != 0) &&
+						(level.time - client->ps.ManualblockStartTime >= window))
 					{
-						if (client->ps.ManualBlockingFlags & 1 << PERFECTBLOCKING && level.time - client->ps.
-							ManualblockStartTime >= 80)
-						{
-							// Been holding block for too long....Turn off
-							client->ps.ManualBlockingFlags &= ~(1 << PERFECTBLOCKING);
-						}
+						client->ps.ManualBlockingFlags &= ~(1 << PERFECTBLOCKING);
 					}
 				}
 
@@ -8176,8 +8210,8 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 							client->ps.ManualBlockingFlags |= 1 << MBF_ACCURATEMISSILEBLOCKING; // activate the function
 						}
 					}
-					else if (client->ps.ManualBlockingFlags & 1 << MBF_ACCURATEMISSILEBLOCKING && level.time - client->
-						ps.BoltblockStartTime >= 3000)
+					else if (client->ps.ManualBlockingFlags & 1 << MBF_ACCURATEMISSILEBLOCKING &&
+						level.time - client->ps.BoltblockStartTime >= 3000)
 					{
 						// Been holding block for too long....let go.
 						client->ps.ManualBlockingFlags &= ~(1 << MBF_ACCURATEMISSILEBLOCKING);

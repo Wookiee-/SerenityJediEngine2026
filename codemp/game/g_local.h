@@ -946,7 +946,6 @@ struct gclient_s
 	gentity_t* team_leader;
 	gentity_t* leader;
 	gentity_t* follower;
-	int numFollowers;
 	gentity_t* formationGoal;
 	int nextFormGoal;
 	class_t NPC_class;
@@ -1081,6 +1080,7 @@ struct gclient_s
 	int cloneFired;
 	int BoltsFired;
 	int Dash_Count;
+	int Dash_BOT_Count;
 
 	int VaderBreathTime;
 
@@ -1447,7 +1447,7 @@ gentity_t* G_Find(gentity_t* from, int fieldofs, const char* match);
 int G_RadiusList(vec3_t origin, float radius, const gentity_t* ignore, qboolean take_damage,
 	gentity_t* ent_list[MAX_GENTITIES]);
 
-void g_throw(gentity_t* targ, const vec3_t new_dir, float push);
+void G_Throw(gentity_t* targ, const vec3_t new_dir, float push);
 
 void G_FreeFakeClient(gclient_t** cl);
 void G_CreateFakeClient(int entNum, gclient_t** cl);

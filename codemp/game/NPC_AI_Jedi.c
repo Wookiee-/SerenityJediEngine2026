@@ -474,7 +474,7 @@ void Tavion_ScepterDamage(void)
 						{
 							G_AddVoiceEvent(NPCS.NPC, EV_JDETECTED3, 10000);
 						}
-						g_throw(traceEnt, dir, Q_flrand(50, 80));
+						G_Throw(traceEnt, dir, Q_flrand(50, 80));
 						if (traceEnt->health > 0 && !Q_irand(0, 2)) //FIXME: base on skill!
 						{
 							//do pain on enemy
@@ -603,7 +603,7 @@ void Tavion_ScepterSlam(void)
 					}
 					entDir[2] += 0.1f;
 					VectorNormalize(entDir);
-					g_throw(radius_ent, entDir, throwStr);
+					G_Throw(radius_ent, entDir, throwStr);
 					if (radius_ent->health > 0)
 					{
 						if (dist < halfRad
@@ -1147,11 +1147,11 @@ void Boba_FireFlameThrower(gentity_t* self)
 	{
 		G_Damage(traceEnt, self, self, dir, tr.endpos, damage,
 			DAMAGE_NO_ARMOR | DAMAGE_NO_KNOCKBACK | DAMAGE_IGNORE_TEAM, MOD_BURNING);
-		g_throw(traceEnt, dir, 30);
+		G_Throw(traceEnt, dir, 30);
 
 		if (traceEnt->health > 0 && traceEnt->painDebounceTime > level.time)
 		{
-			g_throw(traceEnt, dir, 30);
+			G_Throw(traceEnt, dir, 30);
 
 			if (damage && traceEnt->client)
 			{
@@ -3326,13 +3326,13 @@ static void Jedi_CombatDistance(const int enemy_dist)
 						//throw them
 						smack_dir[2] = 1;
 						VectorNormalize(smack_dir);
-						g_throw(NPCS.NPC->enemy, smack_dir, 30);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 30);
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, knockAnim,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 					}
 					else if (NPCS.NPC->client->ps.torsoAnim == BOTH_A7_SLAP_R)
 					{
-						g_throw(NPCS.NPC->enemy, smack_dir, 40);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 40);
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, BOTH_KNOCKDOWN5,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 					}
@@ -3340,7 +3340,7 @@ static void Jedi_CombatDistance(const int enemy_dist)
 					{
 						//uppercut
 						//throw them
-						g_throw(NPCS.NPC->enemy, smack_dir, 50);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 50);
 						//make them backflip
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, BOTH_KNOCKDOWN2,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
@@ -3444,13 +3444,13 @@ static void Jedi_CombatDistance(const int enemy_dist)
 						//throw them
 						smack_dir[2] = 1;
 						VectorNormalize(smack_dir);
-						g_throw(NPCS.NPC->enemy, smack_dir, 30);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 30);
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, knockAnim,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 					}
 					else if (NPCS.NPC->client->ps.torsoAnim == BOTH_A7_SLAP_R)
 					{
-						g_throw(NPCS.NPC->enemy, smack_dir, 40);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 40);
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, BOTH_KNOCKDOWN5,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 					}
@@ -3458,7 +3458,7 @@ static void Jedi_CombatDistance(const int enemy_dist)
 					{
 						//uppercut
 						//throw them
-						g_throw(NPCS.NPC->enemy, smack_dir, 50);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 50);
 						//make them backflip
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, BOTH_KNOCKDOWN2,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);

@@ -2061,7 +2061,7 @@ static bool UpdateRider(Vehicle_t* p_veh, bgEntity_t* pRider, usercmd_t* pUmcd)
 				vec3_t toEnemy;
 				VectorSubtract(p_veh->m_pParentEntity->currentOrigin, rider->enemy->currentOrigin, toEnemy);
 				VectorNormalize(toEnemy);
-				g_throw(p_veh->m_pParentEntity, toEnemy, 50);
+				G_Throw(p_veh->m_pParentEntity, toEnemy, 50);
 
 				// Start Boarding On Enemy's Vehicle
 				//-----------------------------------

@@ -29,6 +29,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #define	SCOREBOARD_WIDTH	(26*BIGCHAR_WIDTH)
 
+extern vmCvar_t cg_com_outcast;
+
 /*
 =================
 CG_MissionFailed
@@ -41,7 +43,14 @@ static void CG_MissionFailed()
 	if (!cg.missionFailedScreen)
 	{
 		char* text;
-		cgi_UI_SetActive_Menu("missionfailed_menu");
+		if (cg_com_outcast.integer == 7)
+		{
+			cgi_UI_SetActive_Menu("missionfailed_nina_menu");
+		}
+		else
+		{
+			cgi_UI_SetActive_Menu("missionfailed_menu");
+		}
 		cg.missionFailedScreen = qtrue;
 
 		switch (statusTextIndex)

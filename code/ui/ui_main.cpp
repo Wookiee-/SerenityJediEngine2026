@@ -713,6 +713,12 @@ static void UI_LoadMods()
 	}
 }
 
+void UI_ReloadStrings_f(void)
+{
+	SE_NewLanguage();
+	SE_LoadLanguage(se_language->string, SE_FALSE);
+}
+
 /*
 ================
 vmMain
@@ -1295,7 +1301,14 @@ static qboolean UI_RunMenuScript(const char** args)
 
 			if (1 == Cvar_VariableIntegerValue("ui_missionfailed"))
 			{
-				Menus_ActivateByName("missionfailed_menu");
+				if (ui_com_outcast.integer == 7)
+				{
+					Menus_ActivateByName("missionfailed_nina_menu");
+				}
+				else
+				{
+					Menus_ActivateByName("missionfailed_menu");
+				}
 				ui.Key_SetCatcher(KEYCATCH_UI);
 			}
 			else
@@ -1773,6 +1786,10 @@ static qboolean UI_RunMenuScript(const char** args)
 		else if (Q_stricmp(name, "LaunchMP") == 0)
 		{
 			// TODO for MAC_PORT, will only be valid for non-JK2 mode
+		}
+		else if (Q_stricmp(name, "reload_strings") == 0)
+		{
+			UI_ReloadStrings_f();
 		}
 		else
 		{

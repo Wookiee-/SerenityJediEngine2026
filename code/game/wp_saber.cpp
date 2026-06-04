@@ -1286,7 +1286,7 @@ static void bg_reduce_saber_mishap_level(playerState_t* ps)
 }
 
 //----------------------------------------------------------
-void g_throw(gentity_t* targ, const vec3_t new_dir, const float push)
+void G_Throw(gentity_t* targ, const vec3_t new_dir, const float push)
 //----------------------------------------------------------
 {
 	vec3_t kvel;
@@ -2434,7 +2434,7 @@ void wp_saber_clear_damage_for_ent_num(gentity_t* attacker, const int entityNum,
 					VectorScale(center, 0.5, center);
 					VectorSubtract(victim->currentOrigin, saberHitLocation, dir_to_center);
 					VectorNormalize(dir_to_center);
-					g_throw(victim, dir_to_center, knockback);
+					G_Throw(victim, dir_to_center, knockback);
 					if (victim->client->ps.groundEntityNum != ENTITYNUM_NONE
 						&& dir_to_center[2] <= 0)
 					{
@@ -5799,31 +5799,57 @@ qboolean WP_SaberFatiguedParry(gentity_t* blocker, gentity_t* attacker, const in
 }
 
 qboolean saberShotOutOfHand(gentity_t* self, vec3_t throw_dir);
-
 qboolean WP_BrokenBoltBlockKnockBack(gentity_t* victim)
 {
-	if (!victim || !victim->client)
+	// Sanity check
+	if (victim == nullptr || victim->client == nullptr)
 	{
 		return qfalse;
 	}
 
-	if (victim->s.weapon == WP_SABER &&
-		victim->client->ps.SaberActive() &&
-		victim->client->ps.blockPoints <= BLOCKPOINTS_TEN ||
-		victim->s.weapon == WP_SABER &&
-		victim->client->ps.SaberActive() &&
-		victim->client->ps.forcePower <= BLOCKPOINTS_TEN)
+	// Must be using an active saber
+	if (victim->s.weapon != WP_SABER ||
+		victim->client->ps.SaberActive() == qfalse)
 	{
-		//knock their asses down!!
+		return qfalse;
+	}
+
+	// Check block/force thresholds
+	const qboolean lowBlock =
+		((victim->client->ps.blockPoints <= BLOCKPOINTS_TWENTYFIVE) ? qtrue : qfalse);
+
+	const qboolean lowForce =
+		((victim->client->ps.forcePower <= BLOCKPOINTS_TWENTYFIVE) ? qtrue : qfalse);
+
+	if (lowBlock == qfalse && lowForce == qfalse)
+	{
+		// Not low enough to trigger knockback
+		return qfalse;
+	}
+
+	// Severe threshold (knockdown + saber shot)
+	const qboolean severeBlock =
+		((victim->client->ps.blockPoints <= BLOCKPOINTS_TEN) ? qtrue : qfalse);
+
+	const qboolean severeForce =
+		((victim->client->ps.forcePower <= BLOCKPOINTS_TEN) ? qtrue : qfalse);
+
+	if (severeBlock == qtrue || severeForce == qtrue)
+	{
+		// Knockdown
 		G_Stagger(victim);
 
-		vec3_t throw_dir = { 0, 0, 350 };
-
+		// Throw saber upward
+		vec3_t throw_dir = { 0.0f, 0.0f, 350.0f };
 		saberShotOutOfHand(victim, throw_dir);
 
+		// Pain event
 		G_AddEvent(victim, EV_PAIN, victim->health);
+
 		return qtrue;
 	}
+
+	// Mild threshold → stagger only
 	G_Stagger(victim);
 	return qtrue;
 }
@@ -6182,7 +6208,7 @@ static void WP_SaberRadiusDamage(gentity_t* ent, vec3_t point, const float radiu
 					const float knockback_str = knockBack * dist / radius;
 					entDir[2] += 0.1f;
 					VectorNormalize(entDir);
-					g_throw(radius_ents[i], entDir, knockback_str);
+					G_Throw(radius_ents[i], entDir, knockback_str);
 					if (radius_ents[i]->health > 0)
 					{
 						//still alive
@@ -11199,8 +11225,7 @@ int wp_saber_must_block(gentity_t* self, const gentity_t* atk, const qboolean ch
 		if (self->s.number >= MAX_CLIENTS && !G_ControlledByPlayer(self))
 		{
 			//bots just randomly parry to make up for them not intelligently parrying.
-			if (self->client->ps.weapon == WP_SABER && self->client->ps.SaberActive() && !self->client->ps.
-				saberInFlight)
+			if (self->client->ps.weapon == WP_SABER && self->client->ps.SaberActive() && !self->client->ps.saberInFlight)
 			{
 				return 1;
 			}
@@ -11317,7 +11342,7 @@ qboolean manual_saberblocking(const gentity_t* defender)
 
 	if (defender->s.number >= MAX_CLIENTS && !G_ControlledByPlayer(defender)
 		&& defender->client->ps.weapon != WP_SABER)
-	{
+	{//bots can only block with saber, if they have it out.
 		return qfalse;
 	}
 
@@ -14785,7 +14810,7 @@ qboolean G_CheckEnemyPresence(const gentity_t* ent, int dir, float radius, float
 	// ----------------------------------------------------
 	// Build bounding box
 	// ----------------------------------------------------
-	vec3_t mins={0}, maxs={0};
+	vec3_t mins = { 0 }, maxs = { 0 };
 	for (int i = 0; i < 3; i++)
 	{
 		mins[i] = ent->currentOrigin[i] - radius;
@@ -17014,7 +17039,7 @@ void ForceThrow(gentity_t* self, qboolean pull, qboolean fake)
 						}
 					}
 					//actually push/pull the enemy
-					g_throw(push_target[x], push_dir, knockback);
+					G_Throw(push_target[x], push_dir, knockback);
 					//make it so they don't actually hurt me when pulled at me...
 					push_target[x]->forcePuller = self->s.number;
 
@@ -18198,7 +18223,7 @@ static void ForceRepulseThrow(gentity_t* self, int charge_time)
 					}
 				}
 				//actually push/pull the enemy
-				g_throw(push_target[x], push_dir, knockback);
+				G_Throw(push_target[x], push_dir, knockback);
 				//make it so they don't actually hurt me when pulled at me...
 				push_target[x]->forcePuller = self->s.number;
 
@@ -19602,7 +19627,7 @@ void ForceGripAdvanced(gentity_t* self)
 			VectorNormalize(forward);
 			traceEnt = &g_entities[tr.entityNum];
 
-			vec3_t center, mins = {0}, maxs = {0}, v={0};
+			vec3_t center, mins = { 0 }, maxs = { 0 }, v = { 0 };
 			constexpr float radius = 512;
 			gentity_t* entity_list[MAX_GENTITIES];
 			int i;
@@ -23099,7 +23124,7 @@ static void force_lightning_damage(gentity_t* self, gentity_t* traceEnt, vec3_t 
 					else if (traceEnt->client->ps.groundEntityNum == ENTITYNUM_NONE &&
 						traceEnt->health > 1)
 					{
-						g_throw(traceEnt, dir, 2);
+						G_Throw(traceEnt, dir, 2);
 						NPC_SetAnim(traceEnt, SETANIM_BOTH, Q_irand(BOTH_SLAPDOWNRIGHT, BOTH_SLAPDOWNLEFT), SETANIM_AFLAG_PACE);
 					}
 					else

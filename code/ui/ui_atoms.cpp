@@ -167,10 +167,24 @@ void UI_SetActiveMenu(const char* menuname, const char* menuID)
 		return;
 	}
 #ifndef JK2_MODE
+	if (Q_stricmp(menuname, "missionfailed_nina_menu") == 0)
+	{
+		Menus_CloseAll();
+		Menus_ActivateByName("missionfailed_nina_menu");
+		ui.Key_SetCatcher(KEYCATCH_UI);
+	}
 	if (Q_stricmp(menuname, "missionfailed_menu") == 0)
 	{
 		Menus_CloseAll();
-		Menus_ActivateByName("missionfailed_menu");
+
+		if (ui_com_outcast.integer == 7)
+		{
+			Menus_ActivateByName("missionfailed_nina_menu");
+		}
+		else
+		{
+			Menus_ActivateByName("missionfailed_menu");
+		}
 		ui.Key_SetCatcher(KEYCATCH_UI);
 	}
 #endif
@@ -304,6 +318,8 @@ qboolean UI_ConsoleCommand()
 UI_Init
 =================
 */
+
+extern void UI_ReloadStrings_f(void);
 void UI_Init(const int apiVersion, const uiimport_t* uiimport, const qboolean inGameLoad)
 {
 	ui = *uiimport;
@@ -319,7 +335,13 @@ void UI_Init(const int apiVersion, const uiimport_t* uiimport, const qboolean in
 	uis.scaley = uis.glconfig.vidHeight * (1.0 / 480.0);
 	uis.scalex = uis.glconfig.vidWidth * (1.0 / 640.0);
 
-	Menu_Cache();
+	Menu_Cache();Menu_Cache();
+
+	// -----------------------------
+	// REGISTER reload_strings HERE
+	// -----------------------------
+	Cmd_AddCommand("reload_strings", UI_ReloadStrings_f);
+	// -----------------------------
 
 	ui.Cvar_Create("cg_drawCrosshair", "2", CVAR_ARCHIVE);
 	ui.Cvar_Create("cg_marks", "1", CVAR_ARCHIVE);

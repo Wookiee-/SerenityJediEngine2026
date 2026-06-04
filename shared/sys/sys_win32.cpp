@@ -287,15 +287,28 @@ qboolean Sys_Mkdir(const char* path)
 Sys_Cwd
 ==============
 */
-char* Sys_Cwd()
+char* Sys_Cwd(void)
 {
 	static char cwd[MAX_OSPATH];
 
-	_getcwd(cwd, sizeof cwd - 1);
-	cwd[MAX_OSPATH - 1] = 0;
+	// Attempt to get the current working directory
+	char* result = _getcwd(cwd, sizeof(cwd) - 1);
+
+	if (result == nullptr)
+	{
+		// Debug print instead of assert or crash
+		Com_Printf(S_COLOR_RED "Sys_Cwd: _getcwd failed — returning empty path.\n");
+
+		cwd[0] = '\0';
+		return cwd;
+	}
+
+	// Ensure null termination
+	cwd[MAX_OSPATH - 1] = '\0';
 
 	return cwd;
 }
+
 
 /* Resolves path names and determines if they are the same */
 /* For use with full OS paths not quake paths */
@@ -458,7 +471,7 @@ char** Sys_ListFiles(const char* directory, const char* extension, char* filter,
 		}
 
 		// Allocate final list
-		char** listCopy = (char**)Z_Malloc((nfiles + 1) * sizeof(char*), TAG_LISTFILES);
+		char** listCopy = (char**)Z_Malloc((static_cast<unsigned long long>(nfiles) + 1) * sizeof(char*), TAG_LISTFILES);
 
 		for (int i = 0; i < nfiles; i++)
 			listCopy[i] = list[i];

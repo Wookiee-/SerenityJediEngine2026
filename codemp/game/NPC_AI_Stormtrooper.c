@@ -3478,13 +3478,13 @@ void NPC_BSST_Attack(void)
 						//throw them
 						smack_dir[2] = 1;
 						VectorNormalize(smack_dir);
-						g_throw(NPCS.NPC->enemy, smack_dir, 50);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 50);
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, knockAnim,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 					}
 					else if (NPCS.NPC->client->ps.torsoAnim == BOTH_MELEE_R)
 					{
-						g_throw(NPCS.NPC->enemy, smack_dir, 65);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 65);
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, BOTH_KNOCKDOWN5,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 					}
@@ -3492,7 +3492,7 @@ void NPC_BSST_Attack(void)
 					{
 						//uppercut
 						//throw them
-						g_throw(NPCS.NPC->enemy, smack_dir, 80);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 80);
 						//make them backflip
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, BOTH_KNOCKDOWN2,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
@@ -3581,13 +3581,13 @@ void NPC_BSST_Attack(void)
 						//throw them
 						smack_dir[2] = 1;
 						VectorNormalize(smack_dir);
-						g_throw(NPCS.NPC->enemy, smack_dir, 25);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 25);
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, knockAnim,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 					}
 					else if (NPCS.NPC->client->ps.torsoAnim == BOTH_A7_KICK_F2)
 					{
-						g_throw(NPCS.NPC->enemy, smack_dir, 30);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 30);
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, BOTH_KNOCKDOWN5,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 					}
@@ -3595,7 +3595,7 @@ void NPC_BSST_Attack(void)
 					{
 						//uppercut
 						//throw them
-						g_throw(NPCS.NPC->enemy, smack_dir, 50);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 50);
 						//make them backflip
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, BOTH_KNOCKDOWN2,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
@@ -3698,19 +3698,19 @@ void NPC_BSST_Attack(void)
 						//throw them
 						smack_dir[2] = 1;
 						VectorNormalize(smack_dir);
-						g_throw(NPCS.NPC->enemy, smack_dir, 10);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 10);
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, knockAnim,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 					}
 					else if (NPCS.NPC->client->ps.torsoAnim == BOTH_MELEE_L)
 					{
-						g_throw(NPCS.NPC->enemy, smack_dir, 10);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 10);
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, BOTH_PAIN3,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 					}
 					else if (NPCS.NPC->client->ps.torsoAnim == BOTH_MELEEUP)
 					{
-						g_throw(NPCS.NPC->enemy, smack_dir, 10);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 10);
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, BOTH_PAIN4,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 					}
@@ -3718,7 +3718,7 @@ void NPC_BSST_Attack(void)
 					{
 						//uppercut
 						//throw them
-						g_throw(NPCS.NPC->enemy, smack_dir, 10);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 10);
 						//make them backflip
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, BOTH_PAIN1,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
@@ -3811,13 +3811,13 @@ void NPC_BSST_Attack(void)
 						//throw them
 						smack_dir[2] = 1;
 						VectorNormalize(smack_dir);
-						g_throw(NPCS.NPC->enemy, smack_dir, 50);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 50);
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, knockAnim,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 					}
 					else if (NPCS.NPC->client->ps.torsoAnim == BOTH_A7_KICK_F2)
 					{
-						g_throw(NPCS.NPC->enemy, smack_dir, 65);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 65);
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, BOTH_KNOCKDOWN5,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 					}
@@ -3825,7 +3825,7 @@ void NPC_BSST_Attack(void)
 					{
 						//uppercut
 						//throw them
-						g_throw(NPCS.NPC->enemy, smack_dir, 80);
+						G_Throw(NPCS.NPC->enemy, smack_dir, 80);
 						//make them backflip
 						NPC_SetAnim(NPCS.NPC->enemy, SETANIM_BOTH, BOTH_KNOCKDOWN2,
 							SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);

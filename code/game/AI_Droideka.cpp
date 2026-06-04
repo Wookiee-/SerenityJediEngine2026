@@ -409,7 +409,7 @@ static void droideka_attack()
 			VectorNormalize(smack_dir);
 			G_Damage(NPC->enemy, NPC, NPC, smack_dir, NPC->currentOrigin, (g_spskill->integer + 1) * Q_irand(2, 5),
 				DAMAGE_NO_KNOCKBACK, MOD_ELECTROCUTE);
-			g_throw(NPC->enemy, smack_dir, 50);
+			G_Throw(NPC->enemy, smack_dir, 50);
 			NPC->enemy->s.powerups |= 1 << PW_SHOCKED;
 			if (NPC->enemy->client)
 			{

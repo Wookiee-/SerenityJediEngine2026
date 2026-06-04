@@ -33,6 +33,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SE_FALSE				qfalse
 #define	iSE_MAX_FILENAME_LENGTH	MAX_QPATH
 #define sSE_STRINGS_DIR			"strings"
+#define sSE_STRINGS_DIR_NINA	"strings/nina"
+#define sSE_STRINGS_DIR_YAVIN	"strings/yavin"
+
 #define sSE_DEBUGSTR_PREFIX		"["		// any string you want prefixing onto the debug versions of strings (to spot hardwired english etc)
 
 #define sSE_DEBUGSTR_SUFFIX		"]"		// ""

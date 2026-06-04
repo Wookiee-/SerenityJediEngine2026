@@ -408,7 +408,6 @@ void g_load_arenas(void)
 #endif
 }
 
-
 void g_load_sp_arenas(void)
 {
 #if 0
@@ -477,7 +476,6 @@ void g_load_sp_arenas(void)
 
 #endif
 }
-
 
 /*
 ===============

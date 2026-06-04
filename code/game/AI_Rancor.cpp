@@ -476,7 +476,7 @@ static void Rancor_Swing(const int boltIndex, const qboolean try_grab)
 					&& radius_ents[i]->client->NPC_class != CLASS_ATST
 					&& !(radius_ents[i]->flags & FL_NO_KNOCKBACK))
 				{
-					g_throw(radius_ents[i], push_dir, 250);
+					G_Throw(radius_ents[i], push_dir, 250);
 					if (radius_ents[i]->health > 0)
 					{
 						//do pain on enemy

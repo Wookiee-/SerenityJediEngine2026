@@ -915,6 +915,7 @@ public:
 	int DekaFired;
 	int BoltsFired;
 	int Dash_Count;
+	int Dash_NPC_Count;
 	gentity_t* lastSaberTarget;
 	int lastSaberTargetTime;
 	int reloadTime;
@@ -1022,6 +1023,7 @@ public:
 		saved_game.write<int32_t>(DekaFired);
 		saved_game.write<int32_t>(BoltsFired);
 		saved_game.write<int32_t>(Dash_Count);
+		saved_game.write<int32_t>(Dash_NPC_Count);
 		saved_game.write<int32_t>(lastSaberTarget);
 		saved_game.write<int32_t>(lastSaberTargetTime);
 		saved_game.write<int32_t>(reloadTime);
@@ -1130,6 +1132,7 @@ public:
 		saved_game.read<int32_t>(DekaFired);
 		saved_game.read<int32_t>(BoltsFired);
 		saved_game.read<int32_t>(Dash_Count);
+		saved_game.read<int32_t>(Dash_NPC_Count);
 		saved_game.read<int32_t>(lastSaberTarget);
 		saved_game.read<int32_t>(lastSaberTargetTime);
 		saved_game.read<int32_t>(reloadTime);
@@ -1554,7 +1557,8 @@ struct gentity_s
 	int saberPowerTime;
 	qboolean saberPower;
 	int lastKataTime; // timestamp (level.time) when kata is next allowed; 0 = allowed now
-	int Dash_Count = 0;
+	int Dash_Count;
+	int Dash_NPC_Count;
 
 	void sg_export(
 		ojk::SavedGameHelper& saved_game) const
@@ -1770,6 +1774,7 @@ struct gentity_s
 		saved_game.write<int32_t>(saberPower);
 		saved_game.write<int32_t>(lastKataTime);
 		saved_game.write<int32_t>(Dash_Count);
+		saved_game.write<int32_t>(Dash_NPC_Count);
 	}
 
 	void sg_import(
@@ -1986,6 +1991,7 @@ struct gentity_s
 		saved_game.read<int32_t>(saberPower);
 		saved_game.read<int32_t>(lastKataTime);
 		saved_game.read<int32_t>(Dash_Count);
+		saved_game.read<int32_t>(Dash_NPC_Count);
 	}
 };
 #endif //#ifdef GAME_INCLUDE

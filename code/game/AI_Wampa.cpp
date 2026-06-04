@@ -237,7 +237,7 @@ static void Wampa_Slash(const int boltIndex, const qboolean backhand)
 					&& radius_ents[i]->client->NPC_class != CLASS_ATST
 					&& !(radius_ents[i]->flags & FL_NO_KNOCKBACK))
 				{
-					g_throw(radius_ents[i], push_dir, 65);
+					G_Throw(radius_ents[i], push_dir, 65);
 					if (radius_ents[i]->health > 0 && Q_irand(0, 1))
 					{
 						//do pain on enemy
@@ -700,7 +700,7 @@ static qboolean Wampa_TryGrab()
 			&& NPC->enemy->client->NPC_class != CLASS_ATST
 			&& !(NPC->enemy->flags & FL_NO_KNOCKBACK))
 		{
-			g_throw(NPC->enemy, push_dir, Q_irand(30, 70));
+			G_Throw(NPC->enemy, push_dir, Q_irand(30, 70));
 			if (NPC->enemy->health > 0)
 			{
 				//do pain on enemy
