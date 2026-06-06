@@ -332,7 +332,7 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 	if(WIN32)
 		set(SPEngineWin32Files
 			"${SPDir}/win32/resource.h"
-			"${SPDir}/win32/winquake.rc"
+			"${SPDir}/win32/SerenityJediEngine2026-SP.rc"
 			)
 		source_group("win32" FILES ${SPEngineWin32Files})
 		set(SPEngineFiles ${SPEngineFiles} ${SPEngineWin32Files})
