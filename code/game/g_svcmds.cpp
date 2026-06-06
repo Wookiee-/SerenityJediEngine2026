@@ -700,18 +700,8 @@ static void Svcmd_SaberAttackCycle_f()
 		{
 			if (!(self->client->ps.ManualBlockingFlags & 1 << HOLDINGBLOCK) && !PM_SaberInAttack(self->client->ps.saberMove) && self->client->ps.saberLockTime < level.time) // lets do a movement when changing styles // need better anims for this
 			{
-				if (saberAnimLevel == SS_DUAL)
-				{
-					NPC_SetAnim(self, SETANIM_TORSO, BOTH_STAND2TO1, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-				}
-				else if (saberAnimLevel == SS_STAFF)
-				{
-					NPC_SetAnim(self, SETANIM_TORSO, BOTH_STAND2TO1, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-				}
-				else
-				{
-					NPC_SetAnim(self, SETANIM_TORSO, BOTH_STAND2TO1, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-				}
+				NPC_SetAnim(self, SETANIM_TORSO, BOTH_STAND2TO1, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+
 				if (self->s.number < MAX_CLIENTS || G_ControlledByPlayer(self)) //only player
 				{
 					if (self->client->ps.SaberActive())

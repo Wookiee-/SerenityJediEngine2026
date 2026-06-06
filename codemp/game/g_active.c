@@ -3956,7 +3956,10 @@ void G_SetsaberdownorAnim(gentity_t* ent)
 	}
 
 	if (PM_InKataAnim(ent->client->ps.legsAnim) ||
-		PM_InKataAnim(ent->client->ps.torsoAnim))
+		PM_InKataAnim(ent->client->ps.torsoAnim) ||
+		PM_InLedgeMove(ent->client->ps.legsAnim) ||
+		PM_InLedgeMove(ent->client->ps.torsoAnim) ||
+		IsSurrendering(ent))
 	{
 		return;
 	}
@@ -3970,9 +3973,8 @@ void G_SetsaberdownorAnim(gentity_t* ent)
 			{
 				ent->client->ps.saberHolstered = 0;
 
-				if (!g_noIgniteTwirl.integer &&
-					!IsSurrendering(ent)) //twirl on
-				{
+				if (!g_noIgniteTwirl.integer)
+				{ //twirl on
 					if (PM_RunningAnim(ent->client->ps.legsAnim)
 						|| ent->client->ps.groundEntityNum == ENTITYNUM_NONE
 						|| in_camera)
@@ -4088,6 +4090,17 @@ void G_SetsaberdownorAnim(gentity_t* ent)
 						}
 					}
 				}
+				else
+				{//twirl is off
+					if (ent->client->saber[0].soundOn)
+					{
+						G_Sound(ent, CHAN_AUTO, ent->client->saber[0].soundOn);
+					}
+					if (ent->client->saber[1].soundOn)
+					{
+						G_Sound(ent, CHAN_AUTO, ent->client->saber[1].soundOn);
+					}
+				}
 			}
 			// SABER OFF
 			else
@@ -4095,7 +4108,7 @@ void G_SetsaberdownorAnim(gentity_t* ent)
 				ent->client->ps.saberHolstered = 2;
 
 				if (!g_noIgniteTwirl.integer &&
-					!IsSurrendering(ent)) //twirl on
+					!IsSurrendering(ent) && !PM_InLedgeMove(ent->client->ps.legsAnim) && !PM_InLedgeMove(ent->client->ps.torsoAnim)) //twirl on
 				{
 					switch (ent->client->ps.fd.saberAnimLevel)
 					{
@@ -4104,9 +4117,6 @@ void G_SetsaberdownorAnim(gentity_t* ent)
 						G_Sound(ent, CHAN_AUTO, ent->client->saber[0].soundOff);
 						break;
 					case SS_STAFF:
-						NPC_SetAnim(ent, SETANIM_TORSO, BOTH_SABER_BACKHAND_IGNITION, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-						G_Sound(ent, CHAN_AUTO, ent->client->saber[0].soundOff);
-						break;
 					case SS_NONE:
 					case SS_FAST:
 					case SS_MEDIUM:
@@ -4122,8 +4132,20 @@ void G_SetsaberdownorAnim(gentity_t* ent)
 						break;
 					}
 				}
-				// prevent actions for 400ms after holster
-				ent->client->ps.weaponTime = 400;
+				else
+				{ //twirl is off
+					if (ent->client->saber[0].soundOff)
+					{
+						G_Sound(ent, CHAN_AUTO, ent->client->saber[0].soundOff);
+					}
+					if (ent->client->saber[1].soundOff &&
+						ent->client->saber[1].model[0])
+					{
+						G_Sound(ent, CHAN_AUTO, ent->client->saber[1].soundOff);
+					}
+				}
+				// prevent actions for 200ms after holster
+				ent->client->ps.weaponTime = 200;
 			}
 		}
 	}
@@ -5768,8 +5790,8 @@ static void ClientThink_real(gentity_t* ent)
 							client->ps.ManualBlockingFlags |= 1 << MBF_ACCURATEMISSILEBLOCKING; // activate the function
 						}
 					}
-					else if (client->ps.ManualBlockingFlags & 1 << MBF_ACCURATEMISSILEBLOCKING && level.time - client->
-						ps.BoltblockStartTime >= 3000)
+					else if (client->ps.ManualBlockingFlags & 1 << MBF_ACCURATEMISSILEBLOCKING &&
+						level.time - client->ps.BoltblockStartTime >= 6000)
 					{
 						// Been holding block for too long....let go.
 						client->ps.ManualBlockingFlags &= ~(1 << MBF_ACCURATEMISSILEBLOCKING);

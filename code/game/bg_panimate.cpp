@@ -6784,7 +6784,10 @@ static void PM_TorsoAnimLightsaber()
 		&& !(pm->ps->saberEventFlags & SEF_HITWALL)
 		&& pm->ps->weaponstate == WEAPON_RAISING)
 	{// igniting
-		if (!G_IsRidingVehicle(pm->gent))
+		if (!G_IsRidingVehicle(pm->gent) &&
+			!IsSurrendering(pm->gent) &&
+			!PM_InLedgeMove(pm->ps->legsAnim) &&
+			!PM_InLedgeMove(pm->ps->torsoAnim))
 		{
 			if (pm->ps->clientNum >= MAX_CLIENTS && !PM_ControlledByPlayer())
 			{// npc
@@ -6792,7 +6795,7 @@ static void PM_TorsoAnimLightsaber()
 			}
 			else
 			{
-				if (!g_noIgniteTwirl->integer && !IsSurrendering(pm->gent)) //twirl on
+				if (!g_noIgniteTwirl->integer) //twirl on
 				{
 					if (PM_RunningAnim(pm->ps->legsAnim) || pm->ps->groundEntityNum == ENTITYNUM_NONE || in_camera)
 					{//running or in air or in camera
@@ -6895,70 +6898,15 @@ static void PM_TorsoAnimLightsaber()
 						}
 					}
 				}
-				else
+				else // twirl is off or we are doing a ledge move, so just do a normal draw anim
 				{
-					if ((PM_RunningAnim(pm->ps->legsAnim)
-						|| PM_WalkingAnim(pm->ps->legsAnim))
-						&& pm->ps->saberBlockingTime < cg.time
-						&& !IsSurrendering(pm->gent))
-					{
-						//running w/1-handed weapon uses full-body anim
-						int setFlags = SETANIM_FLAG_NORMAL;
-						if (PM_LandingAnim(pm->ps->torsoAnim))
-						{
-							setFlags = SETANIM_FLAG_OVERRIDE;
-						}
-						PM_SetAnim(pm, SETANIM_TORSO, pm->ps->legsAnim, setFlags);
-					}
-					else
-					{
-						if (!IsSurrendering(pm->gent))
-						{
-							PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_IGNITION_JFA, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-						}
-					}
+					// no anim
 				}
 			}
 		}
 		return;
 	}
-	if (!pm->ps->SaberActive() && pm->ps->SaberLength())
-	{// turning saber off, but it's still on, so do the putaway anim
-		if (!G_IsRidingVehicle(pm->gent))
-		{
-			if (pm->ps->clientNum >= MAX_CLIENTS && !PM_ControlledByPlayer())
-			{// npc
-				PM_SetSaberMove(LS_PUTAWAY);
-			}
-			else
-			{
-				if (!g_noIgniteTwirl->integer && !IsSurrendering(pm->gent))
-				{
-					switch (pm->ps->saberAnimLevel)
-					{
-					case SS_DUAL:
-						PM_SetAnim(pm, SETANIM_TORSO, BOTH_GRIEVOUS_SABERON, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-						break;
-					case SS_STAFF:
-						PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_BACKHAND_IGNITION, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-						break;
-					case SS_NONE:
-					case SS_FAST:
-					case SS_MEDIUM:
-					case SS_STRONG:
-					case SS_TAVION:
-					case SS_DESANN:
-						PM_SetAnim(pm, SETANIM_TORSO, BOTH_STAND2TO1, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-						break;
-					default:
-						PM_SetAnim(pm, SETANIM_TORSO, BOTH_STAND2TO1, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-						break;
-					}
-				}
-			}
-		}
-		return;
-	}
+	
 
 	if (pm->ps->weaponTime > 0)
 	{

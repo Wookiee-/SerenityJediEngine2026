@@ -12098,18 +12098,16 @@ void PM_FinishWeaponChange(void)
 
 	if (weapon == WP_SABER)
 	{
-		if (!pm->ps->saberEntityNum && pm->ps->saberInFlight)
-		{
+		if (!pm->ps->saberEntityNum && pm->ps->saberInFlight && !PM_InLedgeMove(pm->ps->legsAnim) && !PM_InLedgeMove(pm->ps->torsoAnim))
+		{// saber is in flight, but we don't have it yet, so wait to switch until we do have it
 			//our saber is currently dropped.  Don't allow the dropped blade to be activated.
 			if (pm->ps->fd.saberAnimLevel == SS_DUAL)
-			{
-				//holding second saber, activate it.
+			{// dual saber, so we can still switch to single saber
 				pm->ps->saberHolstered = 1;
-				PM_SetSaberMove(LS_DRAW);
+				PM_SetAnim(SETANIM_TORSO, BOTH_GRIEVOUS_SABERON, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 			}
 			else
-			{
-				//not holding any sabers, make sure all our blades are all off.
+			{//not holding any sabers, make sure all our blades are all off.
 				pm->ps->saberHolstered = 2;
 			}
 		}
@@ -12125,8 +12123,10 @@ void PM_FinishWeaponChange(void)
 			else
 #endif
 			{
-				if (!g_noIgniteTwirl.integer)
-				{
+				if (!g_noIgniteTwirl.integer &&
+					!PM_InLedgeMove(pm->ps->legsAnim) &&
+					!PM_InLedgeMove(pm->ps->torsoAnim))
+				{// twirl if we aren't already doing a ledge move
 					if (PM_RunningAnim(pm->ps->legsAnim)
 						|| pm->ps->groundEntityNum == ENTITYNUM_NONE
 						|| in_camera)
@@ -12196,6 +12196,10 @@ void PM_FinishWeaponChange(void)
 							break;
 						}
 					}
+				}
+				else // twirl is off or we are doing a ledge move, so just do a normal draw anim
+				{
+					// no anim
 				}
 			}
 		}

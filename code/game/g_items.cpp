@@ -2279,7 +2279,7 @@ static qboolean he_has_gun(const gentity_t* ent)
 	return qfalse;
 }
 
-qboolean he_is_jedi(const gentity_t* ent)
+qboolean HeIsJedi(const gentity_t* ent)
 {
 	if (!ent || !ent->client)
 	{

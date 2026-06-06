@@ -1387,7 +1387,7 @@ static void Jedi_AggressionErosion(const int amt)
 		if (!NPC_IsAlive(NPC, NPC->enemy))
 		{//only if our enemy is dead, otherwise we might need it again soon,turn off the saber
 			WP_DeactivateLightSaber(NPC);
-			NPC_SetAnim(NPC, SETANIM_TORSO, BOTH_STAND1TO2, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+			NPC_SetAnim(NPC, SETANIM_TORSO, BOTH_STAND2TO1, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 			G_AddVoiceEvent(NPC, Q_irand(EV_VICTORY1, EV_VICTORY3), 3000);
 		}
 	}
@@ -1890,6 +1890,18 @@ static void JediDirectionalDashAttack(gentity_t* NPC, gentity_t* enemy)
 {
 	// Safety
 	if (NPC == nullptr || enemy == nullptr || NPC->client == nullptr)
+	{
+		return;
+	}
+	if (PM_InKnockDown(&NPC->client->ps))
+	{
+		return;
+	}
+	if (PM_InRoll(&NPC->client->ps))
+	{
+		return;
+	}
+	if (PM_InGetUp(&NPC->client->ps))
 	{
 		return;
 	}
@@ -2583,7 +2595,7 @@ static void Jedi_CombatDistance(const int enemy_dist)
 			// Start cooldown after second dash
 			if (NPC->Dash_NPC_Count == 2)
 			{
-				TIMER_Set(NPC, "DashOutTime", Q_irand(3000, 5000));
+				TIMER_Set(NPC, "DashOutTime", Q_irand(5000, 10000));
 			}
 
 			return;
@@ -8996,11 +9008,10 @@ static void Jedi_Combat()
 					}
 
 					NPC_SetAnim(NPC, SETANIM_BOTH, desiredAnim, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-					WP_Melee(NPC);
 
 					if (!npc_is_dark_jedi(NPC))
 					{
-						G_AddVoiceEvent(NPC, Q_irand(EV_DEFLECT1, EV_DEFLECT3), 2000);
+						G_AddVoiceEvent(NPC, Q_irand(EV_COMBAT1, EV_COMBAT3), 2000);
 					}
 					else
 					{
@@ -9043,10 +9054,11 @@ static void Jedi_Combat()
 						if (TIMER_Done(NPC, "DashInTime") &&
 							Distance(NPC->enemy->currentOrigin, NPC->currentOrigin) > 128 &&
 							Distance(NPC->enemy->currentOrigin, NPC->currentOrigin) < 256 &&
-							NPC->client->ps.groundEntityNum != ENTITYNUM_NONE)
+							NPC->client->ps.groundEntityNum != ENTITYNUM_NONE &&
+							PM_InKnockDown(&NPC->client->ps) == qfalse)
 						{//try to dash to TargetPosition
 							JediDirectionalDashAttack(NPC, NPC->enemy);
-							TIMER_Set(NPC, "DashInTime", Q_irand(3000, 5000));
+							TIMER_Set(NPC, "DashInTime", Q_irand(10000, 15000));
 							if (d_JediAI->integer || g_DebugSaberCombat->integer)
 							{
 								Com_Printf(S_COLOR_RED"Debug: NPC dashing to player...\n");

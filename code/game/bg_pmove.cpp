@@ -11952,37 +11952,7 @@ static void PM_BeginWeaponChange(const int weapon)
 				{
 					G_SoundOnEnt(pm->gent, CHAN_WEAPON, "sound/weapons/saber/saberoffquick.mp3");
 				}
-			}
-			if (!G_IsRidingVehicle(pm->gent))
-			{
-				if (pm->ps->clientNum >= MAX_CLIENTS && !PM_ControlledByPlayer())
-				{
-					PM_SetSaberMove(LS_PUTAWAY);
-				}
-				else
-				{
-					if (!g_noIgniteTwirl->integer && !IsSurrendering(pm->gent))
-					{
-						if (PM_RunningAnim(pm->ps->legsAnim) || pm->ps->groundEntityNum == ENTITYNUM_NONE ||
-							in_camera)
-						{
-							PM_SetSaberMove(LS_PUTAWAY);
-						}
-						else if (PM_WalkingAnim(pm->ps->legsAnim))
-						{
-							PM_SetSaberMove(LS_PUTAWAY);
-							//PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_IGNITION_JFA, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-						}
-					}
-					else
-					{
-						/*if (!IsSurrendering(pm->gent))
-						{
-							PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_IGNITION_JFA, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-						}*/
-					}
-				}
-			}
+			}			
 		}
 		//put this back in because saberActive isn't being set somewhere else anymore
 		pm->ps->SaberDeactivate();
@@ -12127,95 +12097,126 @@ static void PM_FinishWeaponChange()
 		if (true_switch)
 		{
 			//actually did switch weapons, play anim
-			if (!G_IsRidingVehicle(pm->gent))
+			if (!G_IsRidingVehicle(pm->gent) &&
+				!IsSurrendering(pm->gent) &&
+				!PM_InLedgeMove(pm->ps->legsAnim) &&
+				!PM_InLedgeMove(pm->ps->torsoAnim))
 			{
 				if (pm->ps->clientNum >= MAX_CLIENTS && !PM_ControlledByPlayer())
-				{
+				{// npc
 					PM_SetSaberMove(LS_DRAW);
 				}
 				else
 				{
-					if (!g_noIgniteTwirl->integer && !IsSurrendering(pm->gent) && !is_holding_block_button_and_attack
-						&& !is_holding_block_button)
-					{
-						if (PM_RunningAnim(pm->ps->legsAnim) || pm->ps->groundEntityNum == ENTITYNUM_NONE ||
+					if (!g_noIgniteTwirl->integer)
+					{ // twirl on draw
+						if (PM_RunningAnim(pm->ps->legsAnim) ||
+							pm->ps->groundEntityNum == ENTITYNUM_NONE ||
 							in_camera)
 						{
-							//running or in air or in camera
-							PM_SetSaberMove(LS_DRAW);
+							switch (pm->ps->saberAnimLevel)
+							{
+							case SS_DUAL:
+								PM_SetAnim(pm, SETANIM_TORSO, BOTH_GRIEVOUS_SABERON, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								break;
+							case SS_STAFF:
+								PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_BACKHAND_IGNITION, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								break;
+							case SS_NONE:
+							case SS_FAST:
+							case SS_MEDIUM:
+							case SS_STRONG:
+							case SS_TAVION:
+							case SS_DESANN:
+								PM_SetAnim(pm, SETANIM_TORSO, BOTH_STAND1TO2, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								break;
+							default:
+								PM_SetAnim(pm, SETANIM_TORSO, BOTH_STAND1TO2, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								break;
+							}
 						}
 						else if (PM_WalkingAnim(pm->ps->legsAnim))
 						{
-							//walking
-							PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_IGNITION_JFA,
-								SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+							switch (pm->ps->saberAnimLevel)
+							{
+							case SS_DUAL:
+								PM_SetAnim(pm, SETANIM_TORSO, BOTH_GRIEVOUS_SABERON, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								break;
+							case SS_STAFF:
+								PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_BACKHAND_IGNITION, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								break;
+							case SS_NONE:
+							case SS_FAST:
+							case SS_MEDIUM:
+							case SS_STRONG:
+							case SS_TAVION:
+							case SS_DESANN:
+								PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_IGNITION_JFA, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								break;
+							default:
+								PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_IGNITION_JFA, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								break;
+							}
 						}
 						else
 						{
-							//standing
-							if (pm->ps->saber[0].type == SABER_BACKHAND
-								|| pm->ps->saber[0].type == SABER_ASBACKHAND) //saber backhand
+							switch (pm->ps->saberAnimLevel)
 							{
-								PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_BACKHAND_IGNITION,
-									SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-							}
-							else if (pm->ps->saber[0].type == SABER_YODA)
-							{
-								PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_IGNITION_JFA,
-									SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-							}
-							else if (pm->ps->saber[0].type == SABER_DOOKU)
-							{
-								PM_SetAnim(pm, SETANIM_TORSO, BOTH_DOOKU_SMALLDRAW,
-									SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-							}
-							else if (pm->ps->saber[0].type == SABER_UNSTABLE)
-							{
-								PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABERSTANCE_STANCE_ALT,
-									SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-							}
-							else if (pm->ps->saber[0].type == SABER_OBIWAN) //saber kylo
-							{
-								PM_SetAnim(pm, SETANIM_TORSO, BOTH_SHOWOFF_OBI,
-									SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-							}
-							else if (pm->ps->saber[0].type == SABER_SFX || pm->ps->saber[0].type == SABER_REY)
-							{
-								PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_IGNITION_JFA,
-									SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-							}
-							else if (pm->ps->saber[0].type == SABER_GRIE || pm->ps->saber[0].type == SABER_GRIE4)
-							{
-								PM_SetSaberMove(LS_DRAW3);
-							}
-							else
-							{
-								PM_SetSaberMove(LS_DRAW2);
+							case SS_DUAL:
+								PM_SetAnim(pm, SETANIM_TORSO, BOTH_GRIEVOUS_SABERON, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								break;
+							case SS_STAFF:
+								PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_BACKHAND_IGNITION, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								break;
+							case SS_NONE:
+							case SS_FAST:
+							case SS_MEDIUM:
+							case SS_STRONG:
+							case SS_TAVION:
+							case SS_DESANN:
+								//standing
+								if (pm->ps->saber[0].type == SABER_BACKHAND || pm->ps->saber[0].type == SABER_ASBACKHAND) //saber backhand
+								{
+									PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_BACKHAND_IGNITION, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								}
+								else if (pm->ps->saber[0].type == SABER_YODA)
+								{
+									PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_IGNITION_JFA, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								}
+								else if (pm->ps->saber[0].type == SABER_DOOKU)
+								{
+									PM_SetAnim(pm, SETANIM_TORSO, BOTH_DOOKU_SMALLDRAW, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								}
+								else if (pm->ps->saber[0].type == SABER_UNSTABLE)
+								{
+									PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABERSTANCE_STANCE_ALT, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								}
+								else if (pm->ps->saber[0].type == SABER_OBIWAN) //saber kylo
+								{
+									PM_SetAnim(pm, SETANIM_TORSO, BOTH_SHOWOFF_OBI, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								}
+								else if (pm->ps->saber[0].type == SABER_SFX || pm->ps->saber[0].type == SABER_REY)
+								{
+									PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_IGNITION_JFA, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								}
+								else if (pm->ps->saber[0].type == SABER_GRIE || pm->ps->saber[0].type == SABER_GRIE4)
+								{
+									PM_SetAnim(pm, SETANIM_TORSO, BOTH_GRIEVOUS_SABERON, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								}
+								else
+								{
+									PM_SetAnim(pm, SETANIM_TORSO, BOTH_STAND1TO2, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								}
+								break;
+							default:
+								PM_SetAnim(pm, SETANIM_TORSO, BOTH_STAND1TO2, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
+								break;
 							}
 						}
 					}
-					else
+					else // twirl is off or we are doing a ledge move, so just do a normal draw anim
 					{
-						if ((PM_RunningAnim(pm->ps->legsAnim)
-							|| PM_WalkingAnim(pm->ps->legsAnim))
-							&& pm->ps->saberBlockingTime < cg.time && !IsSurrendering(pm->gent))
-						{
-							//running w/1-handed weapon uses full-body anim
-							int set_flags = SETANIM_FLAG_NORMAL;
-							if (PM_LandingAnim(pm->ps->torsoAnim))
-							{
-								set_flags = SETANIM_FLAG_OVERRIDE;
-							}
-							PM_SetAnim(pm, SETANIM_TORSO, pm->ps->legsAnim, set_flags);
-						}
-						else
-						{
-							if (!IsSurrendering(pm->gent))
-							{
-								PM_SetAnim(pm, SETANIM_TORSO, BOTH_SABER_IGNITION_JFA,
-									SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
-							}
-						}
+						// no anim
 					}
 				}
 			}
@@ -13427,7 +13428,8 @@ void PM_SetSaberMove(saber_moveName_t new_move)
 			}
 			parts = SETANIM_TORSO;
 		}
-	}
+		}
+	
 	//different styles use different animations for the DFA move.
 	else if (new_move == LS_A_JUMP_T__B_ && pm->ps->saberAnimLevel == SS_DESANN)
 	{

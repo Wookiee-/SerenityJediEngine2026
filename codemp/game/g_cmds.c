@@ -3832,18 +3832,8 @@ void Cmd_SaberAttackCycle_f(gentity_t* ent)
 		{
 			if (!(ent->client->ps.ManualBlockingFlags & 1 << HOLDINGBLOCK) && !PM_SaberInAttack(ent->client->ps.saberMove) && ent->client->ps.saberLockTime < level.time) // lets do a movement when changing styles // need better anims for this
 			{
-				if (select_level == SS_DUAL)
-				{
-					G_SetAnim(ent, &ent->client->pers.cmd, SETANIM_TORSO, BOTH_GRIEVOUS_SABERON, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
-				}
-				else if (select_level == SS_STAFF)
-				{
-					G_SetAnim(ent, &ent->client->pers.cmd, SETANIM_TORSO, BOTH_SABER_BACKHAND_IGNITION, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
-				}
-				else
-				{
-					G_SetAnim(ent, &ent->client->pers.cmd, SETANIM_TORSO, BOTH_STAND2TO1, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
-				}
+				G_SetAnim(ent, &ent->client->pers.cmd, SETANIM_TORSO, BOTH_STAND2TO1, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
+
 				if (!(ent->r.svFlags & SVF_BOT)) // only player
 				{
 					if (ent->client->ps.saberHolstered)

@@ -2281,6 +2281,41 @@ static int ReflectionLevel(const gentity_t* player)
 	return FORCE_LEVEL_1;
 }
 
+// Returns qtrue only if entity and its client are valid
+static qboolean G_HasClient(const gentity_t* ent)
+{
+	return (ent && ent->client) ? qtrue : qfalse;
+}
+
+// Safe access to defense level (fallback = FORCE_LEVEL_1)
+static int G_GetDefenseLevel(const gentity_t* ent)
+{
+	if (!G_HasClient(ent))
+	{
+		return FORCE_LEVEL_1;
+	}
+	return ent->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE];
+}
+
+// Safe access to blockPoints (fallback = 0)
+static int G_GetBlockPoints(const gentity_t* ent)
+{
+	if (!G_HasClient(ent))
+	{
+		return 0;
+	}
+	return ent->client->ps.fd.blockPoints;
+}
+
+// Adds wildness to a direction vector
+static void G_AddWildness(vec3_t dir, float amount)
+{
+	for (int i = 0; i < 3; i++)
+	{
+		dir[i] += Q_flrand(-amount, amount);
+	}
+}
+
 void WP_HandleBoltBlock(gentity_t* bolt, gentity_t* blocker, trace_t* trace, vec3_t fwd)
 {
 	// Safety: validate pointers (bug fix – previously could crash on NULL)
@@ -2289,20 +2324,22 @@ void WP_HandleBoltBlock(gentity_t* bolt, gentity_t* blocker, trace_t* trace, vec
 		return;
 	}
 
+	qboolean saber_block_reflection = qfalse;
+	qboolean bolt_block_reflection = qfalse;
+	qboolean npc_reflection = qfalse;
+	qboolean reflected = qfalse;
+
 	// Handles all the behavior needed to saber block a blaster bolt.
 	const int   other_def_level = ReflectionLevel(blocker);
-	float slop_factor =
-		(float)(MISHAP_MAXINACCURACY - 6) *
-		(float)(FORCE_LEVEL_3 - blocker->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE]) /
-		(float)FORCE_LEVEL_3;
+	float slop_factor = (float)(MISHAP_MAXINACCURACY - 6) * (float)(FORCE_LEVEL_3 - blocker->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE]) / (float)FORCE_LEVEL_3;
 
 	gentity_t* prev_owner = G_GetEntitySafe(bolt->r.ownerNum);
 	const float distance = prev_owner ? vector_bolt_distance(blocker->r.currentOrigin, prev_owner->r.currentOrigin) : 99999.0f;
 
-	const qboolean manual_proj_blocking =
-		(blocker->client->ps.ManualBlockingFlags & (1 << HOLDINGBLOCKANDATTACK)) ? qtrue : qfalse;
-	const qboolean accurate_missile_block =
-		(blocker->client->ps.ManualBlockingFlags & (1 << MBF_ACCURATEMISSILEBLOCKING)) ? qtrue : qfalse;
+	const qboolean manual_blocking = (blocker->client->ps.ManualBlockingFlags & (1 << HOLDINGBLOCK)) ? qtrue : qfalse;
+
+	const qboolean manual_proj_blocking = (blocker->client->ps.ManualBlockingFlags & (1 << HOLDINGBLOCKANDATTACK)) ? qtrue : qfalse;
+	const qboolean accurate_missile_block = (blocker->client->ps.ManualBlockingFlags & (1 << MBF_ACCURATEMISSILEBLOCKING)) ? qtrue : qfalse;
 
 	const int manual_run_blocking = manual_running_and_saberblocking(blocker);
 	const int npc_is_blocking = manual_npc_saberblocking(blocker);
@@ -2312,6 +2349,33 @@ void WP_HandleBoltBlock(gentity_t* bolt, gentity_t* blocker, trace_t* trace, vec
 
 	// Base forward direction from blocker view
 	AngleVectors(blocker->client->ps.viewangles, fwd, NULL, NULL);
+
+	// ------------------------------------------------------------
+	//  DETERMINE REFLECTION MODE
+	// ------------------------------------------------------------
+	if (manual_blocking && !manual_proj_blocking)
+	{
+		saber_block_reflection = qtrue;
+		npc_reflection = qfalse;
+	}
+
+	if (manual_blocking && manual_proj_blocking)
+	{
+		bolt_block_reflection = qtrue;
+		npc_reflection = qfalse;
+	}
+
+	if (accurate_missile_block)
+	{
+		saber_block_reflection = qtrue;
+		bolt_block_reflection = qfalse;
+		npc_reflection = qfalse;
+	}
+
+	if (npc_is_blocking)
+	{
+		npc_reflection = qtrue;
+	}
 
 	//
 	// Low defense level: random deflect away, heavy fatigue
@@ -2370,28 +2434,21 @@ void WP_HandleBoltBlock(gentity_t* bolt, gentity_t* blocker, trace_t* trace, vec
 			}
 
 			// Block‑point cost
-			if (accurate_missile_block)
-			{
-				block_points_used = 2.0f;
-			}
-			else
-			{
-				block_points_used = WP_SaberBlockCost(blocker, bolt, bolt->r.currentOrigin);
-			}
+			int cost = accurate_missile_block ? 2 : WP_SaberBlockCost(blocker, bolt, bolt->r.currentOrigin);
 
-			if (blocker->client->ps.fd.blockPoints < block_points_used)
+			if (G_GetBlockPoints(blocker) < cost)
 			{
 				blocker->client->ps.fd.blockPoints = 0;
 			}
 			else
 			{
-				WP_BlockPointsDrain(blocker, block_points_used);
+				WP_BlockPointsDrain(blocker, cost);
 			}
 		}
 		//
 		// Manual / running / NPC blocking: send to enemy
 		//
-		else if (manual_proj_blocking || manual_run_blocking || npc_is_blocking)
+		else if (manual_proj_blocking || manual_run_blocking || npc_reflection)
 		{
 			g_reflect_missile_to_attacker(blocker, bolt, fwd);
 
@@ -2437,6 +2494,94 @@ void WP_HandleBoltBlock(gentity_t* bolt, gentity_t* blocker, trace_t* trace, vec
 				WP_BlockPointsDrain(blocker, block_points_used);
 			}
 		}
+		else if (saber_block_reflection)
+		{
+			vec3_t angs;
+			vec3_t bounce_dir;
+
+			if ((d_blockinfo.integer || g_DebugSaberCombat.integer) &&
+				!(blocker->r.svFlags & SVF_BOT))
+			{
+				Com_Printf(S_COLOR_YELLOW "GOES TO CROSSHAIR\n");
+			}
+
+			if (level.time - blocker->client->ps.ManualBlockingTime < 6000)
+			{
+				// Good: early manual block, minimal slop
+				vectoangles(fwd, angs);
+				AngleVectors(angs, fwd, NULL, NULL);
+			}
+			else if (blocker->client->pers.cmd.forwardmove >= 0)
+			{
+				// Bad if moving forward: more slop
+				slop_factor += Q_irand(2, 5);
+				vectoangles(fwd, angs);
+				angs[PITCH] += flrand(-slop_factor, slop_factor);
+				angs[YAW] += flrand(-slop_factor, slop_factor);
+				AngleVectors(angs, fwd, NULL, NULL);
+			}
+			else
+			{
+				// Average after 3 seconds: moderate slop
+				slop_factor += Q_irand(0.5, 1.5);
+				vectoangles(fwd, angs);
+				angs[PITCH] += flrand(-slop_factor, slop_factor);
+				angs[YAW] += flrand(-slop_factor, slop_factor);
+				AngleVectors(angs, fwd, NULL, NULL);
+			}
+
+			if (blocker->client->ps.fd.blockPoints <= BLOCKPOINTS_TWENTYFIVE)
+			{
+				if (blocker->client->ps.fd.blockPoints <= BLOCKPOINTS_FIFTEEN)
+				{
+					WP_BrokenBoltBlockKnockBack(blocker);
+					blocker->client->ps.saberBlocked = BLOCKED_NONE;
+					blocker->client->ps.saberMove = LS_NONE;
+				}
+				else
+				{
+					WP_SaberFatiguedParryDirection(blocker, bolt->r.currentOrigin, qtrue);
+				}
+			}
+			else
+			{
+				wp_saber_block_non_random_missile(blocker, bolt->r.currentOrigin, qtrue);
+			}
+
+			// Block point cost
+			int cost = accurate_missile_block ? 2 : WP_SaberBlockCost(blocker, bolt, bolt->r.currentOrigin);
+
+			if (G_GetBlockPoints(blocker) < cost)
+			{
+				blocker->client->ps.fd.blockPoints = 0;
+			}
+			else
+			{
+				WP_BlockPointsDrain(blocker, cost);
+			}
+
+			// Save the original speed
+			const float speed = VectorNormalize(bolt->s.pos.trDelta);
+
+			VectorCopy(fwd, bounce_dir);
+			VectorScale(bounce_dir, speed, bolt->s.pos.trDelta);
+
+			bolt->s.pos.trTime = level.time;
+			VectorCopy(bolt->r.currentOrigin, bolt->s.pos.trBase);
+
+			if (bolt->s.weapon != WP_SABER && bolt->s.weapon != G2_MODEL_PART)
+			{
+				// You are mine now!
+				bolt->r.ownerNum = blocker->s.number;
+			}
+
+			if (bolt->s.weapon == WP_ROCKET_LAUNCHER)
+			{
+				// Stop homing
+				bolt->think = NULL;
+				bolt->nextthink = 0;
+			}
+		}
 		//
 		// Default: send toward crosshair (with slop)
 		//
@@ -2451,7 +2596,7 @@ void WP_HandleBoltBlock(gentity_t* bolt, gentity_t* blocker, trace_t* trace, vec
 				Com_Printf(S_COLOR_YELLOW "GOES TO CROSSHAIR\n");
 			}
 
-			if (level.time - blocker->client->ps.ManualblockStartTime < 3000)
+			if (level.time - blocker->client->ps.ManualblockStartTime < 6000)
 			{
 				// Good: early manual block, minimal slop
 				vectoangles(fwd, angs);

@@ -876,7 +876,7 @@ InitGame
 //	may get changed anyway if a new nav system is ever used. This way saves messing with g_local.h each time -slc
 int giMapChecksum;
 SavedGameJustLoaded_e g_eSavedGameJustLoaded;
-qboolean g_qb_load_transition = qfalse;
+qboolean g_qbLoadTransition = qfalse;
 void G_LoadExtraEntitiesFile();
 
 static void init_game(const char* mapname, const char* spawntarget, const int check_sum, const char* entities,
@@ -890,7 +890,7 @@ static void init_game(const char* mapname, const char* spawntarget, const int ch
 
 	giMapChecksum = check_sum;
 	g_eSavedGameJustLoaded = e_saved_game_just_loaded;
-	g_qb_load_transition = qb_load_transition;
+	g_qbLoadTransition = qb_load_transition;
 
 	gi.Printf("------- Game Initialization -------\n");
 	gi.Printf("gamename: %s\n", GAMEVERSION);

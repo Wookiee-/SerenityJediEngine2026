@@ -377,6 +377,7 @@ void SV_SaveGame_f()
 	}
 }
 
+extern void SV_Player_EndOfLevelSave();
 //---------------
 static void WriteGame(const qboolean autosave)
 {
@@ -391,7 +392,6 @@ static void WriteGame(const qboolean autosave)
 	{
 		// write out player ammo level, health, etc...
 		//
-		extern void SV_Player_EndOfLevelSave();
 		SV_Player_EndOfLevelSave(); // this sets up the various cvars needed, so we can then write them to disk
 		//
 		char s[MAX_STRING_CHARS] = {};
@@ -498,7 +498,7 @@ static qboolean ReadGame()
 extern cvar_t* cvar_vars;
 // I know this is really unpleasant, but I need access for scanning/writing latched cvars during save games
 
-void SG_WriteCvars()
+static void SG_WriteCvars()
 {
 	cvar_t* var;
 	int i_count = 0;
@@ -552,7 +552,7 @@ void SG_WriteCvars()
 	}
 }
 
-void SG_ReadCvars()
+static void SG_ReadCvars()
 {
 	int i_count = 0;
 	std::string ps_name;
@@ -582,7 +582,7 @@ void SG_ReadCvars()
 	}
 }
 
-void SG_WriteServerConfigStrings()
+static void SG_WriteServerConfigStrings()
 {
 	ojk::SavedGameHelper saved_game(
 		&ojk::SavedGame::get_instance());
@@ -629,7 +629,7 @@ void SG_WriteServerConfigStrings()
 	}
 }
 
-void SG_ReadServerConfigStrings()
+static void SG_ReadServerConfigStrings()
 {
 	// trash the whole table...
 	//

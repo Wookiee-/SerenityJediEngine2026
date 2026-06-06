@@ -8484,7 +8484,7 @@ static void melee_combat_handling(bot_state_t* bs)
 				// If we just used the 2nd dash → start cooldown
 				if (bs->Dash_BOT_Count >= 2)
 				{
-					bs->DashOutTime = level.time + Q_irand(3000, 5000);
+					bs->DashOutTime = level.time + Q_irand(5000, 10000);
 				}
 				return;
 			}
@@ -9283,7 +9283,7 @@ static void saber_combat_handling(bot_state_t* bs)
 				// If we just used the 2nd dash → start cooldown
 				if (bs->Dash_BOT_Count >= 2)
 				{
-					bs->DashOutTime = level.time + Q_irand(3000, 5000);
+					bs->DashOutTime = level.time + Q_irand(5000, 10000);
 				}
 				return;
 			}
@@ -9368,14 +9368,16 @@ static void saber_combat_handling(bot_state_t* bs)
 	}
 	else if (bs->frame_Enemy_Len > idealMax)
 	{
+		playerState_t* ps = &bs->currentEnemy->client->ps;
 		// Dash cooldown using bot-local timer
 		if (lowSkill == qfalse &&
 			bs->DashInTime <= level.time &&
 			bs->frame_Enemy_Len < MaxDashDist &&
-			bs->cur_ps.groundEntityNum != ENTITYNUM_NONE)
+			bs->cur_ps.groundEntityNum != ENTITYNUM_NONE &&
+			PM_InKnockDown(ps) == qfalse)
 		{
 			JediDirectionalDashAttack(bs, enemyPos);
-			bs->DashInTime = level.time + Q_irand(3000, 5000);
+			bs->DashInTime = level.time + Q_irand(10000, 15000);
 #ifdef _DEBUG
 			//Com_Printf("Standard_dash_to_attack\n");
 #endif
@@ -9502,7 +9504,7 @@ static void Enhanced_saber_combat_handling(bot_state_t* bs)
 				// If we just used the 2nd dash → start cooldown
 				if (bs->Dash_BOT_Count >= 2)
 				{
-					bs->DashOutTime = level.time + Q_irand(3000, 5000);
+					bs->DashOutTime = level.time + Q_irand(5000, 10000);
 				}
 				return;
 			}
@@ -9538,13 +9540,15 @@ static void Enhanced_saber_combat_handling(bot_state_t* bs)
 	}
 	else if (bs->frame_Enemy_Len > idealMax)
 	{
+		playerState_t* ps = &bs->currentEnemy->client->ps;
 		// Dash cooldown using bot-local timer
 		if (bs->DashInTime <= level.time &&
 			bs->frame_Enemy_Len < MaxDashDist &&
-			bs->cur_ps.groundEntityNum != ENTITYNUM_NONE)
+			bs->cur_ps.groundEntityNum != ENTITYNUM_NONE &&
+			PM_InKnockDown(ps) == qfalse)
 		{
 			JediDirectionalDashAttack(bs, enemyPos);
-			bs->DashInTime = level.time + Q_irand(3000, 5000);
+			bs->DashInTime = level.time + Q_irand(10000, 15000);
 #ifdef _DEBUG
 			//Com_Printf("Enhanced_dash_to_attack\n");
 #endif

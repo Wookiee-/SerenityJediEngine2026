@@ -893,12 +893,21 @@ static void WP_HandleBoltBlock(gentity_t* ent, gentity_t* missile, vec3_t forwar
 		saber_block_reflection = qtrue;
 		npc_reflection = qfalse;
 	}
-	else if (manual_blocking && manual_proj_blocking)
+
+	if (manual_blocking && manual_proj_blocking)
 	{
 		bolt_block_reflection = qtrue;
 		npc_reflection = qfalse;
 	}
-	else if (npc_is_blocking)
+
+	if (accurate_missile_blocking)
+	{
+		saber_block_reflection = qtrue;
+		bolt_block_reflection = qfalse;
+		npc_reflection = qfalse;
+	}
+
+	if (npc_is_blocking)
 	{
 		npc_reflection = qtrue;
 	}
@@ -924,7 +933,7 @@ static void WP_HandleBoltBlock(gentity_t* ent, gentity_t* missile, vec3_t forwar
 			gi.Printf(S_COLOR_YELLOW "GOES TO CROSSHAIR\n");
 		}
 
-		if (level.time - blocker->client->ps.ManualblockStartTime < 3000)
+		if (level.time - blocker->client->ps.ManualBlockingTime < 6000)
 		{
 			// Good: recent manual block, accurate to crosshair
 			vectoangles(forward, angs);
@@ -933,7 +942,7 @@ static void WP_HandleBoltBlock(gentity_t* ent, gentity_t* missile, vec3_t forwar
 		else if (blocker->client->pers.cmd.forwardmove >= 0)
 		{
 			// Bad if moving forward: more slop
-			slop_factor += Q_irand(1, 5);
+			slop_factor += Q_irand(2, 5);
 			vectoangles(forward, angs);
 			angs[PITCH] += Q_irand(-slop_factor, slop_factor);
 			angs[YAW] += Q_irand(-slop_factor, slop_factor);
@@ -942,7 +951,7 @@ static void WP_HandleBoltBlock(gentity_t* ent, gentity_t* missile, vec3_t forwar
 		else
 		{
 			// Average after 3 seconds
-			slop_factor += Q_irand(1, 3);
+			slop_factor += Q_irand(0.5, 1.5);
 			vectoangles(forward, angs);
 			angs[PITCH] += Q_irand(-slop_factor, slop_factor);
 			angs[YAW] += Q_irand(-slop_factor, slop_factor);
@@ -1049,7 +1058,7 @@ static void WP_HandleBoltBlock(gentity_t* ent, gentity_t* missile, vec3_t forwar
 			}
 
 			// Block point cost
-			int cost = accurate_missile_blocking ? 2 : WP_SaberBlockCost(blocker, missile, missile->currentOrigin);
+			int cost = WP_SaberBlockCost(blocker, missile, missile->currentOrigin) * 2;
 
 			if (G_GetBlockPoints(blocker) < cost)
 			{
