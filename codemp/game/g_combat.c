@@ -8362,7 +8362,7 @@ void G_DodgeDrain(const gentity_t* victim, const gentity_t* attacker, int amount
 	// DFA bonus mishap
 	if (attacker != NULL &&
 		attacker->client != NULL &&
-		attacker->client->ps.torsoAnim == saber_moveData[16].animToUse)
+		attacker->client->ps.torsoAnim == saberMoveData[16].animToUse)
 	{
 		client->ps.saberFatigueChainCount += MISHAPLEVEL_OVERLOAD;
 	}

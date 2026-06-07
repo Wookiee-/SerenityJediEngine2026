@@ -1407,7 +1407,7 @@ typedef enum {
 // Ideally this will be replaced with an external file or more sophisticated move-picker
 // once the game gets out of prototype stage.
 
-// rww - Moved all this to bg_public so that we can access the saber_moveData stuff on the cgame
+// rww - Moved all this to bg_public so that we can access the saberMoveData stuff on the cgame
 // which is currently used for determining if a saber trail should be rendered in a given frame
 #ifdef LS_NONE
 #undef LS_NONE
@@ -1644,7 +1644,7 @@ typedef enum {
 	LS_KNOCK_LEFT,
 
 	LS_MOVE_MAX
-} saber_moveName_t;
+} saberMoveName_t;
 
 typedef enum {
 	Q_BR,
@@ -1658,7 +1658,7 @@ typedef enum {
 	Q_NUM_QUADS
 } saberQuadrant_t;
 
-typedef struct saber_moveData_s {
+typedef struct saberMoveData_s {
 	char* name;
 	int animToUse;
 	int	startQuad;
@@ -1666,12 +1666,12 @@ typedef struct saber_moveData_s {
 	unsigned animSetFlags;
 	int blendTime;
 	int blocking;
-	saber_moveName_t chain_idle;			// What move to call if the attack button is not pressed at the end of this anim
-	saber_moveName_t chain_attack;		// What move to call if the attack button (and nothing else) is pressed
+	saberMoveName_t chain_idle;			// What move to call if the attack button is not pressed at the end of this anim
+	saberMoveName_t chain_attack;		// What move to call if the attack button (and nothing else) is pressed
 	qboolean trailLength;
-} saber_moveData_t;
+} saberMoveData_t;
 
-extern saber_moveData_t	saber_moveData[LS_MOVE_MAX];
+extern saberMoveData_t	saberMoveData[LS_MOVE_MAX];
 
 typedef enum
 {
@@ -1988,7 +1988,7 @@ qboolean PM_SaberInIdle(int move);
 qboolean PM_FlippingAnim(int anim);
 qboolean PM_SpinningSaberAnim(int anim);
 qboolean PM_SaberInSpecialAttack(int anim);
-qboolean PM_SaberInKata(saber_moveName_t saberMove);
+qboolean PM_SaberInKata(saberMoveName_t saberMove);
 qboolean PM_InKataAnim(int anim);
 qboolean PM_InKataBotDashDodgeAnim(const int anim);
 qboolean PM_KickingAnim(int anim);

@@ -4787,14 +4787,35 @@ static void CG_DrawCrosshair(vec3_t world_point)
 	qhandle_t hShader = 0;
 	float		chX, chY;
 
+	const qboolean holding_block = (cg.predictedPlayerState.ManualBlockingFlags & (1 << HOLDINGBLOCK)) ? qtrue : qfalse;
+	const qboolean holding_block_and_attack = (cg.predictedPlayerState.ManualBlockingFlags & (1 << HOLDINGBLOCKANDATTACK)) ? qtrue : qfalse;
+	const qboolean holding_sprint = (cg.predictedPlayerState.PlayerEffectFlags & (1 << PEF_SPRINTING)) ? qtrue : qfalse;
+
 	if (!cg_drawCrosshair.integer)
 	{
 		return;
 	}
 
+	if (cg_adaptiveCrosshair.integer == 1 &&
+		cg.snap->ps.weapon == WP_SABER)
+	{
+		if ((holding_block == qfalse &&
+			holding_block_and_attack == qfalse) ||
+			holding_sprint == qtrue)
+		{
+			// Don't show crosshair when using a saber (unless blocking) and we're not blocking or holding block and attack if adaptive crosshair is on
+			return;
+		}
+	}
+
 	if (in_camera)
 	{
 		//no crosshair while in cutscenes
+		return;
+	}
+
+	if (cg.snap->ps.weapon == WP_MELEE || cg.snap->ps.weapon == WP_NONE)
+	{
 		return;
 	}
 

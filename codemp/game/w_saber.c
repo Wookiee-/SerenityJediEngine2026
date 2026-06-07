@@ -63,7 +63,7 @@ extern qboolean G_GetHitLocFromSurfName(gentity_t* ent, const char* surfName, in
 	vec3_t blade_dir, int mod);
 extern int G_GetHitLocation(const gentity_t* target, vec3_t ppoint);
 int saberSpinSound = 0;
-extern saber_moveName_t PM_SaberBounceForAttack(int move);
+extern saberMoveName_t PM_SaberBounceForAttack(int move);
 qboolean PM_SaberInTransition(int move);
 qboolean PM_SaberInDeflect(int move);
 qboolean PM_SaberInBrokenParry(int move);
@@ -91,10 +91,10 @@ extern qboolean g_accurate_blocking(const gentity_t* blocker, const gentity_t* a
 extern void PM_AddFatigue(playerState_t* ps, int fatigue);
 extern qboolean PM_WalkingAnim(int anim);
 extern qboolean PM_StandingAnim(int anim);
-extern saber_moveName_t PM_BrokenParryForParry(int move);
-extern saber_moveName_t pm_broken_parry_for_attack(int move);
-extern saber_moveName_t PM_KnockawayForParry(int move);
-extern saber_moveName_t PM_KnockawayForParryOld(int move);
+extern saberMoveName_t PM_BrokenParryForParry(int move);
+extern saberMoveName_t pm_broken_parry_for_attack(int move);
+extern saberMoveName_t PM_KnockawayForParry(int move);
+extern saberMoveName_t PM_KnockawayForParryOld(int move);
 qboolean G_HeavyMelee(const gentity_t* attacker);
 qboolean PM_RunningAnim(int anim);
 extern void Boba_FlyStart(gentity_t* self);
@@ -112,7 +112,7 @@ extern qboolean PM_InForceGetUp(const playerState_t* ps);
 extern void sab_beh_animate_slow_bounce_blocker(gentity_t* self);
 extern void NPC_SetPainEvent(gentity_t* self);
 extern qboolean G_ControlledByPlayer(const gentity_t* self);
-extern saber_moveName_t pm_block_the_attack(int move);
+extern saberMoveName_t pm_block_the_attack(int move);
 extern int g_block_the_attack(int move);
 void WP_BlockPointsDrain(const gentity_t* self, int fatigue);
 extern int Jedi_ReCalcParryTime(const gentity_t* self, evasionType_t evasion_type);
@@ -121,7 +121,7 @@ extern qboolean NPC_IsAlive(const gentity_t* self, const gentity_t* npc);
 //////////////////////////////////////////////////
 extern qboolean sab_beh_attack_vs_block(gentity_t* attacker, gentity_t* blocker, int saberNum, int blade_num, vec3_t hit_loc);
 //////////////////////////////////////////////////
-extern saber_moveName_t PM_AnimateOldKnockBack(int move);
+extern saberMoveName_t PM_AnimateOldKnockBack(int move);
 extern int G_AnimateOldKnockBack(int move);
 extern qboolean BG_IsAlreadyinTauntAnim(int anim);
 extern qboolean PM_SaberInDamageMove(int move);
@@ -154,8 +154,8 @@ extern qboolean PM_RestAnim(int anim);
 extern qboolean sab_beh_block_vs_attack(gentity_t* blocker, gentity_t* attacker, int saberNum, int blade_num, vec3_t hit_loc);
 extern qboolean BG_HopAnim(int anim);
 extern void WP_ForcePowerRegenerate(const gentity_t* self, int override_amt);
-extern qboolean PM_SaberInOverHeadSlash(saber_moveName_t saberMove);
-extern qboolean PM_SaberInBackAttack(saber_moveName_t saberMove);
+extern qboolean PM_SaberInOverHeadSlash(saberMoveName_t saberMove);
+extern qboolean PM_SaberInBackAttack(saberMoveName_t saberMove);
 qboolean WP_DoingForcedAnimationForForcePowers(const gentity_t* self);
 void WP_thrownSaberTouch(gentity_t* saberent, gentity_t* other, const trace_t* trace);
 qboolean WP_SaberCanBlockThrownSaber(gentity_t* self, vec3_t point, qboolean projectile);
@@ -2037,7 +2037,7 @@ static QINLINE qboolean WP_SabersCheckLock2(gentity_t* attacker, gentity_t* defe
 	return qtrue;
 }
 
-extern saber_moveData_t saber_moveData[LS_MOVE_MAX];
+extern saberMoveData_t saberMoveData[LS_MOVE_MAX];
 
 qboolean WP_SabersCheckLock(gentity_t* ent1, gentity_t* ent2)
 {
@@ -2166,12 +2166,12 @@ qboolean WP_SabersCheckLock(gentity_t* ent1, gentity_t* ent2)
 	if (PM_SaberInParry(ent1->client->ps.saberMove))
 	{
 		//use the endquad of the move
-		lock_quad = saber_moveData[ent1->client->ps.saberMove].endQuad;
+		lock_quad = saberMoveData[ent1->client->ps.saberMove].endQuad;
 	}
 	else
 	{
 		//use the startquad of the move
-		lock_quad = saber_moveData[ent1->client->ps.saberMove].startQuad;
+		lock_quad = saberMoveData[ent1->client->ps.saberMove].startQuad;
 	}
 
 	switch (lock_quad)
@@ -3153,8 +3153,7 @@ int WP_SaberBlockCost(gentity_t* defender, const gentity_t* attacker, vec3_t hit
 	//===========================================================
 	else
 	{
-		const qboolean fakeAttack =
-			((attacker->client->ps.userInt3 & (1 << FLAG_ATTACKFAKE)) != 0) ? qtrue : qfalse;
+		const qboolean fakeAttack = ((attacker->client->ps.userInt3 & (1 << FLAG_ATTACKFAKE)) != 0) ? qtrue : qfalse;
 
 		if (fakeAttack == qtrue)
 		{
@@ -6928,7 +6927,7 @@ static QINLINE qboolean CheckSaberDamage(
 					WP_SaberBounceOnWallSound(self, rSaberNum, rBladeNum);
 					self->client->ps.saberBlocked = BLOCKED_ATK_BOUNCE;
 					self->client->ps.saberBounceMove =
-						LS_D1_BR + (saber_moveData[self->client->ps.saberMove].startQuad - Q_BR);
+						LS_D1_BR + (saberMoveData[self->client->ps.saberMove].startQuad - Q_BR);
 				}
 				else if ((self->client->ps.ManualBlockingFlags & (1 << HOLDINGBLOCK)) &&
 					!PM_SaberInAttackPure(self->client->ps.saberMove) &&
@@ -6941,7 +6940,7 @@ static QINLINE qboolean CheckSaberDamage(
 					// Reflect from wall while blocking
 					self->client->ps.saberBlocked = BLOCKED_ATK_BOUNCE;
 					self->client->ps.saberBounceMove =
-						LS_D1_BR + (saber_moveData[self->client->ps.saberMove].startQuad - Q_BR);
+						LS_D1_BR + (saberMoveData[self->client->ps.saberMove].startQuad - Q_BR);
 				}
 			}
 			else
@@ -7230,13 +7229,13 @@ void wp_saber_start_missile_block_check(gentity_t* self, usercmd_t* ucmd)
 				if (BG_SaberInNonIdleDamageMove(&p_owner->client->ps, p_owner->localAnimIndex))
 				{
 					//attacking
-					swing_block_quad = invert_quad(saber_moveData[p_owner->client->ps.saberMove].startQuad);
+					swing_block_quad = invert_quad(saberMoveData[p_owner->client->ps.saberMove].startQuad);
 				}
 				else if (PM_SaberInStart(p_owner->client->ps.saberMove)
 					|| PM_SaberInTransition(p_owner->client->ps.saberMove))
 				{
 					//preparing to attack
-					swing_block_quad = invert_quad(saber_moveData[p_owner->client->ps.saberMove].endQuad);
+					swing_block_quad = invert_quad(saberMoveData[p_owner->client->ps.saberMove].endQuad);
 				}
 				else
 				{
@@ -14606,13 +14605,13 @@ qboolean HasSetSaberOnly(void)
 extern float G_GroundDistance(const gentity_t* self);
 extern qboolean G_CheckEnemyPresence(int dir, float radius);
 
-saber_moveName_t G_PickAutoKick(gentity_t* self, const gentity_t* enemy)
+saberMoveName_t G_PickAutoKick(gentity_t* self, const gentity_t* enemy)
 {
 	vec3_t v_fwd;
 	vec3_t v_rt;
 	vec3_t enemy_dir;
 	vec3_t fwd_angs;
-	saber_moveName_t kick_move = LS_NONE;
+	saberMoveName_t kick_move = LS_NONE;
 	if (!self || !self->client)
 	{
 		return LS_NONE;
@@ -14761,7 +14760,7 @@ saber_moveName_t G_PickAutoKick(gentity_t* self, const gentity_t* enemy)
 	if (kick_move != LS_NONE)
 	{
 		//we have a kick_move, do it!
-		const int kick_anim = saber_moveData[kick_move].animToUse;
+		const int kick_anim = saberMoveData[kick_move].animToUse;
 		if (kick_anim != -1)
 		{
 			G_SetAnim(self, NULL, SETANIM_BOTH, kick_anim, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);

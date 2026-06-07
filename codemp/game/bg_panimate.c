@@ -502,7 +502,7 @@ qboolean PM_SaberInAttack(const int move)
 	return qfalse;
 }
 
-qboolean PM_SaberInKata(const saber_moveName_t saberMove)
+qboolean PM_SaberInKata(const saberMoveName_t saberMove)
 {
 	switch (saberMove)
 	{
@@ -523,7 +523,7 @@ qboolean PM_SaberInKata(const saber_moveName_t saberMove)
 	return qfalse;
 }
 
-qboolean PM_SaberInOverHeadSlash(const saber_moveName_t saberMove)
+qboolean PM_SaberInOverHeadSlash(const saberMoveName_t saberMove)
 {
 	switch (saberMove)
 	{
@@ -536,7 +536,7 @@ qboolean PM_SaberInOverHeadSlash(const saber_moveName_t saberMove)
 	return qfalse;
 }
 
-qboolean PM_SaberInBackAttack(const saber_moveName_t saberMove)
+qboolean PM_SaberInBackAttack(const saberMoveName_t saberMove)
 {
 	switch (saberMove)
 	{
@@ -770,38 +770,38 @@ qboolean PM_InAnimForsaber_move(int anim, const int saberMove)
 	//drop the anim to the first level and start the checks there
 	anim -= (anim_level - FORCE_LEVEL_1) * SABER_ANIM_GROUP_SIZE;
 	//check level 1
-	if (anim == saber_moveData[saberMove].animToUse)
+	if (anim == saberMoveData[saberMove].animToUse)
 	{
 		return qtrue;
 	}
 	//check level 2
 	anim += SABER_ANIM_GROUP_SIZE;
-	if (anim == saber_moveData[saberMove].animToUse)
+	if (anim == saberMoveData[saberMove].animToUse)
 	{
 		return qtrue;
 	}
 	//check level 3
 	anim += SABER_ANIM_GROUP_SIZE;
-	if (anim == saber_moveData[saberMove].animToUse)
+	if (anim == saberMoveData[saberMove].animToUse)
 	{
 		return qtrue;
 	}
 	//check level 4
 	anim += SABER_ANIM_GROUP_SIZE;
-	if (anim == saber_moveData[saberMove].animToUse)
+	if (anim == saberMoveData[saberMove].animToUse)
 	{
 		return qtrue;
 	}
 	//check level 5
 	anim += SABER_ANIM_GROUP_SIZE;
-	if (anim == saber_moveData[saberMove].animToUse)
+	if (anim == saberMoveData[saberMove].animToUse)
 	{
 		return qtrue;
 	}
 	if (anim >= BOTH_P1_S1_T_ && anim <= BOTH_H1_S1_BR)
 	{
 		//parries, knockaways and broken parries
-		return anim == saber_moveData[saberMove].animToUse;
+		return anim == saberMoveData[saberMove].animToUse;
 	}
 	return qfalse;
 }
@@ -1894,9 +1894,9 @@ qboolean PM_SaberCanInterruptMove(const int move, const int anim)
 	return qtrue;
 }
 
-saber_moveName_t pm_broken_parry_for_attack(const int move)
+saberMoveName_t pm_broken_parry_for_attack(const int move)
 {
-	switch (saber_moveData[move].startQuad)
+	switch (saberMoveData[move].startQuad)
 	{
 	case Q_B:
 		return LS_V1_B_;
@@ -1919,7 +1919,7 @@ saber_moveName_t pm_broken_parry_for_attack(const int move)
 	return LS_NONE;
 }
 
-saber_moveName_t pm_block_the_attack(const int move)
+saberMoveName_t pm_block_the_attack(const int move)
 {
 	switch (move)
 	{
@@ -1966,7 +1966,7 @@ int g_block_the_attack(const int move)
 	}
 }
 
-saber_moveName_t PM_KnockawayForParry(const int move)
+saberMoveName_t PM_KnockawayForParry(const int move)
 {
 	switch (move)
 	{
@@ -1988,7 +1988,7 @@ saber_moveName_t PM_KnockawayForParry(const int move)
 	}
 }
 
-saber_moveName_t PM_KnockawayForParryOld(const int move)
+saberMoveName_t PM_KnockawayForParryOld(const int move)
 {
 	switch (move)
 	{
@@ -2010,7 +2010,7 @@ saber_moveName_t PM_KnockawayForParryOld(const int move)
 	}
 }
 
-saber_moveName_t PM_AnimateOldKnockBack(const int move)
+saberMoveName_t PM_AnimateOldKnockBack(const int move)
 {
 	switch (move)
 	{
@@ -2490,9 +2490,9 @@ qboolean BG_StabDownAnim(const int anim)
 	return qfalse;
 }
 
-saber_moveName_t PM_SaberBounceForAttack(const int move)
+saberMoveName_t PM_SaberBounceForAttack(const int move)
 {
-	switch (saber_moveData[move].startQuad)
+	switch (saberMoveData[move].startQuad)
 	{
 	case Q_B:
 	case Q_BR:
@@ -5754,17 +5754,17 @@ int bg_parse_animation_file(const char* filename, animation_t* anim_set, const q
 			//Slow down saber moves...
 			for (int x = 4; x < LS_MOVE_MAX; x++)
 			{
-				if (saber_moveData[x].animToUse + 77 * 4 == anim_num) // SS_TAVION
+				if (saberMoveData[x].animToUse + 77 * 4 == anim_num) // SS_TAVION
 				{
 					anim_set[anim_num].frameLerp *= 1.2;
 					break;
 				}
-				if (saber_moveData[x].animToUse + 77 * 5 == anim_num) // SS_DUAL
+				if (saberMoveData[x].animToUse + 77 * 5 == anim_num) // SS_DUAL
 				{
 					anim_set[anim_num].frameLerp *= 1.1;
 					break;
 				}
-				if (saber_moveData[x].animToUse + 77 * 6 == anim_num) // SS_STAFF
+				if (saberMoveData[x].animToUse + 77 * 6 == anim_num) // SS_STAFF
 				{
 					anim_set[anim_num].frameLerp *= 1.1;
 					break;
@@ -5778,17 +5778,17 @@ int bg_parse_animation_file(const char* filename, animation_t* anim_set, const q
 			//Slow down saber moves...
 			for (int x = 4; x < LS_MOVE_MAX; x++)
 			{
-				if (saber_moveData[x].animToUse + 77 * 4 == anim_num) // SS_TAVION
+				if (saberMoveData[x].animToUse + 77 * 4 == anim_num) // SS_TAVION
 				{
 					anim_set[anim_num].frameLerp *= 1.2;
 					break;
 				}
-				if (saber_moveData[x].animToUse + 77 * 5 == anim_num) // SS_DUAL
+				if (saberMoveData[x].animToUse + 77 * 5 == anim_num) // SS_DUAL
 				{
 					anim_set[anim_num].frameLerp *= 1.1;
 					break;
 				}
-				if (saber_moveData[x].animToUse + 77 * 6 == anim_num) // SS_STAFF
+				if (saberMoveData[x].animToUse + 77 * 6 == anim_num) // SS_STAFF
 				{
 					anim_set[anim_num].frameLerp *= 1.1;
 					break;

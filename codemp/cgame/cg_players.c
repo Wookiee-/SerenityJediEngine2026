@@ -12419,7 +12419,7 @@ CheckTrail:
 	{
 		int trail_dur;
 		// Use Raven's superior sabers.
-		saber_trail->duration = saber_moveData[cent->currentState.saberMove].trailLength;
+		saber_trail->duration = saberMoveData[cent->currentState.saberMove].trailLength;
 
 		if (cent->currentState.userInt3 & 1 << FLAG_ATTACKFAKE)
 		{//fake attacking players have longer saber trails since they're moving faster than they should be.
@@ -12461,7 +12461,7 @@ CheckTrail:
 					|| (PM_SuperBreakWinAnim(cent->currentState.torsoAnim)
 						|| G_DrawSaberTrailForAnimation(cent->currentState.torsoAnim)
 						|| PM_InKataAnim(cent->currentState.torsoAnim)
-						|| saber_moveData[cent->currentState.saberMove].trailLength > 0
+						|| saberMoveData[cent->currentState.saberMove].trailLength > 0
 						|| cent->currentState.powerups & 1 << PW_SPEED && cg_speedTrail.integer
 						|| cent->currentState.saberInFlight && saberNum == 0)
 					&& cg.time < saber_trail->lastTime + 2000)
@@ -12757,7 +12757,7 @@ CheckTrail:
 			dirlen1 = VectorLength(dir1);
 			dirlen2 = VectorLength(dir2);
 
-			if (saber_moveData[cent->currentState.saberMove].trailLength == 0)
+			if (saberMoveData[cent->currentState.saberMove].trailLength == 0)
 			{
 				dirlen0 *= 0.5f;
 				dirlen1 *= 0.3f;

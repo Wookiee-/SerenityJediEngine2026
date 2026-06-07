@@ -13094,7 +13094,7 @@ static void CG_AddSaberBladeGo(const centity_t* cent, centity_t* scent, const in
 			float dirlen1 = VectorLength(dir1);
 			const float dirlen2 = VectorLength(dir2);
 
-			if (saber_moveData[client->ps.saberMove].trailLength == 0)
+			if (saberMoveData[client->ps.saberMove].trailLength == 0)
 			{
 				dirlen0 *= 0.5f;
 				dirlen1 *= 0.3f;
