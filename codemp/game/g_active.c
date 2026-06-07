@@ -5791,7 +5791,7 @@ static void ClientThink_real(gentity_t* ent)
 						}
 					}
 					else if (client->ps.ManualBlockingFlags & 1 << MBF_ACCURATEMISSILEBLOCKING &&
-						level.time - client->ps.BoltblockStartTime >= 6000)
+						level.time - client->ps.BoltblockStartTime >= 3000)
 					{
 						// Been holding block for too long....let go.
 						client->ps.ManualBlockingFlags &= ~(1 << MBF_ACCURATEMISSILEBLOCKING);

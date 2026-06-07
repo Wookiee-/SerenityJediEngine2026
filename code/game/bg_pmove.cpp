@@ -21724,7 +21724,7 @@ void PM_SaberFakeFlagUpdate(const int new_move)
 	if (!PM_SaberInTransition(new_move) && !PM_SaberInStart(new_move) && !PM_SaberInAttackPure(new_move))
 	{
 		//not going into an attack move, clear the flag
-		if (pm && pm->ps)
+		if (pm && pm->ps && pm->ps->userInt3 & 1 << FLAG_ATTACKFAKE)
 		{
 			pm->ps->userInt3 &= ~(1 << FLAG_ATTACKFAKE);
 		}
