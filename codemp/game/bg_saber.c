@@ -6373,10 +6373,7 @@ weapChecks:
 				}
 
 				//starting a new attack, as such, remove the attack fake flag.
-				if (pm && pm->ps && pm->ps->userInt3 & 1 << FLAG_ATTACKFAKE)
-				{
-					pm->ps->userInt3 &= ~(1 << FLAG_ATTACKFAKE);
-				}
+				pm->ps->userInt3 &= ~(1 << FLAG_ATTACKFAKE);
 
 				// 9. Kata chain restrictions
 				if (PM_SaberKataDone(curmove, newmove))
@@ -6685,15 +6682,21 @@ static void PM_SaberFatigue(playerState_t* ps, const int new_move)
 			PM_AddBlockFatigue(ps, Fatigue_SaberAttack());
 		}
 		else if (PM_SaberInTransition(new_move) && pm->ps->userInt3 & 1 << FLAG_ATTACKFAKE)
-		{//attack fakes cost FP as well
+		{//attack fakes cost sf as well
 			if (ps->saberAnimLevel == SS_DUAL)
-			{//dual sabers don't have transition/FP costs.
+			{//dual sabers don't have transition/sf costs.
 			}
 			else
 			{//single sabers
 				if (pm->ps->saberFatigueChainCount < MISHAPLEVEL_MAX)
 				{
-					pm->ps->saberFatigueChainCount++;
+					if ((pm->ps->saberAttackChainCount & 1) == 0)  // even number
+					{
+						if (pm->ps->saberFatigueChainCount < MISHAPLEVEL_MAX)
+						{
+							pm->ps->saberFatigueChainCount++;
+						}
+					}
 				}
 			}
 		}
@@ -7678,21 +7681,22 @@ void PM_SaberFakeFlagUpdate(const int new_move)
 	if (!PM_SaberInTransition(new_move) && !PM_SaberInStart(new_move) && !PM_SaberInAttackPure(new_move))
 	{
 		//not going into an attack move, clear the flag
-		if (pm && pm->ps && pm->ps->userInt3 & 1 << FLAG_ATTACKFAKE)
-		{
-			pm->ps->userInt3 &= ~(1 << FLAG_ATTACKFAKE);
-		}
+		pm->ps->userInt3 &= ~(1 << FLAG_ATTACKFAKE);
 	}
 }
 
 void PM_SaberPerfectBlockUpdate(const int new_move)
 {
-	const qboolean is_holding_block_button = pm->ps->ManualBlockingFlags & 1 << HOLDINGBLOCK ? qtrue : qfalse;
+	// This is the manual blocking state.
+	const qboolean is_manual_blocking = (pm->ps->ManualBlockingFlags & (1 << HOLDINGBLOCK)) ? qtrue : qfalse;
 
-	//checks to see if the flag needs to be removed.
-	if ((!(is_holding_block_button)) || PM_SaberInBounce(new_move) || PM_SaberInMassiveBounce(pm->ps->torsoAnim) || PM_SaberInAttack(new_move))
+	// Conditions that cancel perfect block
+	if (is_manual_blocking == qfalse ||
+		PM_SaberInBounce(new_move) == qtrue ||
+		PM_SaberInMassiveBounce(pm->ps->torsoAnim) == qtrue ||
+		PM_SaberInAttack(new_move) == qtrue)
 	{
-		pm->ps->userInt3 &= ~(1 << FLAG_PERFECTBLOCK);
+		pm->ps->userInt3 &= ~(1 << FLAG_PERFECTBLOCK); // Clear perfect block flag
 	}
 }
 

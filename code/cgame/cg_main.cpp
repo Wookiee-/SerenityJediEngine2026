@@ -506,7 +506,7 @@ static cvarTable_t cvarTable[] = {
 	{&cg_drawAmmoWarning, "cg_drawAmmoWarning", "1", CVAR_ARCHIVE},
 	{&cg_drawCrosshair, "cg_drawCrosshair", "2", CVAR_ARCHIVE},
 	{&cg_dynamicCrosshair, "cg_dynamicCrosshair", "1", CVAR_ARCHIVE},
-	{&cg_adaptiveCrosshair, "cg_adaptiveCrosshair", "0", CVAR_ARCHIVE},
+	{&cg_adaptiveCrosshair, "cg_adaptiveCrosshair", "1", CVAR_ARCHIVE},
 	{&cg_drawCrosshairNames, "cg_drawCrosshairNames", "0", CVAR_ARCHIVE | CVAR_SAVEGAME | CVAR_NORESTART},
 	{&cg_DrawCrosshairItem, "cg_DrawCrosshairItem", "1", CVAR_ARCHIVE},
 	// NOTE : I also create this in UI_Init()
@@ -2405,6 +2405,8 @@ Displays the info screen while loading media
 int iCGResetCount = 0;
 qboolean qbVidRestartOccured = qfalse;
 
+extern void CG_ClearAnimEvtCache();
+
 //===================
 qboolean gbUseTheseValuesFromLoadSave = qfalse; // MUST default to this
 int gi_cg_forcepowerSelect;
@@ -2414,8 +2416,6 @@ int gi_cg_inventorySelect;
 static void CG_GameStateReceived()
 {
 	// clear everything
-
-	extern void CG_ClearAnimEvtCache();
 	CG_ClearAnimEvtCache(); // else sound handles wrong after vid_restart
 
 	qbVidRestartOccured = qtrue;

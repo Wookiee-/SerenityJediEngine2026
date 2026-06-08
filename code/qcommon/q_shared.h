@@ -1893,19 +1893,6 @@ public:
 
 #endif
 
-	//NEW vehicle stuff
-	// This has been localized to the vehicle stuff (NOTE: We can still use it later, I'm just commenting it to
-	// root out all the calls. We can store the data in vehicles and update by copying it here).
-	//int			vehicleIndex;	// Index into vehicleData table
-	//vec3_t		vehicleAngles;	// current angles of your vehicle
-	//int			vehicleArmor;	// current armor of your vehicle (explodes if drops to 0)
-
-	// !!
-	// not communicated over the net at all
-	// !!
-	//int			vehicleLastFXTime;				//timer for all cgame-FX...?
-	//int			vehicleExplodeTime;				//when it will go BOOM!
-
 	int useTime; //not sent
 	int lastShotTime; //last time you shot your weapon
 	int ping; // server to game info for scoreboard

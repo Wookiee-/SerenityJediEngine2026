@@ -138,6 +138,12 @@ static void CG_Draw_JKA_ForcePower(const centity_t* cent, const float hud_ratio)
 		return;
 	}
 
+	// Only draw block points for the real player (SP)
+	if (cent->currentState.number != 0)
+	{
+		return;
+	}
+
 	// Make the hud flash by setting forceHUDTotalFlashTime above cg.time
 	if (cg.forceHUDTotalFlashTime > cg.time || cg_entities[cg.snap->ps.clientNum].currentState.userInt3 & 1 << FLAG_FATIGUED)
 	{
@@ -947,6 +953,12 @@ static void CG_DrawoldblockPoints(const centity_t* cent)
 	vec4_t cColor{};
 	float x = BPFUELBAR_X;
 	constexpr float y = BPFUELBAR_Y;
+	
+	// Only draw block points for the real player (SP)
+	if (cent->currentState.number != 0)
+	{ 
+		return;
+	}
 
 	float percent = static_cast<float>(cg.snap->ps.blockPoints) / 100.0f * BPFUELBAR_H;
 
@@ -1060,6 +1072,12 @@ static void CG_DrawoldblockPoints(const centity_t* cent)
 static void CG_DrawCusblockPoints(const int x, const int y, const float hud_ratio)
 {
 	vec4_t calc_color;
+	
+	// Only draw block points for the real player
+	if (cg.snap->ps.clientNum != 0)
+	{
+		return;
+	}
 
 	//	Outer block circular
 	//==========================================================================================================//
@@ -2020,6 +2038,12 @@ static void CG_DrawJK2HealthSJE(const int x, const int y)
 static void CG_DrawJK2blockPoints(const int x, const int y)
 {
 	vec4_t calc_color;
+
+	// Only draw block points for the real player
+	if (cg.snap->ps.clientNum != 0)
+	{
+		return;
+	}
 
 	//	Outer block circular
 	//==========================================================================================================//
@@ -3095,9 +3119,14 @@ static void CG_DrawSimpleForcePower(const centity_t* cent)
 		return;
 	}
 
+	// Only draw block points for the real player (SP)
+	if (cent->currentState.number != 0)
+	{
+		return;
+	}
+
 	// Make the hud flash by setting forceHUDTotalFlashTime above cg.time
-	if (cg.forceHUDTotalFlashTime > cg.time || cg_entities[cg.snap->ps.clientNum].currentState.userInt3 & 1 <<
-		FLAG_FATIGUED)
+	if (cg.forceHUDTotalFlashTime > cg.time || cg_entities[cg.snap->ps.clientNum].currentState.userInt3 & 1 <<FLAG_FATIGUED)
 	{
 		flash = qtrue;
 		if (cg.forceHUDNextFlashTime < cg.time)
@@ -4790,6 +4819,7 @@ static void CG_DrawCrosshair(vec3_t world_point)
 	const qboolean holding_block = (cg.predictedPlayerState.ManualBlockingFlags & (1 << HOLDINGBLOCK)) ? qtrue : qfalse;
 	const qboolean holding_block_and_attack = (cg.predictedPlayerState.ManualBlockingFlags & (1 << HOLDINGBLOCKANDATTACK)) ? qtrue : qfalse;
 	const qboolean holding_sprint = (cg.predictedPlayerState.PlayerEffectFlags & (1 << PEF_SPRINTING)) ? qtrue : qfalse;
+	const qboolean holding_block_button = (cg.predictedPlayerState.pm_flags & PMF_BLOCK_HELD) ? qtrue : qfalse;
 
 	if (!cg_drawCrosshair.integer)
 	{
@@ -4797,7 +4827,7 @@ static void CG_DrawCrosshair(vec3_t world_point)
 	}
 
 	if (cg_adaptiveCrosshair.integer == 1 &&
-		cg.snap->ps.weapon == WP_SABER)
+		(cg.snap->ps.weapon == WP_SABER))
 	{
 		if ((holding_block == qfalse &&
 			holding_block_and_attack == qfalse) ||
@@ -4808,14 +4838,20 @@ static void CG_DrawCrosshair(vec3_t world_point)
 		}
 	}
 
+	if (cg_adaptiveCrosshair.integer == 1 &&
+		(cg.snap->ps.weapon == WP_MELEE || cg.snap->ps.weapon == WP_NONE))
+	{
+		if ((holding_block_button == qfalse) ||
+			holding_sprint == qtrue)
+		{
+			// Don't show crosshair when using a MELEE and we're not HOLDING THE BLOCK BUTTON
+			return;
+		}
+	}
+
 	if (in_camera)
 	{
 		//no crosshair while in cutscenes
-		return;
-	}
-
-	if (cg.snap->ps.weapon == WP_MELEE || cg.snap->ps.weapon == WP_NONE)
-	{
 		return;
 	}
 
@@ -5066,8 +5102,7 @@ static void CG_DrawCrosshair(vec3_t world_point)
 	{
 		if (cg_weaponcrosshairs.integer)
 		{
-			if (cg.snap->ps.weapon == WP_SABER ||
-				cg.snap->ps.weapon == WP_MELEE)
+			if (cg.snap->ps.weapon == WP_MELEE || cg.snap->ps.weapon == WP_NONE || cg.snap->ps.weapon == WP_SABER)
 			{
 				cgi_R_DrawStretchPic(x + cg.refdef.x + 0.5 * (640 - w), y + cg.refdef.y + 0.5 * (480 - h), w, h, 0, 0,
 					1, 1, cgs.media.crosshairShader[1]);
@@ -7450,7 +7485,7 @@ static void CG_Draw2D()
 	//if (cg.predictedPlayerState.communicatingflags & (1 << PROJECTING))
 	//if (cg.predictedPlayerState.pm_flags & PMF_DASH_HELD)
 	//if (cg.predictedPlayerState.ManualBlockingFlags & (1 << MBF_PROJBLOCKING))
-	//if (cg_entities[cg.snap->ps.clientNum].currentState.userInt3 & (1 << FLAG_ATTACKFAKE))
+	//if (cg.predictedPlayerState.userInt3 & (1 << FLAG_ATTACKFAKE))
 	//if (cent->currentState.eFlags & EF2_DUAL_WEAPONS)
 	//if (cent->currentState.eFlags & EF2_DUAL_PISTOLS)
 	//if (cg.predictedPlayerState.ManualBlockingFlags & 1 << MBF_ACCURATEMISSILEBLOCKING)
