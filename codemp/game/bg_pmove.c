@@ -10473,238 +10473,6 @@ static void PM_Footsteps(void)
 							}
 						}
 					}
-					//					else if (pm->ps->weapon == WP_BRYAR_PISTOL ||
-					//						pm->ps->weapon == WP_REY ||
-					//						pm->ps->weapon == WP_JANGO ||
-					//						pm->ps->weapon == WP_REBELBLASTER ||
-					//						pm->ps->weapon == WP_CLONEPISTOL ||
-					//						pm->ps->weapon == WP_STUN_BATON)
-					//					{
-					//						if (pm->ps->eFlags & EF3_DUAL_WEAPONS) // pistols have a unique
-					//						{
-					//							if (!pm->ps->weaponTime) //not firing
-					//							{
-					//								if (pm->ps->stats[STAT_HEALTH] <= 70 && pm->ps->stats[STAT_HEALTH] >= 40)
-					//								{
-					//									if (pm_entSelf->s.NPC_class == CLASS_STORMTROOPER ||
-					//										pm_entSelf->s.NPC_class == CLASS_STORMCOMMANDO ||
-					//										pm_entSelf->s.NPC_class == CLASS_CLONETROOPER ||
-					//										pm_entSelf->s.botclass == BCLASS_STORMTROOPER ||
-					//										pm_entSelf->s.botclass == BCLASS_SWAMPTROOPER ||
-					//										pm_entSelf->s.botclass == BCLASS_CLONETROOPER)
-					//									{
-					//										PM_SetAnim(SETANIM_BOTH, BOTH_RUN3, SETANIM_FLAG_NORMAL);
-					//									}
-					//									else
-					//									{
-					//										PM_SetAnim(SETANIM_BOTH, BOTH_RUN8, SETANIM_FLAG_NORMAL);
-					//									}
-					//								}
-					//								else if (pm->ps->stats[STAT_HEALTH] <= 40)
-					//								{
-					//									if (pm_entSelf->s.NPC_class == CLASS_STORMTROOPER ||
-					//										pm_entSelf->s.NPC_class == CLASS_STORMCOMMANDO ||
-					//										pm_entSelf->s.NPC_class == CLASS_CLONETROOPER ||
-					//										pm_entSelf->s.botclass == BCLASS_STORMTROOPER ||
-					//										pm_entSelf->s.botclass == BCLASS_SWAMPTROOPER ||
-					//										pm_entSelf->s.botclass == BCLASS_CLONETROOPER)
-					//									{
-					//										PM_SetAnim(SETANIM_BOTH, BOTH_RUN3, SETANIM_FLAG_NORMAL);
-					//									}
-					//									else
-					//									{
-					//										PM_SetAnim(SETANIM_BOTH, BOTH_RUN9, SETANIM_FLAG_NORMAL);
-					//									}
-					//								}
-					//								else
-					//								{
-					//									if (pm->cmd.buttons & BUTTON_BLOCK && pm->ps->sprintFuel > 15)
-					//									{
-					//										PM_SetAnim(SETANIM_BOTH, BOTH_SPRINT_MP, SETANIM_FLAG_NORMAL);
-					//
-					//										if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING)
-					//										{
-					//											pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
-					//										}
-					//										if (!(pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING))
-					//										{
-					//											pm->ps->PlayerEffectFlags |= 1 << PEF_WEAPONSPRINTING;
-					//#ifdef _GAME
-					//											g_entities[pm->ps->clientNum].client->IsSprinting = qtrue;
-					//											if (pm->ps->sprintFuel < 17) // single sprint here
-					//											{
-					//												pm->ps->sprintFuel -= 10;
-					//											}
-					//#endif
-					//										}
-					//									}
-					//									else
-					//									{
-					//										PM_SetAnim(SETANIM_BOTH, BOTH_RUN1, SETANIM_FLAG_NORMAL);// no sprint anim for pistols, just go to run anim
-					//
-					//										if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING ||
-					//											pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING)
-					//										{
-					//											pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
-					//											pm->ps->PlayerEffectFlags &= ~(1 << PEF_WEAPONSPRINTING);
-					//#ifdef _GAME
-					//											g_entities[pm->ps->clientNum].client->IsSprinting = qfalse;
-					//#endif
-					//										}
-					//									}
-					//								}
-					//							}
-					//							else
-					//							{
-					//								if (pm->cmd.buttons & BUTTON_BLOCK && pm->ps->sprintFuel > 15)
-					//								{
-					//									desiredAnim = BOTH_SPRINT_MP;
-					//
-					//									if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING)
-					//									{
-					//										pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
-					//									}
-					//									if (!(pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING))
-					//									{
-					//										pm->ps->PlayerEffectFlags |= 1 << PEF_WEAPONSPRINTING;
-					//#ifdef _GAME
-					//										g_entities[pm->ps->clientNum].client->IsSprinting = qtrue;
-					//										if (pm->ps->sprintFuel < 17) // single sprint here
-					//										{
-					//											pm->ps->sprintFuel -= 10;
-					//										}
-					//#endif
-					//									}
-					//								}
-					//								else
-					//								{
-					//									desiredAnim = BOTH_RUN1;// no sprint anim for pistols, just go to run anim
-					//
-					//									if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING ||
-					//										pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING)
-					//									{
-					//										pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
-					//										pm->ps->PlayerEffectFlags &= ~(1 << PEF_WEAPONSPRINTING);
-					//#ifdef _GAME
-					//										g_entities[pm->ps->clientNum].client->IsSprinting = qfalse;
-					//#endif
-					//									}
-					//								}
-					//							}
-					//						}
-					//						else
-					//						{//not dual wielding, regular pistol run anims
-					//							if (!pm->ps->weaponTime) //not firing
-					//							{
-					//								if (pm->ps->stats[STAT_HEALTH] <= 70 && pm->ps->stats[STAT_HEALTH] >= 40)
-					//								{
-					//									if (pm_entSelf->s.NPC_class == CLASS_STORMTROOPER ||
-					//										pm_entSelf->s.NPC_class == CLASS_STORMCOMMANDO ||
-					//										pm_entSelf->s.NPC_class == CLASS_CLONETROOPER ||
-					//										pm_entSelf->s.botclass == BCLASS_STORMTROOPER ||
-					//										pm_entSelf->s.botclass == BCLASS_SWAMPTROOPER ||
-					//										pm_entSelf->s.botclass == BCLASS_CLONETROOPER)
-					//									{
-					//										PM_SetAnim(SETANIM_BOTH, BOTH_RUN3, SETANIM_FLAG_NORMAL);
-					//									}
-					//									else
-					//									{
-					//										PM_SetAnim(SETANIM_BOTH, BOTH_RUN8, SETANIM_FLAG_NORMAL);
-					//									}
-					//								}
-					//								else if (pm->ps->stats[STAT_HEALTH] <= 40)
-					//								{
-					//									if (pm_entSelf->s.NPC_class == CLASS_STORMTROOPER ||
-					//										pm_entSelf->s.NPC_class == CLASS_STORMCOMMANDO ||
-					//										pm_entSelf->s.NPC_class == CLASS_CLONETROOPER ||
-					//										pm_entSelf->s.botclass == BCLASS_STORMTROOPER ||
-					//										pm_entSelf->s.botclass == BCLASS_SWAMPTROOPER ||
-					//										pm_entSelf->s.botclass == BCLASS_CLONETROOPER)
-					//									{
-					//										PM_SetAnim(SETANIM_BOTH, BOTH_RUN3, SETANIM_FLAG_NORMAL);
-					//									}
-					//									else
-					//									{
-					//										PM_SetAnim(SETANIM_BOTH, BOTH_RUN9, SETANIM_FLAG_NORMAL);
-					//									}
-					//								}
-					//								else
-					//								{
-					//									if (pm->cmd.buttons & BUTTON_BLOCK && pm->ps->sprintFuel > 15)
-					//									{
-					//										PM_SetAnim(SETANIM_BOTH, BOTH_SPRINT_MP, SETANIM_FLAG_NORMAL);
-					//
-					//										if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING)
-					//										{
-					//											pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
-					//										}
-					//										if (!(pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING))
-					//										{
-					//											pm->ps->PlayerEffectFlags |= 1 << PEF_WEAPONSPRINTING;
-					//#ifdef _GAME
-					//											g_entities[pm->ps->clientNum].client->IsSprinting = qtrue;
-					//											if (pm->ps->sprintFuel < 17) // single sprint here
-					//											{
-					//												pm->ps->sprintFuel -= 10;
-					//											}
-					//#endif
-					//										}
-					//									}
-					//									else
-					//									{
-					//										PM_SetAnim(SETANIM_BOTH, BOTH_RUN5, SETANIM_FLAG_NORMAL);// no sprint anim for pistols, just go to run anim
-					//
-					//										if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING ||
-					//											pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING)
-					//										{
-					//											pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
-					//											pm->ps->PlayerEffectFlags &= ~(1 << PEF_WEAPONSPRINTING);
-					//#ifdef _GAME
-					//											g_entities[pm->ps->clientNum].client->IsSprinting = qfalse;
-					//#endif
-					//										}
-					//									}
-					//								}
-					//							}
-					//							else
-					//							{
-					//								if (pm->cmd.buttons & BUTTON_BLOCK && pm->ps->sprintFuel > 15)
-					//								{
-					//									desiredAnim = BOTH_SPRINT_MP;
-					//
-					//									if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING)
-					//									{
-					//										pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
-					//									}
-					//									if (!(pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING))
-					//									{
-					//										pm->ps->PlayerEffectFlags |= 1 << PEF_WEAPONSPRINTING;
-					//#ifdef _GAME
-					//										g_entities[pm->ps->clientNum].client->IsSprinting = qtrue;
-					//										if (pm->ps->sprintFuel < 17) // single sprint here
-					//										{
-					//											pm->ps->sprintFuel -= 10;
-					//										}
-					//#endif
-					//									}
-					//								}
-					//								else
-					//								{
-					//									desiredAnim = BOTH_RUN5;// no sprint anim for pistols, just go to run anim
-					//
-					//									if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING ||
-					//										pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING)
-					//									{
-					//										pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
-					//										pm->ps->PlayerEffectFlags &= ~(1 << PEF_WEAPONSPRINTING);
-					//#ifdef _GAME
-					//										g_entities[pm->ps->clientNum].client->IsSprinting = qfalse;
-					//#endif
-					//									}
-					//								}
-					//							}
-					//						}
-					//					}
 					else if (pm->ps && pm->ps->weapon == WP_BOWCASTER ||
 						pm->ps->weapon == WP_FLECHETTE ||
 						pm->ps->weapon == WP_DISRUPTOR ||
@@ -10716,73 +10484,38 @@ static void PM_Footsteps(void)
 					{
 						if (!pm->ps->weaponTime) //not firing
 						{
-							if (pm->ps->stats[STAT_HEALTH] <= 70 && pm->ps->stats[STAT_HEALTH] >= 40)
+							if (pm->cmd.buttons & BUTTON_BLOCK && pm->ps->sprintFuel > 15)
 							{
-								if (pm_entSelf->s.NPC_class == CLASS_STORMTROOPER ||
-									pm_entSelf->s.NPC_class == CLASS_STORMCOMMANDO ||
-									pm_entSelf->s.NPC_class == CLASS_CLONETROOPER ||
-									pm_entSelf->s.botclass == BCLASS_STORMTROOPER ||
-									pm_entSelf->s.botclass == BCLASS_SWAMPTROOPER ||
-									pm_entSelf->s.botclass == BCLASS_CLONETROOPER)
+								PM_SetAnim(SETANIM_BOTH, BOTH_RUN3_MP, SETANIM_FLAG_NORMAL);
+
+								if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING)
 								{
-									PM_SetAnim(SETANIM_BOTH, BOTH_RUN3_MP, SETANIM_FLAG_NORMAL);
+									pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
 								}
-								else
+								if (!(pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING))
 								{
-									PM_SetAnim(SETANIM_BOTH, BOTH_RUN9, SETANIM_FLAG_NORMAL);
-								}
-							}
-							else if (pm->ps->stats[STAT_HEALTH] <= 40)
-							{
-								if (pm_entSelf->s.NPC_class == CLASS_STORMTROOPER ||
-									pm_entSelf->s.NPC_class == CLASS_STORMCOMMANDO ||
-									pm_entSelf->s.NPC_class == CLASS_CLONETROOPER ||
-									pm_entSelf->s.botclass == BCLASS_STORMTROOPER ||
-									pm_entSelf->s.botclass == BCLASS_SWAMPTROOPER ||
-									pm_entSelf->s.botclass == BCLASS_CLONETROOPER)
-								{
-									PM_SetAnim(SETANIM_BOTH, BOTH_RUN3_MP, SETANIM_FLAG_NORMAL);
-								}
-								else
-								{
-									PM_SetAnim(SETANIM_BOTH, BOTH_RUN8, SETANIM_FLAG_NORMAL);
+									pm->ps->PlayerEffectFlags |= 1 << PEF_WEAPONSPRINTING;
+#ifdef _GAME
+									g_entities[pm->ps->clientNum].client->IsSprinting = qtrue;
+									if (pm->ps->sprintFuel < 17) // single sprint here
+									{
+										pm->ps->sprintFuel -= 10;
+									}
+#endif
 								}
 							}
 							else
 							{
-								if (pm->cmd.buttons & BUTTON_BLOCK && pm->ps->sprintFuel > 15)
-								{
-									PM_SetAnim(SETANIM_BOTH, BOTH_RUN3_MP, SETANIM_FLAG_NORMAL);
+								PM_SetAnim(SETANIM_BOTH, BOTH_RUN3, SETANIM_FLAG_NORMAL);
 
-									if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING)
-									{
-										pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
-									}
-									if (!(pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING))
-									{
-										pm->ps->PlayerEffectFlags |= 1 << PEF_WEAPONSPRINTING;
-#ifdef _GAME
-										g_entities[pm->ps->clientNum].client->IsSprinting = qtrue;
-										if (pm->ps->sprintFuel < 17) // single sprint here
-										{
-											pm->ps->sprintFuel -= 10;
-										}
-#endif
-									}
-								}
-								else
+								if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING ||
+									pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING)
 								{
-									PM_SetAnim(SETANIM_BOTH, BOTH_RUN3, SETANIM_FLAG_NORMAL);
-
-									if (pm->ps->PlayerEffectFlags & 1 << PEF_SPRINTING ||
-										pm->ps->PlayerEffectFlags & 1 << PEF_WEAPONSPRINTING)
-									{
-										pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
-										pm->ps->PlayerEffectFlags &= ~(1 << PEF_WEAPONSPRINTING);
+									pm->ps->PlayerEffectFlags &= ~(1 << PEF_SPRINTING);
+									pm->ps->PlayerEffectFlags &= ~(1 << PEF_WEAPONSPRINTING);
 #ifdef _GAME
-										g_entities[pm->ps->clientNum].client->IsSprinting = qfalse;
+									g_entities[pm->ps->clientNum].client->IsSprinting = qfalse;
 #endif
-									}
 								}
 							}
 						}
@@ -10830,18 +10563,7 @@ static void PM_Footsteps(void)
 					{
 						if (!pm->ps->weaponTime) //not firing
 						{
-							if (pm->ps->stats[STAT_HEALTH] <= 70 && pm->ps->stats[STAT_HEALTH] >= 40)
-							{
-								PM_SetAnim(SETANIM_BOTH, BOTH_RUN7, SETANIM_FLAG_NORMAL);
-							}
-							else if (pm->ps->stats[STAT_HEALTH] <= 40)
-							{
-								PM_SetAnim(SETANIM_BOTH, BOTH_RUN8, SETANIM_FLAG_NORMAL);
-							}
-							else
-							{
-								PM_SetAnim(SETANIM_BOTH, BOTH_RUN6, SETANIM_FLAG_NORMAL);
-							}
+							PM_SetAnim(SETANIM_BOTH, BOTH_RUN6, SETANIM_FLAG_NORMAL);
 						}
 						else
 						{
@@ -10883,42 +10605,7 @@ static void PM_Footsteps(void)
 					{
 						if (!pm->ps->weaponTime) //not firing
 						{
-							if (pm->ps->stats[STAT_HEALTH] <= 70 && pm->ps->stats[STAT_HEALTH] >= 40)
-							{
-								if (pm_entSelf->s.NPC_class == CLASS_STORMTROOPER ||
-									pm_entSelf->s.NPC_class == CLASS_STORMCOMMANDO ||
-									pm_entSelf->s.NPC_class == CLASS_CLONETROOPER ||
-									pm_entSelf->s.botclass == BCLASS_STORMTROOPER ||
-									pm_entSelf->s.botclass == BCLASS_SWAMPTROOPER ||
-									pm_entSelf->s.botclass == BCLASS_CLONETROOPER)
-								{
-									PM_SetAnim(SETANIM_BOTH, BOTH_RUN3_MP, SETANIM_FLAG_NORMAL);
-								}
-								else
-								{
-									PM_SetAnim(SETANIM_BOTH, BOTH_RUN7, SETANIM_FLAG_NORMAL);
-								}
-							}
-							else if (pm->ps->stats[STAT_HEALTH] <= 40)
-							{
-								if (pm_entSelf->s.NPC_class == CLASS_STORMTROOPER ||
-									pm_entSelf->s.NPC_class == CLASS_STORMCOMMANDO ||
-									pm_entSelf->s.NPC_class == CLASS_CLONETROOPER ||
-									pm_entSelf->s.botclass == BCLASS_STORMTROOPER ||
-									pm_entSelf->s.botclass == BCLASS_SWAMPTROOPER ||
-									pm_entSelf->s.botclass == BCLASS_CLONETROOPER)
-								{
-									PM_SetAnim(SETANIM_BOTH, BOTH_RUN3_MP, SETANIM_FLAG_NORMAL);
-								}
-								else
-								{
-									PM_SetAnim(SETANIM_BOTH, BOTH_RUN8, SETANIM_FLAG_NORMAL);
-								}
-							}
-							else
-							{
-								PM_SetAnim(SETANIM_BOTH, BOTH_RUN7, SETANIM_FLAG_NORMAL);
-							}
+							PM_SetAnim(SETANIM_BOTH, BOTH_RUN7, SETANIM_FLAG_NORMAL);
 						}
 						else
 						{
@@ -10961,18 +10648,7 @@ static void PM_Footsteps(void)
 					{
 						if (!pm->ps->weaponTime) //not firing
 						{
-							if (pm->ps->stats[STAT_HEALTH] <= 70 && pm->ps->stats[STAT_HEALTH] >= 40)
-							{
-								PM_SetAnim(SETANIM_BOTH, BOTH_RUN7, SETANIM_FLAG_NORMAL);
-							}
-							else if (pm->ps->stats[STAT_HEALTH] <= 40)
-							{
-								PM_SetAnim(SETANIM_BOTH, BOTH_RUN8, SETANIM_FLAG_NORMAL);
-							}
-							else
-							{
-								PM_SetAnim(SETANIM_BOTH, BOTH_RUN6, SETANIM_FLAG_NORMAL);
-							}
+							PM_SetAnim(SETANIM_BOTH, BOTH_RUN6, SETANIM_FLAG_NORMAL);
 						}
 						else
 						{
@@ -11015,18 +10691,7 @@ static void PM_Footsteps(void)
 						//in force rage
 						if (!pm->ps->weaponTime) //not firing
 						{
-							if (pm->ps->stats[STAT_HEALTH] <= 70 && pm->ps->stats[STAT_HEALTH] >= 40)
-							{
-								PM_SetAnim(SETANIM_BOTH, BOTH_RUN7, SETANIM_FLAG_NORMAL);
-							}
-							else if (pm->ps->stats[STAT_HEALTH] <= 40)
-							{
-								PM_SetAnim(SETANIM_BOTH, BOTH_RUN8, SETANIM_FLAG_NORMAL);
-							}
-							else
-							{
-								PM_SetAnim(SETANIM_BOTH, BOTH_RUN7, SETANIM_FLAG_NORMAL);
-							}
+							PM_SetAnim(SETANIM_BOTH, BOTH_RUN7, SETANIM_FLAG_NORMAL);
 						}
 						else
 						{
@@ -11055,15 +10720,7 @@ static void PM_Footsteps(void)
 					}
 					else if (pm->ps->weapon == WP_MELEE)
 					{
-						if (pm->ps->stats[STAT_HEALTH] <= 70 && pm->ps->stats[STAT_HEALTH] >= 40)
-						{
-							PM_SetAnim(SETANIM_BOTH, BOTH_RUN7, SETANIM_FLAG_NORMAL);
-						}
-						else if (pm->ps->stats[STAT_HEALTH] <= 40)
-						{
-							PM_SetAnim(SETANIM_BOTH, BOTH_RUN8, SETANIM_FLAG_NORMAL);
-						}
-						else if (pm_entSelf->s.botclass == BCLASS_SBD)
+						if (pm_entSelf->s.botclass == BCLASS_SBD)
 						{
 							desiredAnim = SBD_RUNING_WEAPON;
 						}

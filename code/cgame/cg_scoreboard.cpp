@@ -43,14 +43,47 @@ static void CG_MissionFailed()
 	if (!cg.missionFailedScreen)
 	{
 		char* text;
-		if (cg_com_outcast.integer == 7)
+		if (cg_com_outcast.integer == 0)
 		{
-			cgi_UI_SetActive_Menu("missionfailed_nina_menu");
+			cgi_UI_SetActive_Menu("missionfailed_menu"); //academy version
+		}
+		else if (cg_com_outcast.integer == 1)
+		{
+			cgi_UI_SetActive_Menu("missionfailedJKO_Menu"); //outcast version
+		}
+		else if (cg_com_outcast.integer == 2)
+		{
+			cgi_UI_SetActive_Menu("missionfailedCR_menu"); //CREATIVE version
+		}
+		else if (cg_com_outcast.integer == 3)
+		{
+			cgi_UI_SetActive_Menu("missionfailedYAV_menu"); //yavIV version
+		}
+		else if (cg_com_outcast.integer == 4)
+		{
+			cgi_UI_SetActive_Menu("missionfailedDF_menu"); //darkforces version
+		}
+		else if (cg_com_outcast.integer == 5)
+		{
+			cgi_UI_SetActive_Menu("missionfailedKOTOR_menu"); //KOTOR version
+		}
+		else if (cg_com_outcast.integer == 6)
+		{
+			cgi_UI_SetActive_Menu("missionfailedSUV_menu"); //survival version
+		}
+		else if (cg_com_outcast.integer == 7)
+		{
+			cgi_UI_SetActive_Menu("missionfailedNINA_menu"); //nina version
+		}
+		else if (cg_com_outcast.integer == 8)
+		{
+			cgi_UI_SetActive_Menu("missionfailedVENG_menu"); //veng version
 		}
 		else
 		{
-			cgi_UI_SetActive_Menu("missionfailed_menu");
+			cgi_UI_SetActive_Menu("missionfailed_menu"); //default version
 		}
+
 		cg.missionFailedScreen = qtrue;
 
 		switch (statusTextIndex)

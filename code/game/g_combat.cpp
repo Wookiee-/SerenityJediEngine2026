@@ -1508,7 +1508,7 @@ qboolean G_GetHitLocFromSurfName(gentity_t* ent, const char* surfName, int* hit_
 #ifdef _DEBUG
 	else
 	{
-		Com_Printf("ERROR: surface %s `does not belong to any hitLocation!!!\n", surfName);
+		//Com_Printf("ERROR: surface %s `does not belong to any hitLocation!!!\n", surfName);
 	}
 #endif //_DEBUG
 
@@ -5762,7 +5762,7 @@ void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, cons
 			if (G_RagDoll(self, forcedAngles) == qtrue)
 			{
 #ifdef _DEBUG
-				Com_Printf("Debug: Ragdoll started for %s\n", self->NPC_type);
+				//Com_Printf("Debug: Ragdoll started for %s\n", self->NPC_type);
 #endif
 			}
 		}

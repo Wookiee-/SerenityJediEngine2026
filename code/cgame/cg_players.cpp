@@ -14465,8 +14465,8 @@ void CG_Player(centity_t* cent)
 				if (cent->currentState.number == cg.snap->ps.clientNum)
 				{
 					//I am the player
-					if (cg.zoomMode || !cg_trueguns.integer && cg.snap->ps.weapon != WP_SABER && cg.snap->ps.weapon !=
-						WP_MELEE || cg.snap->ps.weapon == WP_SABER && cg_truesaberonly.integer)
+					if (cg.zoomMode || !cg_trueguns.integer && cg.snap->ps.weapon != WP_SABER &&
+						cg.snap->ps.weapon != WP_MELEE || cg.snap->ps.weapon == WP_SABER && cg_truesaberonly.integer)
 					{
 						//not using saber or fists
 						ent.renderfx = RF_THIRD_PERSON; // only draw in mirrors

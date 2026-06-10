@@ -256,7 +256,7 @@ static void G_Give(gentity_t* ent, const char* name, const char* args, const int
 		}
 		if (!HeIsJedi(ent))
 		{//Gunner inventory
-			if (com_outcast->integer == 1) //playing outcast
+			if (com_outcast->integer == 1 || com_outcast->integer == 4) //playing outcast / dark forces
 			{//Outcast inventory
 				ent->client->ps.inventory[INV_CLOAK] = 1;
 			}

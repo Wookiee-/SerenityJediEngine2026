@@ -560,7 +560,7 @@ static cvarTable_t cvarTable[] =
 	{ &ui_hilt2_color_green,	"ui_hilt2_color_green",	"", nullptr, 0},
 	{ &ui_hilt2_color_blue,		"ui_hilt2_color_blue",	"", nullptr, 0},
 
-	{&ui_SFXSabers, "cg_SFXSabers", "5", nullptr, CVAR_ARCHIVE},
+	{&ui_SFXSabers, "cg_SFXSabers", "3", nullptr, CVAR_ARCHIVE},
 	{&ui_SFXSabersGlowSize, "cg_SFXSabersGlowSize", "0.6f", nullptr, CVAR_ARCHIVE},
 	{&ui_SFXSabersCoreSize, "cg_SFXSabersCoreSize", "0.5f", nullptr, CVAR_ARCHIVE},
 
@@ -1301,14 +1301,47 @@ static qboolean UI_RunMenuScript(const char** args)
 
 			if (1 == Cvar_VariableIntegerValue("ui_missionfailed"))
 			{
-				if (ui_com_outcast.integer == 7)
-				{
-					Menus_ActivateByName("missionfailed_nina_menu");
-				}
-				else
-				{
-					Menus_ActivateByName("missionfailed_menu");
-				}
+				Menus_ActivateByName("missionfailed_menu"); //JKA version 1
+				ui.Key_SetCatcher(KEYCATCH_UI);
+			}
+			else if (2 == Cvar_VariableIntegerValue("ui_missionfailed"))
+			{
+				Menus_ActivateByName("missionfailedJKO_Menu"); //JKO version 2
+				ui.Key_SetCatcher(KEYCATCH_UI);
+			}
+			else if (3 == Cvar_VariableIntegerValue("ui_missionfailed"))
+			{
+				Menus_ActivateByName("missionfailedCR_menu"); //CREATIVE version 3
+				ui.Key_SetCatcher(KEYCATCH_UI);
+			}
+			else if (4 == Cvar_VariableIntegerValue("ui_missionfailed"))
+			{
+				Menus_ActivateByName("missionfailedYAV_menu"); //YAVIN version 4
+				ui.Key_SetCatcher(KEYCATCH_UI);
+			}
+			else if (5 == Cvar_VariableIntegerValue("ui_missionfailed"))
+			{
+				Menus_ActivateByName("missionfailedDF_menu"); //darkforces version 5
+				ui.Key_SetCatcher(KEYCATCH_UI);
+			}
+			else if (6 == Cvar_VariableIntegerValue("ui_missionfailed"))
+			{
+				Menus_ActivateByName("missionfailedKOTOR_menu"); //KOTOR version 6
+				ui.Key_SetCatcher(KEYCATCH_UI);
+			}
+			else if (7 == Cvar_VariableIntegerValue("ui_missionfailed"))
+			{
+				Menus_ActivateByName("missionfailedSUV_menu"); //SURVIVAL version 7
+				ui.Key_SetCatcher(KEYCATCH_UI);
+			}
+			else if (8 == Cvar_VariableIntegerValue("ui_missionfailed"))
+			{
+				Menus_ActivateByName("missionfailedNINA_menu"); //nina version 8
+				ui.Key_SetCatcher(KEYCATCH_UI);
+			}
+			else if (9 == Cvar_VariableIntegerValue("ui_missionfailed"))
+			{
+				Menus_ActivateByName("missionfailedVENG_menu"); //VENGENCE version 9
 				ui.Key_SetCatcher(KEYCATCH_UI);
 			}
 			else
@@ -3464,7 +3497,7 @@ void UI_Load()
 		}
 		else if (ui_com_outcast.integer == 5)
 		{
-			menuSet = "ui/ingame_kt.txt"; //darkforces version
+			menuSet = "ui/ingame_kt.txt"; //KOTOR version
 		}
 		else if (ui_com_outcast.integer == 6)
 		{
@@ -7125,9 +7158,49 @@ void UI_AdjustSaveGameListBox(const int currentLine)
 {
 	// could be in either the ingame or shell load menu (I know, I know it's bad)
 	const menuDef_t* menu = Menus_FindByName("loadgameMenu");
+
 	if (!menu)
 	{
-		menu = Menus_FindByName("ingameloadMenu");
+		if (ui_com_outcast.integer == 0)
+		{
+			menu = Menus_FindByName("ingameloadJKAMenu"); //academy version
+		}
+		else if (ui_com_outcast.integer == 1)
+		{
+			menu = Menus_FindByName("ingameloadJKOMenu"); //outcast version
+		}
+		else if (ui_com_outcast.integer == 2)
+		{
+			menu = Menus_FindByName("ingameloadCRMenu"); //mod version
+		}
+		else if (ui_com_outcast.integer == 3)
+		{
+			menu = Menus_FindByName("ingameloadYAVMenu"); //yavIV version
+		}
+		else if (ui_com_outcast.integer == 4)
+		{
+			menu = Menus_FindByName("ingameloadDFMenu"); //darkforces version
+		}
+		else if (ui_com_outcast.integer == 5)
+		{
+			menu = Menus_FindByName("ingameloadKOTORMenu"); //KOTOR version
+		}
+		else if (ui_com_outcast.integer == 6)
+		{
+			menu = Menus_FindByName("ingameloadSUVMenu"); //survival version
+		}
+		else if (ui_com_outcast.integer == 7)
+		{
+			menu = Menus_FindByName("ingameloadNINAMenu"); //nina version
+		}
+		else if (ui_com_outcast.integer == 8)
+		{
+			menu = Menus_FindByName("ingameloadVENGMenu"); //veng version
+		}
+		else
+		{
+			menu = Menus_FindByName("ingameloadMenu"); //default version
+		}
 	}
 
 	if (menu)

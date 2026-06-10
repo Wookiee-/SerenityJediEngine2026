@@ -167,23 +167,97 @@ void UI_SetActiveMenu(const char* menuname, const char* menuID)
 		return;
 	}
 #ifndef JK2_MODE
-	if (Q_stricmp(menuname, "missionfailed_nina_menu") == 0)
+	if (Q_stricmp(menuname, "missionfailedJKO_menu") == 0)
 	{
 		Menus_CloseAll();
-		Menus_ActivateByName("missionfailed_nina_menu");
+		Menus_ActivateByName("missionfailedJKO_menu");
 		ui.Key_SetCatcher(KEYCATCH_UI);
 	}
+	if (Q_stricmp(menuname, "missionfailedCR_menu") == 0)
+	{
+		Menus_CloseAll();
+		Menus_ActivateByName("missionfailedCR_menu");
+		ui.Key_SetCatcher(KEYCATCH_UI);
+	}
+	if (Q_stricmp(menuname, "missionfailedYAV_menu") == 0)
+	{
+		Menus_CloseAll();
+		Menus_ActivateByName("missionfailedYAV_menu");
+		ui.Key_SetCatcher(KEYCATCH_UI);
+	}
+	if (Q_stricmp(menuname, "missionfailedDF_menu") == 0)
+	{
+		Menus_CloseAll();
+		Menus_ActivateByName("missionfailedDF_menu");
+		ui.Key_SetCatcher(KEYCATCH_UI);
+	}
+	if (Q_stricmp(menuname, "missionfailedKOTOR_menu") == 0)
+	{
+		Menus_CloseAll();
+		Menus_ActivateByName("missionfailedKOTOR_menu");
+		ui.Key_SetCatcher(KEYCATCH_UI);
+	}
+	if (Q_stricmp(menuname, "missionfailedSUV_menu") == 0)
+	{
+		Menus_CloseAll();
+		Menus_ActivateByName("missionfailedSUV_menu");
+		ui.Key_SetCatcher(KEYCATCH_UI);
+	}
+	if (Q_stricmp(menuname, "missionfailedNINA_menu") == 0)
+	{
+		Menus_CloseAll();
+		Menus_ActivateByName("missionfailedNINA_menu");
+		ui.Key_SetCatcher(KEYCATCH_UI);
+	}
+	if (Q_stricmp(menuname, "missionfailedVENG_menu") == 0)
+	{
+		Menus_CloseAll();
+		Menus_ActivateByName("missionfailedVENG_menu");
+		ui.Key_SetCatcher(KEYCATCH_UI);
+	}
+	/////////////////////////////////////////////////////
 	if (Q_stricmp(menuname, "missionfailed_menu") == 0)
 	{
 		Menus_CloseAll();
-
-		if (ui_com_outcast.integer == 7)
+		if (ui_com_outcast.integer == 0)
 		{
-			Menus_ActivateByName("missionfailed_nina_menu");
+			Menus_ActivateByName("missionfailed_menu"); //academy version
+		}
+		else if (ui_com_outcast.integer == 1)
+		{
+			Menus_ActivateByName("missionfailedJKO_menu"); //outcast version
+		}
+		else if (ui_com_outcast.integer == 2)
+		{
+			Menus_ActivateByName("missionfailedCR_menu"); //CREATIVE version
+		}
+		else if (ui_com_outcast.integer == 3)
+		{
+			Menus_ActivateByName("missionfailedYAV_menu"); //yavIV version
+		}
+		else if (ui_com_outcast.integer == 4)
+		{
+			Menus_ActivateByName("missionfailedDF_menu"); //darkforces version
+		}
+		else if (ui_com_outcast.integer == 5)
+		{
+			Menus_ActivateByName("missionfailedKOTOR_menu"); //KOTOR version
+		}
+		else if (ui_com_outcast.integer == 6)
+		{
+			Menus_ActivateByName("missionfailedSUV_menu"); //survival version
+		}
+		else if (ui_com_outcast.integer == 7)
+		{
+			Menus_ActivateByName("missionfailedNINA_menu"); //nina version
+		}
+		else if (ui_com_outcast.integer == 8)
+		{
+			Menus_ActivateByName("missionfailedVENG_menu"); //veng version
 		}
 		else
 		{
-			Menus_ActivateByName("missionfailed_menu");
+			Menus_ActivateByName("missionfailed_menu"); //default version
 		}
 		ui.Key_SetCatcher(KEYCATCH_UI);
 	}
@@ -258,6 +332,7 @@ static void UI_Cache_f()
 	Menus_ActivateByName("ingameMissionSelect1");
 	Menus_ActivateByName("ingameMissionSelect2");
 	Menus_ActivateByName("ingameMissionSelect3");
+	Menus_ActivateByName("ingameMissionSelectNINA");
 #endif
 }
 
@@ -475,7 +550,46 @@ UI_LoadMenu_f
 static void UI_LoadMenu_f()
 {
 	trap_Key_SetCatcher(KEYCATCH_UI);
-	Menus_ActivateByName("ingameloadMenu");
+	if (ui_com_outcast.integer == 0)
+	{
+		Menus_ActivateByName("ingameloadJKAMenu"); //academy version
+	}
+	else if (ui_com_outcast.integer == 1)
+	{
+		Menus_ActivateByName("ingameloadJKOMenu"); //outcast version
+	}
+	else if (ui_com_outcast.integer == 2)
+	{
+		Menus_ActivateByName("ingameloadCRMenu"); //creative version
+	}
+	else if (ui_com_outcast.integer == 3)
+	{
+		Menus_ActivateByName("ingameloadYAVMenu"); //yavIV version
+	}
+	else if (ui_com_outcast.integer == 4)
+	{
+		Menus_ActivateByName("ingameloadDFMenu"); //darkforces version
+	}
+	else if (ui_com_outcast.integer == 5)
+	{
+		Menus_ActivateByName("ingameloadKOTORMenu"); //KOTOR version
+	}
+	else if (ui_com_outcast.integer == 6)
+	{
+		Menus_ActivateByName("ingameloadSUVMenu"); //survival version
+	}
+	else if (ui_com_outcast.integer == 7)
+	{
+		Menus_ActivateByName("ingameloadNINAMenu"); //nina version
+	}
+	else if (ui_com_outcast.integer == 8)
+	{
+		Menus_ActivateByName("ingameloadVENGMenu"); //veng version
+	}
+	else
+	{
+		Menus_ActivateByName("ingameloadMenu"); //default version
+	}
 }
 
 /*
@@ -490,7 +604,46 @@ static void UI_SaveMenu_f()
 #endif
 
 	trap_Key_SetCatcher(KEYCATCH_UI);
-	Menus_ActivateByName("ingamesaveMenu");
+	if (ui_com_outcast.integer == 0)
+	{
+		Menus_ActivateByName("ingamesaveJKAMenu"); //academy version
+	}
+	else if (ui_com_outcast.integer == 1)
+	{
+		Menus_ActivateByName("ingamesaveJKOMenu"); //outcast version
+	}
+	else if (ui_com_outcast.integer == 2)
+	{
+		Menus_ActivateByName("ingamesaveCRMenu"); //creative version
+	}
+	else if (ui_com_outcast.integer == 3)
+	{
+		Menus_ActivateByName("ingamesaveYAVMenu"); //yavIV version
+	}
+	else if (ui_com_outcast.integer == 4)
+	{
+		Menus_ActivateByName("ingamesaveDFMenu"); //darkforces version
+	}
+	else if (ui_com_outcast.integer == 5)
+	{
+		Menus_ActivateByName("ingamesaveKOTORMenu"); //KOTOR version
+	}
+	else if (ui_com_outcast.integer == 6)
+	{
+		Menus_ActivateByName("ingamesaveSUVMenu"); //survival version
+	}
+	else if (ui_com_outcast.integer == 7)
+	{
+		Menus_ActivateByName("ingamesaveNINAMenu"); //nina version
+	}
+	else if (ui_com_outcast.integer == 8)
+	{
+		Menus_ActivateByName("ingamesaveVENGMenu"); //veng version
+	}
+	else
+	{
+		Menus_ActivateByName("ingamesaveMenu"); //default version
+	}
 }
 
 //--------------------------------------------

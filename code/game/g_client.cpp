@@ -2642,7 +2642,7 @@ void G_ChangePlayerModel(gentity_t* ent, const char* newModel)
 
 				if (HeIsJedi(ent))
 				{// jedi inventory
-					if (com_outcast->integer == 1) //playing outcast
+					if (com_outcast->integer == 1 || com_outcast->integer == 4) //playing outcast / dark forces
 					{//Outcast inventory
 						ent->client->ps.inventory[INV_LIGHTAMP_GOGGLES] = 1;
 						ent->client->ps.inventory[INV_CLOAK] = 1;
@@ -2691,7 +2691,7 @@ void G_ChangePlayerModel(gentity_t* ent, const char* newModel)
 							ent->flags |= FL_BOBAFETT; //low-level shots bounce off, no knockback
 							ent->flags |= FL_SABERDAMAGE_RESIST; //Partially resistant to sabers
 						}
-						if (com_outcast->integer == 1) //playing outcast
+						if (com_outcast->integer == 1 || com_outcast->integer == 4) //playing outcast / dark forces
 						{//Outcast inventory
 							ent->client->ps.inventory[INV_LIGHTAMP_GOGGLES] = 1;
 							ent->client->ps.inventory[INV_CLOAK] = 1;
@@ -2716,7 +2716,7 @@ void G_ChangePlayerModel(gentity_t* ent, const char* newModel)
 						G_RemoveHolsterModels(ent);
 						ent->flags |= FL_DINDJARIN; //low-level shots bounce off, no knockback
 						ent->flags |= FL_SABERDAMAGE_RESIST; //Partially resistant to sabers
-						if (com_outcast->integer == 1) //playing outcast
+						if (com_outcast->integer == 1 || com_outcast->integer == 4) //playing outcast / dark forces
 						{//Outcast inventory
 							ent->client->ps.inventory[INV_LIGHTAMP_GOGGLES] = 1;
 							ent->client->ps.inventory[INV_CLOAK] = 1;
@@ -2737,7 +2737,7 @@ void G_ChangePlayerModel(gentity_t* ent, const char* newModel)
 					}
 					else
 					{
-						if (com_outcast->integer == 1) //playing outcast
+						if (com_outcast->integer == 1 || com_outcast->integer == 4) //playing outcast / dark forces
 						{//Outcast inventory
 							ent->client->ps.inventory[INV_LIGHTAMP_GOGGLES] = 1;
 							ent->client->ps.inventory[INV_CLOAK] = 1;
@@ -2827,7 +2827,7 @@ void G_ChangePlayerModel(gentity_t* ent, const char* newModel)
 
 				if (HeIsJedi(ent))
 				{// jedi inventory
-					if (com_outcast->integer == 1) //playing outcast
+					if (com_outcast->integer == 1 || com_outcast->integer == 4) //playing outcast or dark forces
 					{//Outcast inventory
 						ent->client->ps.inventory[INV_LIGHTAMP_GOGGLES] = 1;
 						ent->client->ps.inventory[INV_CLOAK] = 1;
@@ -2876,7 +2876,7 @@ void G_ChangePlayerModel(gentity_t* ent, const char* newModel)
 							ent->flags |= FL_BOBAFETT; //low-level shots bounce off, no knockback
 							ent->flags |= FL_SABERDAMAGE_RESIST; //Partially resistant to sabers
 						}
-						if (com_outcast->integer == 1) //playing outcast
+						if (com_outcast->integer == 1 || com_outcast->integer == 4) //playing outcast or dark forces
 						{//Outcast inventory
 							ent->client->ps.inventory[INV_LIGHTAMP_GOGGLES] = 1;
 							ent->client->ps.inventory[INV_CLOAK] = 1;
@@ -2901,7 +2901,7 @@ void G_ChangePlayerModel(gentity_t* ent, const char* newModel)
 						G_RemoveHolsterModels(ent);
 						ent->flags |= FL_DINDJARIN; //low-level shots bounce off, no knockback
 						ent->flags |= FL_SABERDAMAGE_RESIST; //Partially resistant to sabers
-						if (com_outcast->integer == 1) //playing outcast
+						if (com_outcast->integer == 1 || com_outcast->integer == 4) //playing outcast or dark forces
 						{//Outcast inventory
 							ent->client->ps.inventory[INV_LIGHTAMP_GOGGLES] = 1;
 							ent->client->ps.inventory[INV_CLOAK] = 1;
@@ -2922,7 +2922,7 @@ void G_ChangePlayerModel(gentity_t* ent, const char* newModel)
 					}
 					else
 					{
-						if (com_outcast->integer == 1) //playing outcast
+						if (com_outcast->integer == 1 || com_outcast->integer == 4) //playing outcast or dark forces
 						{//Outcast inventory
 							ent->client->ps.inventory[INV_LIGHTAMP_GOGGLES] = 1;
 							ent->client->ps.inventory[INV_CLOAK] = 1;

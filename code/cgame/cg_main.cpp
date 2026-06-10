@@ -599,7 +599,7 @@ static cvarTable_t cvarTable[] = {
 	{&cg_debugHealthBars, "cg_debugHealthBars", "0", CVAR_ARCHIVE},
 	{&cg_debugBlockBars, "cg_drawblockpointbar", "0", CVAR_ARCHIVE},
 
-	{&cg_SFXSabers, "cg_SFXSabers", "5", CVAR_ARCHIVE},
+	{&cg_SFXSabers, "cg_SFXSabers", "3", CVAR_ARCHIVE},
 	{&cg_SFXSabersGlowSize, "cg_SFXSabersGlowSize", "0.6f", CVAR_ARCHIVE},
 	{&cg_SFXSabersCoreSize, "cg_SFXSabersCoreSize", "0.5f", CVAR_ARCHIVE},
 
@@ -632,14 +632,14 @@ static cvarTable_t cvarTable[] = {
 	{&cg_scaleVehicleSensitivity, "cg_scaleVehicleSensitivity", "1", CVAR_ARCHIVE},
 
 	{&cg_trueguns, "cg_trueguns", "1", CVAR_ARCHIVE},
-	{&cg_fpls, "cg_fpls", "0", CVAR_ARCHIVE},
-	{&cg_trueroll, "cg_trueroll", "1", CVAR_ARCHIVE},
-	{&cg_trueflip, "cg_trueflip", "1", CVAR_ARCHIVE},
+	{&cg_fpls, "cg_fpls", "1", CVAR_ARCHIVE},
+	{&cg_trueroll, "cg_trueroll", "0", CVAR_ARCHIVE},
+	{&cg_trueflip, "cg_trueflip", "0", CVAR_ARCHIVE},
 	{&cg_truespin, "cg_truespin", "0", CVAR_ARCHIVE},
 	{&cg_truemoveroll, "cg_truemoveroll", "0", CVAR_ARCHIVE},
 	{&cg_truesaberonly, "cg_truesaberonly", "0", CVAR_ARCHIVE},
 	{&cg_trueeyeposition, "cg_trueeyeposition", "0.0", 0},
-	{&cg_trueinvertsaber, "cg_trueinvertsaber", "0", CVAR_ARCHIVE},
+	{&cg_trueinvertsaber, "cg_trueinvertsaber", "1", CVAR_ARCHIVE},
 	{&cg_truefov, "cg_truefov", "90", CVAR_ARCHIVE},
 	{&cg_truebobbing, "cg_truebobbing", "1", CVAR_ARCHIVE},
 

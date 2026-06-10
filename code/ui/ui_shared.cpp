@@ -5207,19 +5207,19 @@ menuDef_t* Menus_ActivateByName(const char* p)
 	// Nina override
 	if (ui_com_outcast.integer == 7 && Q_stricmp(p, "ingameWpnSelect") == 0)
 	{
-		p = "ingameWpnSelect_nina";
+		p = "ingameWpnSelectNINA";
 	}
 	if (ui_com_outcast.integer == 7 && Q_stricmp(p, "ingameWpnSelectHelp") == 0)
 	{
-		p = "ingameWpnSelectHelp_nina";
+		p = "ingameWpnSelectHelpNINA";
 	}
 	if (ui_com_outcast.integer == 7 && Q_stricmp(p, "ingameForceSelect") == 0)
 	{
-		p = "ingameForceSelect_nina";
+		p = "ingameForceSelectNINA";
 	}
 	if (ui_com_outcast.integer == 7 && Q_stricmp(p, "ingameForceHelp") == 0)
 	{
-		p = "ingameForceHelp_nina";
+		p = "ingameForceHelpNINA";
 	}
 
 	menuDef_t* m = nullptr;
@@ -5407,7 +5407,25 @@ static const char* g_bindCommands[] =
 #endif
 	"taunt",
 	"uimenu ingameloadmenu",
+	"uimenu ingameloadJKAMenu",
+	"uimenu ingameloadJKOmenu",
+	"uimenu ingameloadCROmenu",
+	"uimenu ingameloadYAVMenu",
+	"uimenu ingameloadDFMenu",
+	"uimenu ingameloadKOTORMenu",
+	"uimenu ingameloadSUVMenu",
+	"uimenu ingameloadNINAMenu",
+	"uimenu ingameloadVENGMenu",
 	"uimenu ingamesavemenu",
+	"uimenu ingamesaveJKAMenu",
+	"uimenu ingamesaveJKOmenu",
+	"uimenu ingamesaveCRmenu",
+	"uimenu ingamesaveYAVmenu",
+	"uimenu ingamesaveDFmenu",
+	"uimenu ingamesaveKOTORmenu",
+	"uimenu ingamesaveSUVmenu",
+	"uimenu ingamesaveNINAMenu",
+	"uimenu ingamesaveVENGmenu",
 	"use_bacta",
 	"use_electrobinoculars",
 	"use_lightamp_goggles",
