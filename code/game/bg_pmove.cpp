@@ -17495,6 +17495,7 @@ void PM_WeaponLightsaber()
 #ifdef _DEBUG
 		Com_Printf("PM_WeaponLightsaber: pm or pm->ps was null\n");
 #endif
+		return;
 	}
 
 	const qboolean is_holding_block_button = pm->ps->ManualBlockingFlags & 1 << HOLDINGBLOCK ? qtrue : qfalse;
