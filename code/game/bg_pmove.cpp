@@ -17498,9 +17498,6 @@ void PM_WeaponLightsaber()
 		return;
 	}
 
-	// Cache pm on stack - immune to .bss buffer overflows
-	pmove_t* const pm_local = pm;
-
 	const qboolean is_holding_block_button = pm->ps->ManualBlockingFlags & 1 << HOLDINGBLOCK ? qtrue : qfalse;
 	const qboolean is_holding_block_button_and_attack = pm->ps->ManualBlockingFlags & 1 << HOLDINGBLOCKANDATTACK ? qtrue : qfalse;
 	const qboolean walking_blocking = pm->ps->ManualBlockingFlags & 1 << MBF_BLOCKWALKING ? qtrue : qfalse;
@@ -18518,11 +18515,7 @@ void PM_WeaponLightsaber()
 						}
 					}
 					//starting a new attack, as such, remove the attack fake flag.
-					//Use stack-local pm (immune to .bss buffer overflows)
-					if (pm_local && pm_local->ps)
-					{
-						pm_local->ps->userInt3 &= ~(1 << FLAG_ATTACKFAKE);
-					}
+					pm->ps->userInt3 &= ~(1 << FLAG_ATTACKFAKE);
 
 					if (PM_SaberKataDone(curmove, newmove))
 					{
@@ -21633,20 +21626,10 @@ void Pmove(pmove_t* pmove)
 void PM_SaberFakeFlagUpdate(const int new_move)
 {
 	//checks to see if the attack fake flag needs to be removed.
-	if (!pm)
-	{
-		return;
-	}
-	// Cache pm on stack - immune to .bss buffer overflows
-	pmove_t* const pm_local = pm;
-	if (!pm_local)
-	{
-		return;
-	}
 	if (!PM_SaberInTransition(new_move) && !PM_SaberInStart(new_move) && !PM_SaberInAttackPure(new_move))
 	{
 		//not going into an attack move, clear the flag
-		pm_local->ps->userInt3 &= ~(1 << FLAG_ATTACKFAKE);
+		pm->ps->userInt3 &= ~(1 << FLAG_ATTACKFAKE);
 	}
 }
 
