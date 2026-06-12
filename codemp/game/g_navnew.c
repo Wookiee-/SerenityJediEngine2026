@@ -558,15 +558,15 @@ qboolean NAVNEW_TestNodeConnectionBlocked(const int wp1, const int wp2, const ge
 	trace_t trace;
 	int clipmask = MASK_NPCSOLID | CONTENTS_BOTCLIP;
 	int ignoreEntNum;
-	vec3_t player_mins, player_maxs;
+	vec3_t playerMins, playerMaxs;
 
 	if (!checkWorld && !checkEnts)
 	{
 		//duh, nothing to trace against
 		return qfalse;
 	}
-	VectorSet(player_mins, -15, -15, DEFAULT_MINS_2);
-	VectorSet(player_maxs, 15, 15, DEFAULT_MAXS_2);
+	VectorSet(playerMins, -15, -15, DEFAULT_MINS_2);
+	VectorSet(playerMaxs, 15, 15, DEFAULT_MAXS_2);
 
 	trap->Nav_GetNodePosition(wp1, pos1);
 	trap->Nav_GetNodePosition(wp2, pos2);
@@ -587,8 +587,8 @@ qboolean NAVNEW_TestNodeConnectionBlocked(const int wp1, const int wp2, const ge
 	}
 	else
 	{
-		VectorCopy(player_mins, mins);
-		VectorCopy(player_maxs, maxs);
+		VectorCopy(playerMins, mins);
+		VectorCopy(playerMaxs, maxs);
 		ignoreEntNum = ENTITYNUM_NONE;
 	}
 	mins[2] += STEPSIZE;

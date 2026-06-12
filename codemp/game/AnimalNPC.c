@@ -28,8 +28,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #ifdef _GAME //we only want a few of these functions for BG
 
-extern vec3_t player_mins;
-extern vec3_t player_maxs;
+extern vec3_t playerMins;
+extern vec3_t playerMaxs;
 
 extern int BG_AnimLength(int index, animNumber_t anim);
 

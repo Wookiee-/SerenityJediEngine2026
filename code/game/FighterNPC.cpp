@@ -88,8 +88,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #ifdef QAGAME //SP or game side MP
 extern vmCvar_t cg_thirdPersonAlpha;
-extern vec3_t player_mins;
-extern vec3_t player_maxs;
+extern vec3_t playerMins;
+extern vec3_t playerMaxs;
 extern cvar_t* g_speederControlScheme;
 extern void ChangeWeapon(const gentity_t* ent, int new_weapon);
 extern void PM_SetAnim(const pmove_t* pm, int setAnimParts, int anim, int setAnimFlags, int blendTime);
@@ -998,25 +998,25 @@ static void ProcessMoveCommands(Vehicle_t* p_veh)
 	/********************************************************************************/
 }
 
-extern void BG_VehicleTurnRateForSpeed(const Vehicle_t* p_veh, float speed, float* m_pitch_override, float* m_yaw_override);
+extern void BG_VehicleTurnRateForSpeed(const Vehicle_t* p_veh, float speed, float* mPitchOverride, float* mYawOverride);
 
 static void FighterWingMalfunctionCheck(Vehicle_t* p_veh, const playerState_t* parent_ps)
 {
-	float m_pitch_override = 1.0f;
-	float m_yaw_override = 1.0f;
-	BG_VehicleTurnRateForSpeed(p_veh, parent_ps->speed, &m_pitch_override, &m_yaw_override);
+	float mPitchOverride = 1.0f;
+	float mYawOverride = 1.0f;
+	BG_VehicleTurnRateForSpeed(p_veh, parent_ps->speed, &mPitchOverride, &mYawOverride);
 	//check right wing damage
 	if (parent_ps->brokenLimbs & 1 << SHIPSURF_DAMAGE_RIGHT_HEAVY)
 	{
 		//right wing has taken heavy damage
 		p_veh->m_vOrientation[ROLL] += (sin(p_veh->m_ucmd.serverTime * 0.001) + 1.0f) * p_veh->m_fTimeModifier *
-			m_yaw_override * 50.0f;
+			mYawOverride * 50.0f;
 	}
 	else if (parent_ps->brokenLimbs & 1 << SHIPSURF_DAMAGE_RIGHT_LIGHT)
 	{
 		//right wing has taken light damage
 		p_veh->m_vOrientation[ROLL] += (sin(p_veh->m_ucmd.serverTime * 0.001) + 1.0f) * p_veh->m_fTimeModifier *
-			m_yaw_override * 12.5f;
+			mYawOverride * 12.5f;
 	}
 
 	//check left wing damage
@@ -1024,34 +1024,34 @@ static void FighterWingMalfunctionCheck(Vehicle_t* p_veh, const playerState_t* p
 	{
 		//left wing has taken heavy damage
 		p_veh->m_vOrientation[ROLL] -= (sin(p_veh->m_ucmd.serverTime * 0.001) + 1.0f) * p_veh->m_fTimeModifier *
-			m_yaw_override * 50.0f;
+			mYawOverride * 50.0f;
 	}
 	else if (parent_ps->brokenLimbs & 1 << SHIPSURF_DAMAGE_LEFT_LIGHT)
 	{
 		//left wing has taken light damage
 		p_veh->m_vOrientation[ROLL] -= (sin(p_veh->m_ucmd.serverTime * 0.001) + 1.0f) * p_veh->m_fTimeModifier *
-			m_yaw_override * 12.5f;
+			mYawOverride * 12.5f;
 	}
 }
 
 static void FighterNoseMalfunctionCheck(Vehicle_t* p_veh, const playerState_t* parent_ps)
 {
-	float m_pitch_override = 1.0f;
-	float m_yaw_override = 1.0f;
-	BG_VehicleTurnRateForSpeed(p_veh, parent_ps->speed, &m_pitch_override, &m_yaw_override);
+	float mPitchOverride = 1.0f;
+	float mYawOverride = 1.0f;
+	BG_VehicleTurnRateForSpeed(p_veh, parent_ps->speed, &mPitchOverride, &mYawOverride);
 	//check nose damage
 	if (parent_ps->brokenLimbs & 1 << SHIPSURF_DAMAGE_FRONT_HEAVY)
 	{
 		//nose has taken heavy damage
 		//pitch up and down over time
-		p_veh->m_vOrientation[PITCH] += sin(p_veh->m_ucmd.serverTime * 0.001) * p_veh->m_fTimeModifier * m_pitch_override *
+		p_veh->m_vOrientation[PITCH] += sin(p_veh->m_ucmd.serverTime * 0.001) * p_veh->m_fTimeModifier * mPitchOverride *
 			50.0f;
 	}
 	else if (parent_ps->brokenLimbs & 1 << SHIPSURF_DAMAGE_FRONT_LIGHT)
 	{
 		//nose has taken heavy damage
 		//pitch up and down over time
-		p_veh->m_vOrientation[PITCH] += sin(p_veh->m_ucmd.serverTime * 0.001) * p_veh->m_fTimeModifier * m_pitch_override *
+		p_veh->m_vOrientation[PITCH] += sin(p_veh->m_ucmd.serverTime * 0.001) * p_veh->m_fTimeModifier * mPitchOverride *
 			20.0f;
 	}
 }

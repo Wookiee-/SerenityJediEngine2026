@@ -953,10 +953,10 @@ static void CG_DrawoldblockPoints(const centity_t* cent)
 	vec4_t cColor{};
 	float x = BPFUELBAR_X;
 	constexpr float y = BPFUELBAR_Y;
-	
+
 	// Only draw block points for the real player (SP)
 	if (cent->currentState.number != 0)
-	{ 
+	{
 		return;
 	}
 
@@ -1072,7 +1072,7 @@ static void CG_DrawoldblockPoints(const centity_t* cent)
 static void CG_DrawCusblockPoints(const int x, const int y, const float hud_ratio)
 {
 	vec4_t calc_color;
-	
+
 	// Only draw block points for the real player
 	if (cg.snap->ps.clientNum != 0)
 	{
@@ -3126,7 +3126,7 @@ static void CG_DrawSimpleForcePower(const centity_t* cent)
 	}
 
 	// Make the hud flash by setting forceHUDTotalFlashTime above cg.time
-	if (cg.forceHUDTotalFlashTime > cg.time || cg_entities[cg.snap->ps.clientNum].currentState.userInt3 & 1 <<FLAG_FATIGUED)
+	if (cg.forceHUDTotalFlashTime > cg.time || cg_entities[cg.snap->ps.clientNum].currentState.userInt3 & 1 << FLAG_FATIGUED)
 	{
 		flash = qtrue;
 		if (cg.forceHUDNextFlashTime < cg.time)
@@ -4820,6 +4820,7 @@ static void CG_DrawCrosshair(vec3_t world_point)
 	const qboolean holding_block_and_attack = (cg.predictedPlayerState.ManualBlockingFlags & (1 << HOLDINGBLOCKANDATTACK)) ? qtrue : qfalse;
 	const qboolean holding_sprint = (cg.predictedPlayerState.PlayerEffectFlags & (1 << PEF_SPRINTING)) ? qtrue : qfalse;
 	const qboolean holding_block_button = (cg.predictedPlayerState.pm_flags & PMF_BLOCK_HELD) ? qtrue : qfalse;
+	const qboolean holding_walking_button = (cg.predictedPlayerState.pm_flags & PMF_WALKING_HELD) ? qtrue : qfalse;
 
 	if (!cg_drawCrosshair.integer)
 	{
@@ -4841,7 +4842,7 @@ static void CG_DrawCrosshair(vec3_t world_point)
 	if (cg_adaptiveCrosshair.integer == 1 &&
 		(cg.snap->ps.weapon == WP_MELEE || cg.snap->ps.weapon == WP_NONE))
 	{
-		if ((holding_block_button == qfalse) ||
+		if ((holding_block_button == qfalse || holding_walking_button == qfalse) ||
 			holding_sprint == qtrue)
 		{
 			// Don't show crosshair when using a MELEE and we're not HOLDING THE BLOCK BUTTON
@@ -5624,10 +5625,19 @@ static void CG_DrawCrosshairItem()
 
 	CG_ScanForCrosshairEntity(scan_all);
 
-	if (cg_entities[cg.crosshairclientNum].currentState.eType == ET_ITEM && cg.snap->ps.weapon != WP_DROIDEKA)
+	if (cg_entities[cg.crosshairclientNum].currentState.eType == ET_ITEM)
 	{
-		CG_DrawPic(50, 285, 32, 32, cgs.media.useableHint);
-		return;
+		vec3_t diff;
+		VectorSubtract(cg_entities[cg.crosshairclientNum].lerpOrigin, cg.refdef.vieworg, diff);
+
+		float distSq = VectorLengthSquared(diff);
+
+		// Only show hint if within 512 units
+		if (distSq < (512.0f * 512.0f))
+		{
+			CG_DrawPic(50, 285, 32, 32, cgs.media.useableHint);
+			return;
+		}
 	}
 
 	cgi_R_SetColor(nullptr);
@@ -7020,10 +7030,20 @@ qboolean CanUseInfrontOf(const gentity_t*);
 static void CG_UseIcon()
 {
 	cg_usingInFrontOf = CanUseInfrontOf(cg_entities[cg.snap->ps.clientNum].gent);
+
 	if (cg_usingInFrontOf)
 	{
-		cgi_R_SetColor(nullptr);
-		CG_DrawPic(50, 285, 32, 32, cgs.media.useableHint);
+		vec3_t diff;
+		VectorSubtract(cg_entities[cg.crosshairclientNum].lerpOrigin, cg.refdef.vieworg, diff);
+
+		float distSq = VectorLengthSquared(diff);
+
+		// Only show hint if within 512 units
+		if (distSq < (512.0f * 512.0f))
+		{
+			cgi_R_SetColor(nullptr);
+			CG_DrawPic(50, 285, 32, 32, cgs.media.useableHint);
+		}
 	}
 }
 

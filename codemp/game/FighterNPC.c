@@ -30,8 +30,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #endif
 #ifdef _GAME //SP or game side MP
 extern vmCvar_t cg_thirdPersonAlpha;
-extern vec3_t player_mins;
-extern vec3_t player_maxs;
+extern vec3_t playerMins;
+extern vec3_t playerMaxs;
 extern void ChangeWeapon(const gentity_t* ent, int newWeapon);
 extern int PM_AnimLength(const animNumber_t anim);
 extern void G_VehicleTrace(trace_t* results, const vec3_t start, const vec3_t tMins, const vec3_t tMaxs,

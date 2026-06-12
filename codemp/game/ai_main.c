@@ -5164,8 +5164,8 @@ static void move_toward_ideal_angles(bot_state_t* bs)
 //are and if we should move to avoid obstacles.
 static int bot_trace_strafe(const bot_state_t* bs, vec3_t traceto)
 {
-	const vec3_t player_mins = { -15, -15, -8 };
-	const vec3_t player_maxs = { 15, 15, DEFAULT_MAXS_2 };
+	const vec3_t playerMins = { -15, -15, -8 };
+	const vec3_t playerMaxs = { 15, 15, DEFAULT_MAXS_2 };
 	vec3_t from, to;
 	vec3_t dir_ang, dir_dif;
 	vec3_t forward, right;
@@ -5201,7 +5201,7 @@ static int bot_trace_strafe(const bot_state_t* bs, vec3_t traceto)
 	to[1] = from[1] + forward[1] * 32;
 	to[2] = from[2] + forward[2] * 32;
 
-	trap->Trace(&tr, from, player_mins, player_maxs, to, bs->client, MASK_PLAYERSOLID, qfalse, 0, 0);
+	trap->Trace(&tr, from, playerMins, playerMaxs, to, bs->client, MASK_PLAYERSOLID, qfalse, 0, 0);
 
 	if (tr.fraction == 1)
 	{
@@ -5218,7 +5218,7 @@ static int bot_trace_strafe(const bot_state_t* bs, vec3_t traceto)
 	to[1] += right[1] * 32;
 	to[2] += right[2] * 32;
 
-	trap->Trace(&tr, from, player_mins, player_maxs, to, bs->client, MASK_PLAYERSOLID, qfalse, 0, 0);
+	trap->Trace(&tr, from, playerMins, playerMaxs, to, bs->client, MASK_PLAYERSOLID, qfalse, 0, 0);
 
 	if (tr.fraction == 1)
 	{
@@ -5233,7 +5233,7 @@ static int bot_trace_strafe(const bot_state_t* bs, vec3_t traceto)
 	to[1] -= right[1] * 64;
 	to[2] -= right[2] * 64;
 
-	trap->Trace(&tr, from, player_mins, player_maxs, to, bs->client, MASK_PLAYERSOLID, qfalse, 0, 0);
+	trap->Trace(&tr, from, playerMins, playerMaxs, to, bs->client, MASK_PLAYERSOLID, qfalse, 0, 0);
 
 	if (tr.fraction == 1)
 	{

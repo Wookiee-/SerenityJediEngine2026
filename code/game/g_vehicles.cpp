@@ -77,8 +77,8 @@ extern qboolean Q3_TaskIDPending(const gentity_t* ent, taskID_t taskType);
 extern void SetClientViewAngle(gentity_t* ent, vec3_t angle);
 
 extern vmCvar_t cg_thirdPersonAlpha;
-extern vec3_t player_mins;
-extern vec3_t player_maxs;
+extern vec3_t playerMins;
+extern vec3_t playerMaxs;
 extern cvar_t* g_speederControlScheme;
 extern cvar_t* in_joystick;
 extern void PM_SetAnim(const pmove_t* pm, int setAnimParts, int anim, int setAnimFlags, int blendTime);
@@ -388,8 +388,8 @@ void G_DriveATST(gentity_t* pEnt, gentity_t* atst)
 		pEnt->flags &= ~FL_SHIELDED;
 		pEnt->client->ps.eFlags &= ~EF_IN_ATST;
 		//size
-		VectorCopy(player_mins, pEnt->mins);
-		VectorCopy(player_maxs, pEnt->maxs);
+		VectorCopy(playerMins, pEnt->mins);
+		VectorCopy(playerMaxs, pEnt->maxs);
 		pEnt->client->crouchheight = CROUCH_MAXS_2;
 		pEnt->client->standheight = DEFAULT_MAXS_2;
 		G_ChangePlayerModel(pEnt, pEnt->NPC_type);

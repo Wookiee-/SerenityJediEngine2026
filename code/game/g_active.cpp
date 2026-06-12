@@ -427,18 +427,18 @@ static qboolean G_ValidateLookEnemy(gentity_t* self, gentity_t* enemy)
 
 static void G_ChooseLookEnemy(gentity_t* self, const usercmd_t* ucmd)
 {
-	//FIXME: should be a more intelligent way of doing this, like auto aim?
-	//closest, most in front... did damage to... took damage from?  How do we know who the player is focusing on?
-	gentity_t* bestEnt = nullptr;
-	gentity_t* entity_list[MAX_GENTITIES];
-	vec3_t center, mins{}, maxs{}, fwdangles{}, forward;
-	constexpr float radius = 256;
-	float bestRating = 0.0f;
+	gentity_t* best_ent = nullptr;
 
-	//FIXME: no need to do this in 1st person?
-	fwdangles[0] = 0; //Must initialize data!
+	// FIX: move large array off the stack
+	static gentity_t* entity_list[MAX_GENTITIES];
+
+	vec3_t center, mins{}, maxs{}, fwdangles, forward;
+	constexpr float radius = 256.0f;
+	float best_rating = 0.0f;
+
+	// Build forward vector (yaw only)
+	VectorClear(fwdangles);
 	fwdangles[1] = self->client->ps.viewangles[1];
-	fwdangles[2] = 0;
 	AngleVectors(fwdangles, forward, nullptr, nullptr);
 
 	VectorCopy(self->currentOrigin, center);
@@ -448,11 +448,12 @@ static void G_ChooseLookEnemy(gentity_t* self, const usercmd_t* ucmd)
 		mins[i] = center[i] - radius;
 		maxs[i] = center[i] + radius;
 	}
-	const int num_listed_entities = gi.EntitiesInBox(mins, maxs, entity_list, MAX_GENTITIES);
 
-	if (!num_listed_entities)
+	const int num_listed_entities =
+		gi.EntitiesInBox(mins, maxs, entity_list, MAX_GENTITIES);
+
+	if (num_listed_entities <= 0)
 	{
-		//should we clear the enemy?
 		return;
 	}
 
@@ -463,76 +464,81 @@ static void G_ChooseLookEnemy(gentity_t* self, const usercmd_t* ucmd)
 
 		if (!gi.inPVS(self->currentOrigin, ent->currentOrigin))
 		{
-			//not even potentially visible
 			continue;
 		}
 
 		if (!G_ValidateLookEnemy(self, ent))
 		{
-			//doesn't meet criteria of valid look enemy (don't check current since we would have done that before this func's call
 			continue;
 		}
 
 		if (!G_ClearLOS(self, self->client->renderInfo.eyePoint, ent))
 		{
-			//can't see him
 			continue;
 		}
-		//rate him based on how close & how in front he is
+
+		// Rate based on distance + angle
 		VectorSubtract(ent->currentOrigin, center, dir);
 		float rating = 1.0f - VectorNormalize(dir) / radius;
 		rating *= DotProduct(forward, dir) + 1.0f;
+
+		// Dead enemies are less important unless attacking
 		if (ent->health <= 0)
 		{
-			if (ucmd->buttons & BUTTON_ATTACK
-				|| ucmd->buttons & BUTTON_ALT_ATTACK
-				|| ucmd->buttons & BUTTON_FORCE_FOCUS)
+			if (ucmd->buttons & BUTTON_ATTACK ||
+				ucmd->buttons & BUTTON_ALT_ATTACK ||
+				ucmd->buttons & BUTTON_FORCE_FOCUS)
 			{
-				//if attacking, don't consider dead enemies
 				continue;
 			}
+
 			if (ent->message)
 			{
-				//key holder
-				rating *= 0.5f;
+				rating *= 0.5f; // keyholder
 			}
 			else
 			{
 				rating *= 0.1f;
 			}
 		}
+
+		// Saber users are more important
 		if (ent->s.weapon == WP_SABER)
 		{
 			rating *= 2.0f;
 		}
+
+		// If he's targeting me, he's more important
 		if (ent->enemy == self)
 		{
-			//he's mad at me, he's more important
 			rating *= 2.0f;
 		}
-		else if (ent->NPC && ent->NPC->blockedSpeechDebounceTime > level.time - 6000)
+		else if (ent->NPC &&
+			ent->NPC->blockedSpeechDebounceTime > level.time - 6000)
 		{
-			//he's detected me, he's more important
+			// Recently detected me
 			if (ent->NPC->blockedSpeechDebounceTime > level.time + 4000)
 			{
 				rating *= 1.5f;
 			}
 			else
 			{
-				//from 1.0f to 1.5f
-				rating += rating * (static_cast<float>(ent->NPC->blockedSpeechDebounceTime - level.time) + 6000.0f) /
+				rating += rating *
+					(static_cast<float>(ent->NPC->blockedSpeechDebounceTime - level.time) + 6000.0f) /
 					20000.0f;
 			}
 		}
-		if (rating > bestRating)
+
+		if (rating > best_rating)
 		{
-			bestEnt = ent;
-			bestRating = rating;
+			best_ent = ent;
+			best_rating = rating;
 		}
 	}
-	if (bestEnt)
+
+	if (best_ent)
 	{
-		self->enemy = bestEnt;
+		self->enemy = best_ent;
 	}
 }
 
@@ -6582,13 +6588,13 @@ static void G_CheckMovingLoopingSounds(gentity_t* ent, const usercmd_t* ucmd)
 
 /*
 ==============
-DoCallout
+CommandNPCtoAttack
 
 This will mark an enemy. If our friend is an NPC, order them to attack.
 ==============
 */
 
-static void DoCallout(gentity_t* caller, gentity_t* ourFriend)
+static void CommandNPCtoAttack(gentity_t* caller, gentity_t* ourFriend)
 {
 	trace_t tr;
 	vec3_t endTrace, forward;
@@ -6602,40 +6608,34 @@ static void DoCallout(gentity_t* caller, gentity_t* ourFriend)
 	gi.trace(&tr, eyes, vec3_origin, vec3_origin, endTrace, caller->s.number, MASK_SHOT, G2_NOCOLLIDE, 0);
 
 	if (tr.fraction >= 1.0f)
-	{
-		// Didn't hit anything.
+	{// nothing was hit, so just target the point in space
 		return;
 	}
 
 	if (tr.entityNum == ENTITYNUM_WORLD)
-	{
-		// Didn't hit an entity
+	{// we hit the world, so just target the point in space
 		return;
 	}
 
-	gentity_t* tracedEnemy = &g_entities[tr.entityNum];
+	gentity_t* tracedEnemy = &g_entities[tr.entityNum]; // The entity we are looking at
 
 	if (tracedEnemy->s.eType != ET_PLAYER)
-	{
-		// We hit an entity, but it wasn't an NPC.
+	{// we are not looking at a player, so just target the point in space
 		return;
 	}
 
 	if (tracedEnemy->health <= 0)
-	{
-		// We hit an entity, but it wasn't an NPC.
+	{// Player is dead, ignore
 		return;
 	}
 
 	if (tracedEnemy->client->playerTeam == ourFriend->client->playerTeam)
-	{
-		// They're on the same team. Whoops.
+	{// Player is on the same team, ignore
 		return;
 	}
 
 	if (caller->s.number == 0)
-	{
-		// Sic 'em!
+	{// caller is the player, so we want to order our friend to attack the enemy we are looking at
 		G_SetEnemy(ourFriend, tracedEnemy);
 	}
 
@@ -6643,9 +6643,8 @@ static void DoCallout(gentity_t* caller, gentity_t* ourFriend)
 	//BOTH_ATTACK_COMMAND
 
 	if (Distance(ourFriend->currentOrigin, tracedEnemy->currentOrigin) >= 512)
-	{
-		G_AddEvent(caller, Q_irand(EV_ESCAPING1, EV_ESCAPING3), 0);
-
+	{// if the enemy is far away, use a long range callout
+		G_AddEvent(caller, Q_irand(EV_CHASE1, EV_CHASE3), 0);
 		NPC_SetAnim(ourFriend, SETANIM_TORSO, TORSO_HANDSIGNAL4, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 		//BOTH_ORDER_RECIVED
 	}
@@ -6656,22 +6655,20 @@ static void DoCallout(gentity_t* caller, gentity_t* ourFriend)
 		const vec_t angle = DotProduct(ourFriend->currentAngles, dir);
 
 		if (angle >= 0.2 && angle <= 1.0)
-		{
-			G_AddEvent(caller, Q_irand(EV_CONFUSE1, EV_CONFUSE3), 0);
-
+		{// enemy is in front of us, use a front callout
+			G_AddEvent(caller, Q_irand(EV_ANGER1, EV_ANGER3), 0);
 			NPC_SetAnim(ourFriend, SETANIM_TORSO, TORSO_HANDSIGNAL1, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 			//BOTH_ORDER_RECIVED
 		}
 		else
-		{
-			G_AddEvent(caller, Q_irand(EV_SIGHT1, EV_SIGHT3), 0);
-
+		{// enemy is behind us, use a back callout
+			G_AddEvent(caller, Q_irand(EV_LOOK1, EV_LOOK2), 0);
 			NPC_SetAnim(ourFriend, SETANIM_TORSO, TORSO_HANDSIGNAL2, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD);
 			//BOTH_ORDER_RECIVED
 		}
 	}
 
-	tracedEnemy->markTime = level.time + 10000;
+	tracedEnemy->markTime = level.time + 5000;
 	caller->calloutTime = level.time + 5000;
 }
 
@@ -6717,35 +6714,32 @@ static void ClientAlterSpeed(gentity_t* ent, usercmd_t* ucmd, const qboolean con
 
 				if (ucmd->forwardmove || ucmd->rightmove || Flying)
 				{
-					//if ( ent->NPC->behaviorState != BS_FORMATION )
+					//In - Formation NPCs set thier desiredSpeed themselves
+					if (ucmd->buttons & BUTTON_WALKING)
 					{
-						//In - Formation NPCs set thier desiredSpeed themselves
-						if (ucmd->buttons & BUTTON_WALKING)
-						{
-							ent->NPC->desiredSpeed = NPC_GetWalkSpeed(ent);
-						}
-						else //running
-						{
-							ent->NPC->desiredSpeed = NPC_GetRunSpeed(ent);
-						}
+						ent->NPC->desiredSpeed = NPC_GetWalkSpeed(ent);
+					}
+					else //running
+					{
+						ent->NPC->desiredSpeed = NPC_GetRunSpeed(ent);
+					}
 
-						if (ent->NPC->currentSpeed >= 80 && !controlledByPlayer)
+					if (ent->NPC->currentSpeed >= 80 && !controlledByPlayer)
+					{
+						//At higher speeds, need to slow down close to stuff
+						//Slow down as you approach your goal
+						if (ent->NPC->distToGoal < SLOWDOWN_DIST && !(ent->NPC->aiFlags & NPCAI_NO_SLOWDOWN)) //128
 						{
-							//At higher speeds, need to slow down close to stuff
-							//Slow down as you approach your goal
-							if (ent->NPC->distToGoal < SLOWDOWN_DIST && !(ent->NPC->aiFlags & NPCAI_NO_SLOWDOWN)) //128
+							if (ent->NPC->desiredSpeed > MIN_NPC_SPEED)
 							{
-								if (ent->NPC->desiredSpeed > MIN_NPC_SPEED)
-								{
-									const float slowdownSpeed = static_cast<float>(ent->NPC->desiredSpeed) * ent->NPC->
-										distToGoal / SLOWDOWN_DIST;
+								const float slowdownSpeed = static_cast<float>(ent->NPC->desiredSpeed) * ent->NPC->
+									distToGoal / SLOWDOWN_DIST;
 
-									ent->NPC->desiredSpeed = ceil(slowdownSpeed);
-									if (ent->NPC->desiredSpeed < MIN_NPC_SPEED)
-									{
-										//don't slow down too much
-										ent->NPC->desiredSpeed = MIN_NPC_SPEED;
-									}
+								ent->NPC->desiredSpeed = ceil(slowdownSpeed);
+								if (ent->NPC->desiredSpeed < MIN_NPC_SPEED)
+								{
+									//don't slow down too much
+									ent->NPC->desiredSpeed = MIN_NPC_SPEED;
 								}
 							}
 						}
@@ -7213,117 +7207,135 @@ This will be called once for each client frame, which will
 usually be a couple times for each server frame on fast clients.
 
 ==============
-*/
-
-static void CG_DamagedBreathPuffs(const gentity_t* ent)
+*/static void CG_DamagedBreathPuffs(const gentity_t* ent)
 {
+	// ---------------------------------------------------------
+	// Safety: ent must be valid before any dereference
+	// ---------------------------------------------------------
+	if (ent == nullptr || ent->client == nullptr)
+	{
+		Com_Printf("CG_DamagedBreathPuffs: NULL ent or ent->client\n");
+		return;
+	}
+
 	gclient_t* client = ent->client;
 
-	if (ent->health < 1 || ent->client->VaderBreathTime > cg.time)
+	// ---------------------------------------------------------
+	// Early outs: dead or breathing cooldown
+	// ---------------------------------------------------------
+	if (ent->health < 1 || client->VaderBreathTime > cg.time)
 	{
 		return;
 	}
 
-	if (in_camera) // Cinematic
+	// No breathing sounds during cinematics
+	if (in_camera == qtrue)
 	{
 		return;
 	}
 
+	// ---------------------------------------------------------
+	// Helper lambdas for clarity (no behaviour change)
+	// ---------------------------------------------------------
+	auto IsNPCType = [&](const char* name) -> qboolean
+		{
+			if (ent->NPC_type == nullptr)
+			{
+				return qfalse;
+			}
+			return (Q_stricmp(name, ent->NPC_type) == 0) ? qtrue : qfalse;
+		};
+
+	auto PlayBreath = [&](qboolean damaged)
+		{
+			if (damaged == qtrue)
+			{
+				G_SoundOnEnt(ent, CHAN_VOICE, "sound/chars/darthvader/misc/breathingdamaged.mp3");
+			}
+			else
+			{
+				G_SoundOnEnt(ent, CHAN_VOICE, "sound/chars/darthvader/misc/breathing.mp3");
+			}
+		};
+
+	const qboolean damaged = (ent->health > 50) ? qfalse : qtrue;
+
+	// ---------------------------------------------------------
+	// DESANN
+	// ---------------------------------------------------------
 	if (client->NPC_class == CLASS_DESANN)
 	{
-		if (ent->health > 50)
+		if (damaged == qtrue)
 		{
-			//
-		}
-		else
-		{
-			G_SoundOnEnt(ent, CHAN_VOICE, "sound/chars/darthvader/misc/breathingdamaged.mp3");
-		}
-	}
-	else if (client->NPC_class == CLASS_GALAKMECH || ent && !Q_stricmp("Galak_Mech", ent->NPC_type))
-	{
-		if (ent->health > 50)
-		{
-			G_SoundOnEnt(ent, CHAN_VOICE, "sound/chars/darthvader/misc/breathing.mp3");
-		}
-		else
-		{
-			G_SoundOnEnt(ent, CHAN_VOICE, "sound/chars/darthvader/misc/breathingdamaged.mp3");
-		}
-	}
-	else if (client->NPC_class == CLASS_VADER)
-	{
-		if (ent && !Q_stricmp("md_vader_ep3", ent->NPC_type) ||
-			ent && !Q_stricmp("md_vader_anh", ent->NPC_type) ||
-			ent && !Q_stricmp("md_vad_tfu", ent->NPC_type) ||
-			ent && !Q_stricmp("md_vad_vr", ent->NPC_type) ||
-			ent && !Q_stricmp("md_vader", ent->NPC_type))
-		{
-			if (ent->health > 50)
-			{
-				G_SoundOnEnt(ent, CHAN_VOICE, "sound/chars/darthvader/misc/breathing.mp3");
-			}
-			else
-			{
-				G_SoundOnEnt(ent, CHAN_VOICE, "sound/chars/darthvader/misc/breathingdamaged.mp3");
-			}
-		}
-		else if (ent && !Q_stricmp("md_vader_bw", ent->NPC_type) ||
-			ent && !Q_stricmp("md_vad2_tfu", ent->NPC_type))
-		{
-			G_SoundOnEnt(ent, CHAN_VOICE, "sound/chars/darthvader/misc/breathingdamaged.mp3");
-		}
-		else
-		{
-			if (ent->health > 50)
-			{
-				G_SoundOnEnt(ent, CHAN_VOICE, "sound/chars/darthvader/misc/breathing.mp3");
-			}
-			else
-			{
-				G_SoundOnEnt(ent, CHAN_VOICE, "sound/chars/darthvader/misc/breathingdamaged.mp3");
-			}
-		}
-	}
-	else if (ent && !Q_stricmp("md_vader_ep3", ent->NPC_type) ||
-		ent && !Q_stricmp("md_vader_anh", ent->NPC_type) ||
-		ent && !Q_stricmp("md_vad_tfu", ent->NPC_type) ||
-		ent && !Q_stricmp("md_vad_vr", ent->NPC_type) ||
-		ent && !Q_stricmp("md_vader", ent->NPC_type))
-	{
-		if (ent->health > 50)
-		{
-			G_SoundOnEnt(ent, CHAN_VOICE, "sound/chars/darthvader/misc/breathing.mp3");
-		}
-		else
-		{
-			G_SoundOnEnt(ent, CHAN_VOICE, "sound/chars/darthvader/misc/breathingdamaged.mp3");
-		}
-	}
-	else if (ent && !Q_stricmp("md_vader_bw", ent->NPC_type) ||
-		ent && !Q_stricmp("md_vad2_tfu", ent->NPC_type))
-	{
-		if (ent->health > 50)
-		{
-			G_SoundOnEnt(ent, CHAN_VOICE, "sound/chars/darthvader/misc/breathing.mp3");
-		}
-		else
-		{
-			G_SoundOnEnt(ent, CHAN_VOICE, "sound/chars/darthvader/misc/breathingdamaged.mp3");
+			PlayBreath(qtrue);
 		}
 	}
 
-	if (client && gi.VoiceVolume[ent->s.number] > 0)
+	// ---------------------------------------------------------
+	// GALAK MECH
+	// ---------------------------------------------------------
+	else if (client->NPC_class == CLASS_GALAKMECH ||
+		IsNPCType("Galak_Mech") == qtrue)
 	{
-		client->VaderBreathTime = cg.time + 2000; // every 200 ms
+		PlayBreath(damaged);
 	}
-	else if (PM_SaberInAttack(client->ps.saberMove) || PM_RunningAnim(client->ps.legsAnim))
+
+	// ---------------------------------------------------------
+	// VADER CLASS
+	// ---------------------------------------------------------
+	else if (client->NPC_class == CLASS_VADER)
 	{
-		client->VaderBreathTime = cg.time + 3000; // every 3 seconds.
+		if (IsNPCType("md_vader_ep3") == qtrue ||
+			IsNPCType("md_vader_anh") == qtrue ||
+			IsNPCType("md_vad_tfu") == qtrue ||
+			IsNPCType("md_vad_vr") == qtrue ||
+			IsNPCType("md_vader") == qtrue)
+		{
+			PlayBreath(damaged);
+		}
+		else if (IsNPCType("md_vader_bw") == qtrue ||
+			IsNPCType("md_vad2_tfu") == qtrue)
+		{
+			PlayBreath(qtrue);
+		}
+		else
+		{
+			PlayBreath(damaged);
+		}
+	}
+
+	// ---------------------------------------------------------
+	// NON‑VADER NPCs USING VADER MODELS
+	// ---------------------------------------------------------
+	else if (IsNPCType("md_vader_ep3") == qtrue ||
+		IsNPCType("md_vader_anh") == qtrue ||
+		IsNPCType("md_vad_tfu") == qtrue ||
+		IsNPCType("md_vad_vr") == qtrue ||
+		IsNPCType("md_vader") == qtrue)
+	{
+		PlayBreath(damaged);
+	}
+	else if (IsNPCType("md_vader_bw") == qtrue ||
+		IsNPCType("md_vad2_tfu") == qtrue)
+	{
+		PlayBreath(damaged);
+	}
+
+	// ---------------------------------------------------------
+	// BREATHING COOLDOWN LOGIC
+	// ---------------------------------------------------------
+	if (gi.VoiceVolume[ent->s.number] > 0)
+	{
+		client->VaderBreathTime = cg.time + 2000; // 2 seconds
+	}
+	else if (PM_SaberInAttack(client->ps.saberMove) == qtrue ||
+		PM_RunningAnim(client->ps.legsAnim) == qtrue)
+	{
+		client->VaderBreathTime = cg.time + 3000; // 3 seconds
 	}
 	else
 	{
-		client->VaderBreathTime = cg.time + 6000; // every 3 seconds.
+		client->VaderBreathTime = cg.time + 6000; // 6 seconds
 	}
 }
 
@@ -7581,7 +7593,11 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 		G_HeldByMonster(ent, &ucmd);
 	}
 
-	CG_DamagedBreathPuffs(ent);
+	if (ent->client && ent->client->ps.Manual_m_blockingTime <= level.time && ent->client->ps.Manual_m_blockingTime > 0)
+	{
+		ent->client->ps.userInt3 &= ~(1 << FLAG_BLOCKING);
+		ent->client->ps.Manual_m_blockingTime = 0;
+	}
 
 	if (ent->client && ent->client->ps.powerups[PW_GALAK_SHIELD] && !droideka_npc(ent))
 	{
@@ -7593,12 +7609,6 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 		{
 			Ent_CheckBarrierIsAllowed(ent);
 		}
-	}
-
-	if (ent->client && ent->client->ps.Manual_m_blockingTime <= level.time && ent->client->ps.Manual_m_blockingTime > 0)
-	{
-		ent->client->ps.userInt3 &= ~(1 << FLAG_BLOCKING);
-		ent->client->ps.Manual_m_blockingTime = 0;
 	}
 
 	if (ent->s.number == 0)
@@ -7704,11 +7714,16 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 		}
 
 		if (!in_camera &&
-			g_entities[0].nearAllies != ENTITYNUM_NONE &&
-			ucmd->buttons & BUTTON_USE &&
-			g_entities[0].calloutTime <= level.time)
+			!PM_SaberInTransitionAny(ent->client->ps.saberMove) //not going to/from/between an attack anim
+			&& !PM_SaberInAttack(ent->client->ps.saberMove) //not in attack anim
+			&& ent->client->ps.weaponTime <= 0 && //not waiting for a weapon anim to finish
+			g_entities[0].nearAllies != ENTITYNUM_NONE && //player has allies
+			!(ent->client->ps.userInt3 & 1 << FLAG_ATTACKFAKE) && //not fake attacking
+			!(ent->client->ps.communicatingflags & 1 << CF_SABERLOCKING) && //not saber locking
+			ucmd->buttons & BUTTON_USE && //using
+			g_entities[0].calloutTime <= level.time) //callout timer is up
 		{
-			DoCallout(&g_entities[0], &g_entities[g_entities[0].nearAllies]);
+			CommandNPCtoAttack(&g_entities[0], &g_entities[g_entities[0].nearAllies]);
 		}
 
 		if (cg.zoomMode == 2)
@@ -7786,11 +7801,7 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 		G_NPCMunroMatchPlayerWeapon(ent);
 	}
 
-	// clear the rewards if time
-	/*if (level.time > ent->client->rewardTime)
-	{
-		ent->client->ps.eFlags &= ~(EF_AWARD_IMPRESSIVE | EF_AWARD_EXCELLENT | EF_AWARD_GAUNTLET | EF_AWARD_ASSIST | EF_AWARD_DEFEND | EF_AWARD_CAP);
-	}*/
+	CG_DamagedBreathPuffs(ent);
 
 	// If we are a vehicle, update ourself.
 	if (p_veh
@@ -8100,13 +8111,17 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 		}
 		else
 		{
-			client->ps.gravity = g_gravity->value;
+			if (client->ps.eFlags2 & EF2_SHIP_DEATH)
+			{
+				//float there
+				VectorClear(client->ps.velocity);
+				client->ps.gravity = 1.0f;
+			}
+			else
+			{
+				client->ps.gravity = g_gravity->value;
+			}
 		}
-	}
-
-	if (ent->s.number == 0)
-	{
-		ClientAlterSpeed(ent, ucmd, controlled_by_player, 0);
 	}
 
 	// Activate the Blocking flags
@@ -8620,6 +8635,11 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 		}
 	}
 
+	if (ent->s.number == 0)
+	{
+		ClientAlterSpeed(ent, ucmd, controlled_by_player, 0);
+	}
+
 	//FIXME: need to do this before check to avoid walls and cliffs (or just cliffs?)
 	BG_AddPushVecToUcmd(ent, ucmd);
 
@@ -8632,11 +8652,11 @@ static void ClientThink_real(gentity_t* ent, usercmd_t* ucmd)
 		WP_BlockPointsUpdate(ent);
 	}
 
-	if (ucmd->buttons & BUTTON_BLOCK)
-	{
-		//blocking with saber
-		ent->client->ps.saberManualBlockingTime = level.time + FRAMETIME;
-	}
+	//if (ucmd->buttons & BUTTON_BLOCK)
+	//{
+	//	//blocking with saber
+	//	ent->client->ps.saberManualBlockingTime = level.time + FRAMETIME;
+	//}
 
 	//if we have the saber in hand, check for starting a block to reflect shots
 	if (ent->s.number < MAX_CLIENTS || ent->NPC && G_JediInNormalAI(ent)) //NPC jedi not in a special AI mode
@@ -9037,10 +9057,14 @@ extern qboolean PM_GentCantJump(const gentity_t* gent);
 
 void ClientThink(const int clientNum, usercmd_t* ucmd)
 {
+	gentity_t* ent = g_entities + clientNum;
+	if (!ent->client)
+	{
+		return;
+	}
+
 	qboolean restore_ucmd = qfalse;
 	usercmd_t sav_ucmd = { 0 };
-
-	gentity_t* ent = g_entities + clientNum;
 
 	if (ent->s.number < MAX_CLIENTS)
 	{
@@ -9049,6 +9073,7 @@ void ClientThink(const int clientNum, usercmd_t* ucmd)
 			//you're controlling another NPC
 			const gentity_t* controlled = &g_entities[ent->client->ps.viewEntity];
 			qboolean freed = qfalse;
+
 			if (controlled->NPC
 				&& controlled->NPC->controlledTime
 				&& ent->client->ps.forcePowerLevel[FP_TELEPATHY] > FORCE_LEVEL_3)
@@ -9062,35 +9087,29 @@ void ClientThink(const int clientNum, usercmd_t* ucmd)
 				}
 				else if (ucmd->upmove > 0 || ucmd->buttons & BUTTON_BLOCK)
 				{
-					//jumping gets you out of it FIXME: check some other button instead... like ESCAPE... so you could even have total control over an NPC?
+					//jumping gets you out of it
 					G_ClearViewEntity(ent);
-					ucmd->upmove = 0; //ucmd->buttons = 0;
-					//stop player from doing anything for a half second after
+					ucmd->upmove = 0;
 					ent->aimDebounceTime = level.time + 500;
 					freed = qtrue;
 				}
 			}
-			else if (controlled->client //an NPC
-				&& PM_GentCantJump(controlled) //that cannot jump
-				&& controlled->client->moveType != MT_FLYSWIM) //and does not use upmove to fly
+			else if (controlled->client
+				&& PM_GentCantJump(controlled)
+				&& controlled->client->moveType != MT_FLYSWIM)
 			{
-				//these types use jump to get out
 				if (ucmd->upmove > 0 || ucmd->buttons & BUTTON_BLOCK)
 				{
-					//jumping gets you out of it FIXME: check some other button instead... like ESCAPE... so you could even have total control over an NPC?
 					G_ClearViewEntity(ent);
-					ucmd->upmove = 0; //ucmd->buttons = 0;
-					//stop player from doing anything for a half second after
+					ucmd->upmove = 0;
 					ent->aimDebounceTime = level.time + 500;
 					freed = qtrue;
 				}
 			}
 			else
 			{
-				//others use the blocking key
 				if (ucmd->buttons & BUTTON_BLOCK)
 				{
-					//jumping gets you out of it FIXME: check some other button instead... like ESCAPE... so you could even have total control over an NPC?
 					G_ClearViewEntity(ent);
 					ucmd->buttons = 0;
 					freed = qtrue;
@@ -9099,33 +9118,26 @@ void ClientThink(const int clientNum, usercmd_t* ucmd)
 
 			if (!freed)
 			{
-				//still controlling, save off my ucmd and clear it for my actual run through pmove
 				restore_ucmd = qtrue;
 				memcpy(&sav_ucmd, ucmd, sizeof(usercmd_t));
+				memset(ucmd, 0, sizeof(usercmd_t));
 
-				// Before using ent->client, add a null check to prevent dereferencing a NULL pointer.
-				if (ent && ent->client)
-				{
-					memset(ucmd, 0, sizeof(usercmd_t));	// ... rest of code that uses ent->client ...
-				}
-
-				//to keep pointing in same dir, need to set ucmd->angles
-				ucmd->angles[PITCH] = ANGLE2SHORT(ent->client->ps.viewangles[PITCH]) - ent->client->ps.delta_angles[
-					PITCH];
+				ucmd->angles[PITCH] = ANGLE2SHORT(ent->client->ps.viewangles[PITCH]) - ent->client->ps.delta_angles[PITCH];
 				ucmd->angles[YAW] = ANGLE2SHORT(ent->client->ps.viewangles[YAW]) - ent->client->ps.delta_angles[YAW];
 				ucmd->angles[ROLL] = 0;
+
 				if (controlled->NPC)
 				{
 					VectorClear(controlled->client->ps.moveDir);
-					controlled->client->ps.speed = sav_ucmd.buttons & BUTTON_WALKING
+					controlled->client->ps.speed =
+						(sav_ucmd.buttons & BUTTON_WALKING)
 						? controlled->NPC->stats.walkSpeed
 						: controlled->NPC->stats.runSpeed;
 				}
 			}
 			else
 			{
-				ucmd->angles[PITCH] = ANGLE2SHORT(ent->client->ps.viewangles[PITCH]) - ent->client->ps.delta_angles[
-					PITCH];
+				ucmd->angles[PITCH] = ANGLE2SHORT(ent->client->ps.viewangles[PITCH]) - ent->client->ps.delta_angles[PITCH];
 				ucmd->angles[YAW] = ANGLE2SHORT(ent->client->ps.viewangles[YAW]) - ent->client->ps.delta_angles[YAW];
 				ucmd->angles[ROLL] = 0;
 			}
@@ -9134,68 +9146,50 @@ void ClientThink(const int clientNum, usercmd_t* ucmd)
 		{
 			if (ucmd->upmove > 0)
 			{
-				//get out of ATST
 				GEntity_UseFunc(ent->activator, ent, ent);
-				ucmd->upmove = 0; //ucmd->buttons = 0;
+				ucmd->upmove = 0;
 			}
 		}
 
 		PM_CheckForceUseButton(ent, ucmd);
 	}
 
-	Vehicle_t* p_veh;
+	Vehicle_t* p_vehicle;
 
-	// Rider logic.
-	// NOTE: Maybe this should be extracted into a RiderUpdate() within the vehicle.
-	if ((p_veh = G_IsRidingVehicle(ent)) != nullptr)
+	if ((p_vehicle = G_IsRidingVehicle(ent)) != nullptr)
 	{
-		if (p_veh->m_pVehicleInfo->UpdateRider(p_veh, ent, ucmd))
+		if (p_vehicle->m_pVehicleInfo->UpdateRider(p_vehicle, ent, ucmd))
 		{
 			restore_ucmd = qtrue;
 			memcpy(&sav_ucmd, ucmd, sizeof(usercmd_t));
 			memset(ucmd, 0, sizeof(usercmd_t));
+
 			ucmd->angles[PITCH] = sav_ucmd.angles[PITCH];
 			ucmd->angles[YAW] = sav_ucmd.angles[YAW];
 			ucmd->angles[ROLL] = sav_ucmd.angles[ROLL];
-			{
-				//trying to change weapons to a valid weapon for this vehicle, to preserve this weapon change command
-				ucmd->weapon = sav_ucmd.weapon;
-			}
-			{
-				//keep our current weapon
-				{
-					//not changing weapons and we are using one of our weapons, not using vehicle weapon
-					//so we actually want to do our fire weapon on us, not the vehicle
-					ucmd->buttons = sav_ucmd.buttons & (BUTTON_ATTACK | BUTTON_ALT_ATTACK);
-				}
-			}
+
+			ucmd->weapon = sav_ucmd.weapon;
+			ucmd->buttons = sav_ucmd.buttons & (BUTTON_ATTACK | BUTTON_ALT_ATTACK);
 		}
 	}
 
 	ent->client->usercmd = *ucmd;
 
-	//	if ( !g_syncronousClients->integer )
-	{
-		ClientThink_real(ent, ucmd);
-	}
+	ClientThink_real(ent, ucmd);
 
-	// If a vehicle, make sure to attach our driver and passengers here (after we pmove, which is done in Think_Real))
 	if (ent->client && ent->client->NPC_class == CLASS_VEHICLE)
 	{
-		p_veh = ent->m_pVehicle;
-		p_veh->m_pVehicleInfo->AttachRiders(p_veh);
+		p_vehicle = ent->m_pVehicle;
+		p_vehicle->m_pVehicleInfo->AttachRiders(p_vehicle);
 	}
 
-	// ClientThink_real can end up freeing this ent, need to check
 	if (restore_ucmd && ent->client)
 	{
-		//restore ucmd for later so NPC you're controlling can refer to them
 		memcpy(&ent->client->usercmd, &sav_ucmd, sizeof(usercmd_t));
 	}
 
 	if (ent->s.number)
 	{
-		//NPCs drown, burn from lava, etc, also
 		P_WorldEffects(ent);
 	}
 }

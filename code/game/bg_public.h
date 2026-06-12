@@ -266,6 +266,7 @@ constexpr auto PMF_BLOCK_HELD = 1 << 25; //32768	// Holding down the attack butt
 constexpr auto PMF_KICK_HELD = 1 << 26; //32768	// Holding down the attack button;
 constexpr auto PMF_ACCURATE_MISSILE_BLOCK_HELD = 1 << 27; //32768	// Holding down the attack button;
 constexpr auto PMF_USE_HELD = 1 << 28; //32768	// Holding down the attack button;
+constexpr auto PMF_WALKING_HELD = 1 << 29; //65536	// Holding down the walking button;
 
 #define	PMF_ALL_TIMES	(PMF_TIME_WATERJUMP|PMF_TIME_LAND|PMF_TIME_KNOCKBACK|PMF_TIME_NOFRICTION)
 

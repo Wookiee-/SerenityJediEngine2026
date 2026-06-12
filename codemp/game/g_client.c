@@ -55,8 +55,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // g_client.c -- client functions that don't happen every frame
 
-static vec3_t player_mins = { -15, -15, DEFAULT_MINS_2 };
-static vec3_t player_maxs = { 15, 15, DEFAULT_MAXS_2 };
+static vec3_t playerMins = { -15, -15, DEFAULT_MINS_2 };
+static vec3_t playerMaxs = { 15, 15, DEFAULT_MAXS_2 };
 
 extern int g_siegeRespawnCheck;
 
@@ -628,8 +628,8 @@ qboolean SpotWouldTelefrag(const gentity_t* spot)
 	static int touch[MAX_GENTITIES];  // safe and recommended
 	vec3_t mins, maxs;
 
-	VectorAdd(spot->s.origin, player_mins, mins);
-	VectorAdd(spot->s.origin, player_maxs, maxs);
+	VectorAdd(spot->s.origin, playerMins, mins);
+	VectorAdd(spot->s.origin, playerMaxs, maxs);
 
 	const int num = trap->EntitiesInBox(mins, maxs, touch, MAX_GENTITIES);
 
@@ -652,7 +652,7 @@ qboolean SpotWouldTelefrag(const gentity_t* spot)
 	return qfalse;
 }
 
-qboolean spot_would_telefrag2(const gentity_t* mover, vec3_t dest)
+qboolean SpotWouldTelefrag2(const gentity_t* mover, vec3_t dest)
 {
 	static int touch[MAX_GENTITIES];  // safe and recommended
 	vec3_t mins, maxs;
@@ -7181,8 +7181,8 @@ spawn_done:
 	ent->watertype = 0;
 	ent->flags = 0;
 
-	VectorCopy(player_mins, ent->r.mins);
-	VectorCopy(player_maxs, ent->r.maxs);
+	VectorCopy(playerMins, ent->r.mins);
+	VectorCopy(playerMaxs, ent->r.maxs);
 	client->ps.crouchheight = CROUCH_MAXS_2;
 	client->ps.standheight = DEFAULT_MAXS_2;
 

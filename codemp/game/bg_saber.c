@@ -5193,12 +5193,6 @@ void PM_WeaponLightsaber(void)
 	int anim = -1;
 	int newmove = LS_NONE;
 
-	if (pm == NULL || pm->ps == NULL)
-	{
-#ifdef _DEBUG
-		Com_Printf("PM_WeaponLightsaber: pm or pm->ps was null\n");
-#endif
-	}
 
 	const saberInfo_t* saber1 = BG_MySaber(pm->ps->clientNum, 0);
 

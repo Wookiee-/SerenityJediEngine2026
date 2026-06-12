@@ -3767,8 +3767,8 @@ void CG_CalcEntityLerpPositions(centity_t* cent)
 		vec3_t slideDir;
 		vec3_t preOffset;
 		vec3_t addedOffset;
-		vec3_t	player_mins = { -15, -15, DEFAULT_MINS_2 };
-		vec3_t	player_maxs = { 15, 15, DEFAULT_MAXS_2 };
+		vec3_t	playerMins = { -15, -15, DEFAULT_MINS_2 };
+		vec3_t	playerMaxs = { 15, 15, DEFAULT_MAXS_2 };
 		trace_t tr;
 
 		//VectorSubtract(cent->lerpOrigin, callData->bonePos, slideDir);
@@ -3789,7 +3789,7 @@ void CG_CalcEntityLerpPositions(centity_t* cent)
 		{
 			//Let's trace there to make sure we can make it
 			VectorAdd(cent->lerpOrigin, cent->lerpOriginOffset, addedOffset);
-			CG_Trace(&tr, cent->lerpOrigin, player_mins, player_maxs, addedOffset, cent->currentState.number, MASK_PLAYERSOLID);
+			CG_Trace(&tr, cent->lerpOrigin, playerMins, playerMaxs, addedOffset, cent->currentState.number, MASK_PLAYERSOLID);
 
 			if (tr.startsolid || tr.allsolid || tr.fraction != 1.0f)
 			{ //can't get there

@@ -12971,12 +12971,6 @@ static void PM_Weapon(void)
 	bgEntity_t* veh = NULL;
 	qboolean vehicleRocketLock = qfalse;
 
-	if (pm == NULL || pm->ps == NULL)
-	{
-		Com_Printf("PM_Weapon: pm or pm->ps was null\n");
-		return;
-	}
-
 	const qboolean is_holding_block_button = pm->ps->ManualBlockingFlags & 1 << HOLDINGBLOCK ? qtrue : qfalse;
 	//Holding Block Button
 
@@ -19860,13 +19854,22 @@ void Pmove(pmove_t* pmove)
 		pm->ps->pm_flags &= ~PMF_BLOCK_HELD;
 	}
 
-	if (pm->cmd.buttons & BUTTON_KICK)
+	if (pm->cmd.buttons & BUTTON_BLOCK)
 	{
-		pm->ps->pm_flags |= PMF_KICK_HELD;
+		pm->ps->pm_flags |= PMF_BLOCK_HELD;
 	}
 	else
 	{
-		pm->ps->pm_flags &= ~PMF_KICK_HELD;
+		pm->ps->pm_flags &= ~PMF_BLOCK_HELD;
+	}
+
+	if (pm->cmd.buttons & BUTTON_WALKING)
+	{
+		pm->ps->pm_flags |= PMF_WALKING_HELD;
+	}
+	else
+	{
+		pm->ps->pm_flags &= ~PMF_WALKING_HELD;
 	}
 
 	if (pm->cmd.buttons & BUTTON_WALKING && pm->cmd.buttons & BUTTON_BLOCK && pm->cmd.buttons & BUTTON_ATTACK)

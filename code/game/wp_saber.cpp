@@ -718,13 +718,15 @@ static void g_create_g2_holstered_weapon_model(gentity_t* ent, const char* ps_we
 	}
 }
 
-void G_CreateG2AttachedWeaponModel(gentity_t* ent, const char* ps_weapon_model, const int bolt_num,
-	const int weapon_num)
+void G_CreateG2AttachedWeaponModel(gentity_t* ent, const char* ps_weapon_model, const int bolt_num, const int weapon_num)
 {
-	if (!ps_weapon_model)
+	if (!ent)
 	{
-		assert(ps_weapon_model);
 		return;
+	}
+	if (!ps_weapon_model || !ps_weapon_model[0])
+	{
+		ps_weapon_model = DEFAULT_SABER_MODEL;
 	}
 	if (ent->playerModel == -1)
 	{
@@ -742,27 +744,13 @@ void G_CreateG2AttachedWeaponModel(gentity_t* ent, const char* ps_weapon_model, 
 		return;
 	}
 
-	//if (ent && ent->client && ent->client->NPC_class == CLASS_SBD)
-	//{
-	//	//hack for sbd, no weaponmodel
-	//	ent->weaponModel[0] = ent->weaponModel[1] = -1;
-	//	return;
-	//}
-
-	//if (ent && ent->client && ent->client->NPC_class == CLASS_DROIDEKA)
-	//{
-	//	//hack for sbd, no weaponmodel
-	//	ent->weaponModel[0] = ent->weaponModel[1] = -1;
-	//	return;
-	//}
-
 	if (weapon_num < 0 || weapon_num >= MAX_INHAND_WEAPONS)
 	{
 		return;
 	}
 	char weapon_model[64];
 
-	strcpy(weapon_model, ps_weapon_model);
+	Q_strncpyz(weapon_model, ps_weapon_model, sizeof(weapon_model));
 	if (char* spot = strstr(weapon_model, ".md3"))
 	{
 		*spot = 0;
@@ -777,6 +765,7 @@ void G_CreateG2AttachedWeaponModel(gentity_t* ent, const char* ps_weapon_model, 
 
 	// give us a saber model
 	const int w_model_index = G_ModelIndex(weapon_model);
+
 	if (w_model_index)
 	{
 		ent->weaponModel[weapon_num] = gi.G2API_InitGhoul2Model(ent->ghoul2, weapon_model, w_model_index, NULL_HANDLE,
@@ -787,100 +776,138 @@ void G_CreateG2AttachedWeaponModel(gentity_t* ent, const char* ps_weapon_model, 
 			gi.G2API_AttachG2Model(&ent->ghoul2[ent->weaponModel[weapon_num]], &ent->ghoul2[ent->playerModel], bolt_num,
 				ent->playerModel);
 			// set up a bolt on the end so we can get where the sabre muzzle is - we can assume this is always bolt 0
-			gi.G2API_AddBolt(&ent->ghoul2[ent->weaponModel[weapon_num]], "*flash");
+			if (gi.G2API_AddBolt(&ent->ghoul2[ent->weaponModel[weapon_num]], "*cannonflash") != -1)
+			{
+				constexpr vec3_t gun_angles = { 0.0f, 0.0f, 0.0f };
+				constexpr vec3_t offset = { 0.0f, 0.0f, -10.0f };
+
+				if (com_rend2->integer == 0) //rend2 is off
+				{
+					gi.G2API_SetSurfaceOnOff(&ent->ghoul2[ent->weaponModel[weapon_num]], "eweb_cannon", 0x00000002);
+					gi.G2API_SetBoneAnglesOffset(&ent->ghoul2[ent->weaponModel[weapon_num]], "base", gun_angles,
+						BONE_ANGLES_PREMULT, POSITIVE_X, NEGATIVE_Y, NEGATIVE_Z, nullptr, 0, 0,
+						offset);
+				}
+			}
+			else
+			{
+				gi.G2API_AddBolt(&ent->ghoul2[ent->weaponModel[weapon_num]], "*flash");
+			}
 		}
 	}
 }
+// WARNING DO NOT MESS WITH THIS IT AFFECTS THE GHOUL2 SYSTEM AND CAUSES ALL SORTS OF GREMLINS IF ALTERED.
 
 void WP_SaberAddG2SaberModels(gentity_t* ent, const int specific_saber_num)
 {
+	//===========================
+	// Safety: validate pointers
+	//===========================
 	if (!ent || !ent->client)
 	{
 		return;
 	}
 
-	int saberNum = 0, max_saber = 1;
+	int saber_num = 0;
+	int max_saber = 1;
 
+	//===========================
+	// Optional: restrict to one saber
+	//===========================
 	if (specific_saber_num != -1 && specific_saber_num <= max_saber)
 	{
-		saberNum = specific_saber_num;
+		saber_num = specific_saber_num;
 		max_saber = specific_saber_num;
 	}
-	for (; saberNum <= max_saber; saberNum++)
+
+	//===========================
+	// Iterate through sabers
+	//===========================
+	for (; saber_num <= max_saber; saber_num++)
 	{
-		if (ent->weaponModel[saberNum] > 0)
+		//---------------------------
+		// Remove existing model
+		//---------------------------
+		if (ent->weaponModel[saber_num] > 0)
 		{
-			//we already have a weapon model in this slot
-			//remove it
-			gi.G2API_SetSkin(&ent->ghoul2[ent->weaponModel[saberNum]], -1, 0);
-			gi.G2API_RemoveGhoul2Model(ent->ghoul2, ent->weaponModel[saberNum]);
-			ent->weaponModel[saberNum] = -1;
+			gi.G2API_SetSkin(&ent->ghoul2[ent->weaponModel[saber_num]], -1, 0);
+			gi.G2API_RemoveGhoul2Model(ent->ghoul2, ent->weaponModel[saber_num]);
+			ent->weaponModel[saber_num] = -1;
 		}
-		if (saberNum > 0)
+
+		//---------------------------
+		// Saber activation logic
+		//---------------------------
+		if (saber_num > 0)
 		{
-			//second saber
-			if (!ent->client->ps.dualSabers
-				|| G_IsRidingVehicle(ent))
+			// Off‑hand saber only allowed if dual sabers are active
+			if (!ent->client->ps.dualSabers || G_IsRidingVehicle(ent))
 			{
-				//only have one saber or riding a vehicle and can only use one saber
 				return;
 			}
 		}
-		else if (saberNum == 0)
+		else if (saber_num == 0)
 		{
-			//first saber
+			// Main saber cannot be added if it's in flight
 			if (ent->client->ps.saberInFlight)
 			{
-				//it's still out there somewhere, don't add it
-				//FIXME: call it back?
 				continue;
 			}
 		}
 
-		int handBolt = saberNum == 0 ? ent->handRBolt : ent->handLBolt;
+		//---------------------------
+		// Determine bolt point
+		//---------------------------
+		int hand_bolt = (saber_num == 0) ? ent->handRBolt : ent->handLBolt;
 
-		if (ent->client->ps.saber[saberNum].saberFlags & SFL_BOLT_TO_WRIST)
+		// Wrist‑bolted sabers override bolt point
+		if (ent->client->ps.saber[saber_num].saberFlags & SFL_BOLT_TO_WRIST)
 		{
-			//special case, bolt to forearm
-			if (saberNum == 0)
+			if (saber_num == 0)
 			{
-				handBolt = gi.G2API_AddBolt(&ent->ghoul2[ent->playerModel], "*r_hand_cap_r_arm");
+				hand_bolt = gi.G2API_AddBolt(&ent->ghoul2[ent->playerModel], "*r_hand_cap_r_arm");
 			}
 			else
 			{
-				handBolt = gi.G2API_AddBolt(&ent->ghoul2[ent->playerModel], "*l_hand_cap_l_arm");
+				hand_bolt = gi.G2API_AddBolt(&ent->ghoul2[ent->playerModel], "*l_hand_cap_l_arm");
 			}
 		}
 
 		//---------------------------
 		// Create the saber model
 		//---------------------------
-		const char* saber_model = ent->client->ps.saber[saberNum].model;
+		const char* saber_model = ent->client->ps.saber[saber_num].model;
 		if (!saber_model || !saber_model[0])
 		{
 			saber_model = DEFAULT_SABER_MODEL;
-			ent->client->ps.saber[saberNum].model = DEFAULT_SABER_MODEL;
+			ent->client->ps.saber[saber_num].model = DEFAULT_SABER_MODEL;
 		}
 
 		G_CreateG2AttachedWeaponModel(
 			ent,
 			saber_model,
-			handBolt,
-			saberNum
+			hand_bolt,
+			saber_num
 		);
 
-		if (ent->client->ps.saber[saberNum].skin != nullptr)
+		//---------------------------
+		// Apply custom skin (if any)
+		//---------------------------
+		if (ent->client->ps.saber[saber_num].skin != NULL)
 		{
-			//if this saber has a customSkin, use it
-			// lets see if it's out there
-			const int saberSkin = gi.RE_RegisterSkin(ent->client->ps.saber[saberNum].skin);
+			const int saber_skin =
+				gi.RE_RegisterSkin(ent->client->ps.saber[saber_num].skin);
 
-			if (saberSkin > 0)
+			if (saber_skin > 0)
 			{
 				// ⭐ Safety: only apply skin if model index is valid
-				if (ent->weaponModel[saberNum] >= 0)
+				if (ent->weaponModel[saber_num] >= 0)
 				{
-					gi.G2API_SetSkin(&ent->ghoul2[ent->weaponModel[saberNum]], G_SkinIndex(ent->client->ps.saber[saberNum].skin), saberSkin);
+					gi.G2API_SetSkin(
+						&ent->ghoul2[ent->weaponModel[saber_num]],
+						G_SkinIndex(ent->client->ps.saber[saber_num].skin),
+						saber_skin
+					);
 				}
 			}
 		}
@@ -11544,13 +11571,15 @@ float manual_running_and_saberblocking(const gentity_t* defender)
 qboolean manual_meleeblocking(const gentity_t* defender) //Is this guy blocking or not?
 {
 	if (defender->client->ps.weapon == WP_MELEE
-		&& defender->client->buttons & BUTTON_WALKING
+		&& (!(defender->client->buttons & BUTTON_WALKING))
 		&& defender->client->buttons & BUTTON_BLOCK
 		&& !PM_KickMove(defender->client->ps.saberMove)
 		&& !PM_KickingAnim(defender->client->ps.torsoAnim)
 		&& !PM_KickingAnim(defender->client->ps.legsAnim)
 		&& !PM_InRoll(&defender->client->ps)
 		&& !PM_InKnockDown(&defender->client->ps)
+		&& !PM_RunningAnim(defender->client->ps.legsAnim)
+		&& !PM_WalkingAnim(defender->client->ps.legsAnim)
 		&& !(defender->client->ps.pm_flags & PMF_DUCKED))
 	{
 		return qtrue;

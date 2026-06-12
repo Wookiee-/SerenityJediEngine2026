@@ -266,63 +266,92 @@ void Rancor_Move()
 
 void Rancor_DropVictim(gentity_t* self)
 {
-	if (self->activator)
+	if (!self)
 	{
-		if (self->activator->client)
+		return;
+	}
+
+	gentity_t* victim = self->activator;
+
+	if (victim)
+	{
+		// Clear EF_HELD_BY_RANCOR
+		if (victim->client)
 		{
-			self->activator->client->ps.eFlags &= ~EF_HELD_BY_RANCOR;
+			victim->client->ps.eFlags &= ~EF_HELD_BY_RANCOR;
 		}
-		self->activator->activator = nullptr;
-		if (self->activator->health <= 0)
+
+		// Break reciprocal link
+		victim->activator = nullptr;
+
+		// Victim is dead?
+		if (victim->health <= 0)
 		{
-			if (self->activator->s.number)
+			if (victim->s.number != 0)
 			{
-				//never free player
+				// Never free player
 				if (self->count == 1)
 				{
-					//in my hand, just drop them
-					if (self->activator->client)
+					// In hand → just drop them
+					if (victim->client)
 					{
-						self->activator->client->ps.legsAnimTimer = self->activator->client->ps.torsoAnimTimer = 0;
+						victim->client->ps.legsAnimTimer = 0;
+						victim->client->ps.torsoAnimTimer = 0;
 					}
 				}
 				else
 				{
-					G_FreeEntity(self->activator);
+					G_FreeEntity(victim);
 				}
 			}
 			else
 			{
-				self->activator->s.eFlags |= EF_NODRAW;
-				if (self->activator->client)
+				// NPC corpse
+				victim->s.eFlags |= EF_NODRAW;
+
+				if (victim->client)
 				{
-					self->activator->client->ps.eFlags |= EF_NODRAW;
+					victim->client->ps.eFlags |= EF_NODRAW;
 				}
-				self->activator->clipmask &= ~CONTENTS_BODY;
+
+				victim->clipmask &= ~CONTENTS_BODY;
 			}
 		}
 		else
 		{
-			if (self->activator->NPC)
+			// Victim is alive
+			if (victim->NPC)
 			{
-				//start thinking again
-				self->activator->NPC->nextBStateThink = level.time;
+				// Resume thinking
+				victim->NPC->nextBStateThink = level.time;
 			}
-			//clear their anim and let them fall
-			self->activator->client->ps.legsAnimTimer = self->activator->client->ps.torsoAnimTimer = 0;
+
+			// Clear anim timers so they fall naturally
+			if (victim->client)
+			{
+				victim->client->ps.legsAnimTimer = 0;
+				victim->client->ps.torsoAnimTimer = 0;
+			}
 		}
-		if (self->enemy == self->activator)
+
+		// If the dropped victim was the current enemy, clear it
+		if (self->enemy == victim)
 		{
 			self->enemy = nullptr;
 		}
-		if (self->activator->s.number == 0)
+
+		// If victim was the player, apply attack debounce
+		if (victim->s.number == 0)
 		{
-			//don't attack the player again for a bit
-			TIMER_Set(self, "attackDebounce", Q_irand(1000, 2000 + (2 - g_spskill->integer) * 2000));
+			TIMER_Set(self, "attackDebounce",
+				Q_irand(1000, 2000 + (2 - g_spskill->integer) * 2000));
 		}
+
 		self->activator = nullptr;
 	}
-	self->count = 0; //drop him
+
+	// Reset grab state
+	self->count = 0;
 }
 
 static void Rancor_Swing(const int boltIndex, const qboolean try_grab)

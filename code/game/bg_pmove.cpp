@@ -50,8 +50,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "g_local.h"
 #include "g_functions.h"
 #include "anims.h"
-#include "../cgame/cg_local.h"	// yeah I know this is naughty, but we're shipping soon...
-
+#include "../cgame/cg_local.h"
 #include "wp_saber.h"
 #include "g_vehicles.h"
 #include <cfloat>
@@ -72,7 +71,6 @@ extern qboolean PM_SaberInTransitionAny(int move);
 extern qboolean PM_SaberInBounce(int move);
 extern qboolean PM_SaberInSpecialAttack(int anim);
 extern qboolean PM_SaberInAttack(int move);
-extern qboolean PM_InAnimForsaberMove(int anim, int saberMove);
 extern saberMoveName_t PM_SaberBounceForAttack(int move);
 extern saberMoveName_t PM_SaberAttackForMovement(int forwardmove, int rightmove, int curmove);
 extern saberMoveName_t PM_BrokenParryForParry(int move);
@@ -85,7 +83,7 @@ extern qboolean PM_SaberInReflect(int move);
 extern qboolean PM_SaberInIdle(int move);
 extern qboolean PM_SaberInStart(int move);
 extern qboolean PM_SaberInReturn(int move);
-extern qboolean PM_SaberKataDone(int curmove, int newmove);
+extern qboolean PM_SaberKataDone(const int curmove, const int newmove);
 extern qboolean PM_SaberInSpecial(int move);
 extern qboolean PM_InDeathAnim();
 extern qboolean PM_StandingAnim(int anim);
@@ -185,18 +183,16 @@ pmove_t* pm;
 pml_t pml;
 
 // movement parameters
+float pm_ladderScale = 0.7f;
 constexpr float pm_stopspeed = 100.0f;
 constexpr float pm_duckScale = 0.50f;
 constexpr float pm_swimScale = 0.50f;
-float pm_ladderScale = 0.7f;
 constexpr float pm_Laddeeraccelerate = 1.0f;
-
 constexpr float pm_vehicleaccelerate = 36.0f;
 constexpr float pm_accelerate = 12.0f;
 constexpr float pm_airaccelerate = 4.0f;
 constexpr float pm_wateraccelerate = 4.0f;
 constexpr float pm_flyaccelerate = 8.0f;
-
 constexpr float pm_friction = 6.0f;
 constexpr float pm_waterfriction = 1.0f;
 constexpr float pm_flightfriction = 3.0f;
@@ -212,18 +208,15 @@ extern int PM_AnimLength(int index, animNumber_t anim);
 extern qboolean PM_InOnGroundAnim(playerState_t* ps);
 extern weaponInfo_t cg_weapons[MAX_WEAPONS];
 extern int PM_PickAnim(const gentity_t* self, int minAnim, int maxAnim);
-
 extern void DoImpact(gentity_t* self, gentity_t* other, qboolean damage_self, const trace_t* trace);
 extern saberMoveName_t transitionMove[Q_NUM_QUADS][Q_NUM_QUADS];
-
 extern Vehicle_t* G_IsRidingVehicle(const gentity_t* pEnt);
+extern qboolean G_ControlledByPlayer(const gentity_t* self);
 
 static Vehicle_t* PM_RidingVehicle()
 {
 	return G_IsRidingVehicle(pm->gent);
 }
-
-extern qboolean G_ControlledByPlayer(const gentity_t* self);
 
 qboolean PM_ControlledByPlayer()
 {
@@ -5490,7 +5483,7 @@ static void PM_SetVehicleAngles(vec3_t normal)
 	}
 }
 
-void BG_VehicleTurnRateForSpeed(const Vehicle_t* p_veh, const float speed, float* m_pitch_override, float* m_yaw_override)
+void BG_VehicleTurnRateForSpeed(const Vehicle_t* p_veh, const float speed, float* mPitchOverride, float* mYawOverride)
 {
 	if (p_veh && p_veh->m_pVehicleInfo)
 	{
@@ -5513,11 +5506,11 @@ void BG_VehicleTurnRateForSpeed(const Vehicle_t* p_veh, const float speed, float
 		}
 		if (p_veh->m_pVehicleInfo->mousePitch)
 		{
-			*m_pitch_override = p_veh->m_pVehicleInfo->mousePitch * speed_frac;
+			*mPitchOverride = p_veh->m_pVehicleInfo->mousePitch * speed_frac;
 		}
 		if (p_veh->m_pVehicleInfo->mouseYaw)
 		{
-			*m_yaw_override = p_veh->m_pVehicleInfo->mouseYaw * speed_frac;
+			*mYawOverride = p_veh->m_pVehicleInfo->mouseYaw * speed_frac;
 		}
 	}
 }
@@ -10285,22 +10278,24 @@ static void PM_Footsteps()
 				return;
 			}
 			qboolean saber_in_air = qtrue;
+
 			if (pm->ps->saberInFlight)
 			{
-				//guiding saber
-				if (PM_SaberInBrokenParry(pm->ps->saberMove) || pm->ps->saberBlocked == BLOCKED_PARRY_BROKEN ||
+				if (PM_SaberInBrokenParry(pm->ps->saberMove) ||
+					pm->ps->saberBlocked == BLOCKED_PARRY_BROKEN ||
 					PM_DodgeAnim(pm->ps->torsoAnim))
 				{
-					//we're stuck in a broken parry
 					saber_in_air = qfalse;
 				}
-				if (pm->ps->saberEntityNum < ENTITYNUM_NONE && pm->ps->saberEntityNum > 0) //player is 0
+
+				int entNum = pm->ps->saberEntityNum;
+
+				if (entNum > 0 && entNum < ENTITYNUM_WORLD)
 				{
-					//
-					if (&g_entities[pm->ps->saberEntityNum] != nullptr && g_entities[pm->ps->saberEntityNum].s.pos.
-						trType == TR_STATIONARY)
+					gentity_t* saberEnt = &g_entities[entNum];
+
+					if (saberEnt->inuse && saberEnt->s.pos.trType == TR_STATIONARY)
 					{
-						//fell to the ground and we're not trying to pull it back
 						saber_in_air = qfalse;
 					}
 				}
@@ -12856,10 +12851,10 @@ static void PM_SaberFatigue(playerState_t* ps, const int new_move)
 				{
 					if ((pm->ps->saberAttackChainCount & 1) == 0)  // even number
 					{
-						if (pm->ps->saberFatigueChainCount < MISHAPLEVEL_MAX)
+						/*if (pm->ps->saberFatigueChainCount < MISHAPLEVEL_MAX)
 						{
 							pm->ps->saberFatigueChainCount++;
-						}
+						}*/
 					}
 				}
 			}
@@ -17490,13 +17485,6 @@ void PM_WeaponLightsaber()
 	int anim = -1;
 	int newmove = LS_NONE;
 
-	if (pm == nullptr || pm->ps == nullptr)
-	{
-#ifdef _DEBUG
-		Com_Printf("PM_WeaponLightsaber: pm or pm->ps was null\n");
-#endif
-	}
-
 	const qboolean is_holding_block_button = pm->ps->ManualBlockingFlags & 1 << HOLDINGBLOCK ? qtrue : qfalse;
 	const qboolean is_holding_block_button_and_attack = pm->ps->ManualBlockingFlags & 1 << HOLDINGBLOCKANDATTACK ? qtrue : qfalse;
 	const qboolean walking_blocking = pm->ps->ManualBlockingFlags & 1 << MBF_BLOCKWALKING ? qtrue : qfalse;
@@ -17743,17 +17731,20 @@ void PM_WeaponLightsaber()
 		//we're not stuck in a broken parry
 		if (pm->ps->saberInFlight)
 		{
-			//guiding saber
-			if (pm->ps->saberEntityNum < ENTITYNUM_NONE && pm->ps->saberEntityNum > 0) //player is 0
+			int entNum = pm->ps->saberEntityNum;
+
+			// Valid entity index (avoid world entity and invalid slots)
+			if (entNum > 0 && entNum < ENTITYNUM_WORLD)
 			{
-				//
-				if (&g_entities[pm->ps->saberEntityNum] != nullptr && g_entities[pm->ps->saberEntityNum].s.pos.
-					trType == TR_STATIONARY)
+				gentity_t* saberEnt = &g_entities[entNum];
+
+				// Ensure the slot is actually in use
+				if (saberEnt->inuse && saberEnt->s.pos.trType == TR_STATIONARY)
 				{
-					//fell to the ground and we're not trying to pull it back
 					saber_in_air = qfalse;
 				}
 			}
+
 			if (pm->ps->weaponTime <= 0 || pm->ps->weaponstate != WEAPON_FIRING)
 			{
 				if (pm->ps->weapon != pm->cmd.weapon)
@@ -17761,10 +17752,9 @@ void PM_WeaponLightsaber()
 					PM_BeginWeaponChange(pm->cmd.weapon);
 				}
 			}
-			else if (pm->ps->weapon == WP_SABER
-				&& (!pm->ps->dualSabers || !pm->ps->saber[1].Active()))
+			else if (pm->ps->weapon == WP_SABER &&
+				(!pm->ps->dualSabers || !pm->ps->saber[1].Active()))
 			{
-				//guiding saber
 				if (saber_in_air)
 				{
 					if (!PM_ForceAnim(pm->ps->torsoAnim) || pm->ps->torsoAnimTimer < 300)
@@ -17984,22 +17974,24 @@ void PM_WeaponLightsaber()
 		else
 		{
 			qboolean in_air = qtrue;
+
 			if (pm->ps->saberInFlight)
 			{
-				//guiding saber
-				if (PM_SaberInBrokenParry(pm->ps->saberMove) || pm->ps->saberBlocked == BLOCKED_PARRY_BROKEN ||
+				if (PM_SaberInBrokenParry(pm->ps->saberMove) ||
+					pm->ps->saberBlocked == BLOCKED_PARRY_BROKEN ||
 					PM_DodgeAnim(pm->ps->torsoAnim))
 				{
-					//we're stuck in a broken parry
 					in_air = qfalse;
 				}
-				if (pm->ps->saberEntityNum < ENTITYNUM_NONE && pm->ps->saberEntityNum > 0) //player is 0
+
+				int entNum = pm->ps->saberEntityNum;
+
+				if (entNum > 0 && entNum < ENTITYNUM_WORLD)
 				{
-					//
-					if (&g_entities[pm->ps->saberEntityNum] != nullptr && g_entities[pm->ps->saberEntityNum].s.pos.
-						trType == TR_STATIONARY)
+					gentity_t* saberEnt = &g_entities[entNum];
+
+					if (saberEnt->inuse && saberEnt->s.pos.trType == TR_STATIONARY)
 					{
-						//fell to the ground and we're not trying to pull it back
 						in_air = qfalse;
 					}
 				}
@@ -18313,22 +18305,24 @@ void PM_WeaponLightsaber()
 		// ***************************************************
 		// Pressing attack, so we must look up the proper attack move.
 		qboolean in_air = qtrue;
+
 		if (pm->ps->saberInFlight)
 		{
-			//guiding saber
-			if (PM_SaberInBrokenParry(pm->ps->saberMove) || pm->ps->saberBlocked == BLOCKED_PARRY_BROKEN ||
+			if (PM_SaberInBrokenParry(pm->ps->saberMove) ||
+				pm->ps->saberBlocked == BLOCKED_PARRY_BROKEN ||
 				PM_DodgeAnim(pm->ps->torsoAnim))
 			{
-				//we're stuck in a broken parry
 				in_air = qfalse;
 			}
-			if (pm->ps->saberEntityNum < ENTITYNUM_NONE && pm->ps->saberEntityNum > 0) //player is 0
+
+			int entNum = pm->ps->saberEntityNum;
+
+			if (entNum > 0 && entNum < ENTITYNUM_WORLD)
 			{
-				//
-				if (&g_entities[pm->ps->saberEntityNum] != nullptr && g_entities[pm->ps->saberEntityNum].s.pos.
-					trType == TR_STATIONARY)
+				gentity_t* saberEnt = &g_entities[entNum];
+
+				if (saberEnt->inuse && saberEnt->s.pos.trType == TR_STATIONARY)
 				{
-					//fell to the ground and we're not trying to pull it back
 					in_air = qfalse;
 				}
 			}
@@ -19287,14 +19281,6 @@ static void PM_Weapon()
 	int add_time, amount, true_count = 1;
 	qboolean delayed_fire = qfalse;
 
-	if (pm == nullptr || pm->ps == nullptr)
-	{
-#ifdef _DEBUG
-		Com_Printf("PM_Weapon: pm or pm->ps was null\n");
-#endif
-		return;
-	}
-
 	if (pm->ps->eFlags & EF_HELD_BY_WAMPA)
 	{
 		PM_WeaponWampa();
@@ -19407,7 +19393,7 @@ static void PM_Weapon()
 	}
 	else
 	{
-		if (pm->cmd.buttons & BUTTON_WALKING && pm->cmd.buttons & BUTTON_BLOCK)
+		if (pm->ps->ManualBlockingFlags & 1 << MBF_MELEEBLOCK)
 		{
 			//set up the block position
 			PM_SetMeleeBlock();
@@ -21495,6 +21481,15 @@ void Pmove(pmove_t* pmove)
 	else
 	{
 		pm->ps->pm_flags &= ~PMF_BLOCK_HELD;
+	}
+
+	if (pm->cmd.buttons & BUTTON_WALKING)
+	{
+		pm->ps->pm_flags |= PMF_WALKING_HELD;
+	}
+	else
+	{
+		pm->ps->pm_flags &= ~PMF_WALKING_HELD;
 	}
 
 	if (pm->cmd.buttons & BUTTON_KICK && !(pm->cmd.buttons & BUTTON_DASH))

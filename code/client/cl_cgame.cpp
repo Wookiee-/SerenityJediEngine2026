@@ -87,7 +87,7 @@ qboolean CL_InitCGameVM(void* gameLibrary)
 CL_GetGameState
 ====================
 */
-void CL_GetGameState(gameState_t* gs)
+static void CL_GetGameState(gameState_t* gs)
 {
 	*gs = cl.gameState;
 }
@@ -129,7 +129,7 @@ qboolean CL_GetUserCmd(const int cmdNumber, usercmd_t* ucmd)
 	return qtrue;
 }
 
-int CL_GetCurrentCmdNumber()
+static int CL_GetCurrentCmdNumber()
 {
 	return cl.cmdNumber;
 }
@@ -162,7 +162,7 @@ qboolean	CL_GetParseEntityState( int parseentity_number, entityState_t *state ) 
 CL_GetCurrentSnapshotNumber
 ====================
 */
-void CL_GetCurrentSnapshotNumber(int* snapshotNumber, int* serverTime)
+static void CL_GetCurrentSnapshotNumber(int* snapshotNumber, int* serverTime)
 {
 	*snapshotNumber = cl.frame.messageNum;
 	*serverTime = cl.frame.serverTime;
@@ -257,7 +257,7 @@ qboolean CL_GetDefaultState(const int index, entityState_t* state)
 extern float cl_mPitchOverride;
 extern float cl_mYawOverride;
 
-void CL_SetUserCmdValue(const int userCmdValue, const float sensitivityScale, const float mPitchOverride,
+static void CL_SetUserCmdValue(const int userCmdValue, const float sensitivityScale, const float mPitchOverride,
 	const float mYawOverride)
 {
 	cl.cgameUserCmdValue = userCmdValue;
@@ -269,7 +269,7 @@ void CL_SetUserCmdValue(const int userCmdValue, const float sensitivityScale, co
 extern vec3_t cl_overriddenAngles;
 extern qboolean cl_overrideAngles;
 
-void CL_SetUserCmdAngles(const float pitchOverride, const float yawOverride, const float rollOverride)
+static void CL_SetUserCmdAngles(const float pitchOverride, const float yawOverride, const float rollOverride)
 {
 	cl_overriddenAngles[PITCH] = pitchOverride;
 	cl_overriddenAngles[YAW] = yawOverride;
@@ -277,7 +277,7 @@ void CL_SetUserCmdAngles(const float pitchOverride, const float yawOverride, con
 	cl_overrideAngles = qtrue;
 }
 
-void CL_AddCgameCommand(const char* cmdName)
+static void CL_AddCgameCommand(const char* cmdName)
 {
 	Cmd_AddCommand(cmdName, nullptr);
 }
@@ -287,15 +287,14 @@ void CL_AddCgameCommand(const char* cmdName)
 CL_ConfigstringModified
 =====================
 */
-void CL_ConfigstringModified()
+static void CL_ConfigstringModified()
 {
-	const char* dup;
-
 	const int index = atoi(Cmd_Argv(1));
 	if (index < 0 || index >= MAX_CONFIGSTRINGS)
 	{
 		Com_Error(ERR_DROP, "configstring > MAX_CONFIGSTRINGS");
 	}
+
 	const char* s = Cmd_Argv(2);
 
 	const char* old = cl.gameState.stringData + cl.gameState.stringOffsets[index];
@@ -304,48 +303,57 @@ void CL_ConfigstringModified()
 		return; // unchanged
 	}
 
-	// build the new gameState_t
-	const gameState_t oldGs = cl.gameState;
+	// ---------------------------------------------------------
+	// FIX: Move large temporary off the stack
+	// ---------------------------------------------------------
+	gameState_t* oldGs = (gameState_t*)Z_Malloc(sizeof(gameState_t), TAG_TEMP_WORKSPACE, qfalse);
+	if (!oldGs)
+	{
+		Com_Printf("CL_ConfigstringModified: Z_Malloc failed\n");
+		return;
+	}
 
+	memcpy(oldGs, &cl.gameState, sizeof(gameState_t));
+
+	// ---------------------------------------------------------
+	// Rebuild gameState
+	// ---------------------------------------------------------
 	memset(&cl.gameState, 0, sizeof cl.gameState);
 
-	// leave the first 0 for uninitialized strings
-	cl.gameState.dataCount = 1;
+	cl.gameState.dataCount = 1; // leave first byte empty
 
 	for (int i = 0; i < MAX_CONFIGSTRINGS; i++)
 	{
-		if (i == index)
-		{
-			dup = s;
-		}
-		else
-		{
-			dup = oldGs.stringData + oldGs.stringOffsets[i];
-		}
+		const char* dup = (i == index)
+			? s
+			: oldGs->stringData + oldGs->stringOffsets[i];
+
 		if (!dup[0])
 		{
-			continue; // leave with the default empty string
+			continue;
 		}
 
 		const int len = strlen(dup);
 
 		if (len + 1 + cl.gameState.dataCount > MAX_GAMESTATE_CHARS)
 		{
+			Z_Free(oldGs);
 			Com_Error(ERR_DROP, "MAX_GAMESTATE_CHARS exceeded");
 		}
 
-		// append it to the gameState string buffer
 		cl.gameState.stringOffsets[i] = cl.gameState.dataCount;
-		memcpy(cl.gameState.stringData + cl.gameState.dataCount, dup, len + 1);
+		memcpy(cl.gameState.stringData + cl.gameState.dataCount, dup, static_cast<size_t>(len) + 1);
 		cl.gameState.dataCount += len + 1;
 	}
 
+	Z_Free(oldGs);
+
 	if (index == CS_SYSTEMINFO)
 	{
-		// parse serverId and other cvars
 		CL_SystemInfoChanged();
 	}
 }
+
 
 /*
 ===================
@@ -421,7 +429,7 @@ CL_CM_LoadMap
 Just adds default parameters that cgame doesn't need to know about
 ====================
 */
-void CL_CM_LoadMap(const char* mapname, const qboolean subBSP)
+static void CL_CM_LoadMap(const char* mapname, const qboolean subBSP)
 {
 	int checksum;
 
@@ -457,7 +465,7 @@ Converts a JK2 syscall to a JKA syscall
 ====================
 */
 
-cgameImport_t CL_ConvertJK2SysCall(cgameJK2Import_t import)
+static cgameImport_t CL_ConvertJK2SysCall(cgameJK2Import_t import)
 {
 	// FIXME: This was a 5-minute slap-hack job in order to test if this really works. CLEAN ME UP!
 	switch (import)
@@ -1531,7 +1539,7 @@ during times of significant packet loss.
 
 constexpr auto RESET_TIME = 300;
 
-void CL_AdjustTimeDelta() {
+static void CL_AdjustTimeDelta() {
 	cl.newSnapshots = qfalse;
 
 	const int newDelta = cl.frame.serverTime - cls.realtime;

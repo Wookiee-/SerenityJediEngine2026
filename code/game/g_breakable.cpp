@@ -493,88 +493,105 @@ void misc_model_breakable_pain(gentity_t* self, gentity_t* inflictor, gentity_t*
 }
 
 void misc_model_breakable_die(gentity_t* self, const gentity_t* inflictor, gentity_t* attacker, int damage,
-	int meansOfDeath,
-	int d_flags, int hit_loc)
+	int meansOfDeath, int d_flags, int hit_loc)
 {
-	float size = 0;
-	vec3_t dir, up, dis;
+	// ---------------------------------------------------------
+	// Safety: self must be valid before any dereference
+	// ---------------------------------------------------------
+	if (self == nullptr)
+	{
+		Com_Printf("misc_model_breakable_die: NULL self\n");
+		return;
+	}
 
-	if (self->e_DieFunc == dieF_NULL) //i was probably already killed since my die func was removed
+	float size = 0.0f;
+	vec3_t dir;
+	vec3_t up;
+	vec3_t dis;
+
+	// Already killed? Die func removed → avoid recursion
+	if (self->e_DieFunc == dieF_NULL)
 	{
 #ifndef FINAL_BUILD
-		gi.Printf(S_COLOR_YELLOW"Recursive misc_model_breakable_die.  Use targets probably pointing back at self.\n");
+		gi.Printf(S_COLOR_YELLOW "Recursive misc_model_breakable_die. Use targets probably pointing back at self.\n");
 #endif
-		return; //this happens when you have a cyclic target chain!
+		return; // cyclic target chain
 	}
-	//NOTE: Stop any scripts that are currently running (FLUSH)... ?
-	//Turn off animation
-	self->s.frame = self->startFrame = self->endFrame = 0;
+
+	// Stop animation
+	self->s.frame = 0;
+	self->startFrame = 0;
+	self->endFrame = 0;
 	self->svFlags &= ~SVF_ANIMATING;
 
+	// Mark as dead
 	self->health = 0;
-	//Throw some chunks
+
+	// ---------------------------------------------------------
+	// Chunk generation
+	// ---------------------------------------------------------
 	AngleVectors(self->s.apos.trBase, dir, nullptr, nullptr);
 	VectorNormalize(dir);
 
-	int numChunks = Q_flrand(0.0f, 1.0f) * 6 + 20;
+	int numChunks = static_cast<int>(Q_flrand(0.0f, 1.0f) * 6.0f) + 20;
 
 	VectorSubtract(self->absmax, self->absmin, dis);
 
-	// This formula really has no logical basis other than the fact that it seemed to be the closest to yielding the results that I wanted.
-	// Volume is length * width * height...then break that volume down based on how many chunks we have
-	float scale = sqrt(sqrt(dis[0] * dis[1] * dis[2])) * 1.75f;
+	// Volume-based scale approximation
+	float scale = sqrtf(sqrtf(dis[0] * dis[1] * dis[2])) * 1.75f;
 
-	if (scale > 48)
+	if (scale > 48.0f)
 	{
-		size = 2;
+		size = 2.0f;
 	}
-	else if (scale > 24)
+	else if (scale > 24.0f)
 	{
-		size = 1;
+		size = 1.0f;
 	}
 
-	scale = scale / numChunks;
+	scale = scale / static_cast<float>(numChunks);
 
 	if (self->radius > 0.0f)
 	{
-		// designer wants to scale number of chunks, helpful because the above scale code is far from perfect
-		//	I do this after the scale calculation because it seems that the chunk size generally seems to be very close, it's just the number of chunks is a bit weak
-		numChunks *= self->radius;
+		// Designer scaling of chunk count
+		numChunks = static_cast<int>(static_cast<float>(numChunks) * self->radius);
 	}
 
 	VectorAdd(self->absmax, self->absmin, dis);
 	VectorScale(dis, 0.5f, dis);
 
-	CG_Chunks(self->s.number, dis, self->absmin, self->absmax, 300, numChunks, self->material, self->s.modelindex3,
-		scale);
+	CG_Chunks(self->s.number, dis, self->absmin, self->absmax, 300, numChunks,
+		self->material, self->s.modelindex3, scale);
 
 	self->e_PainFunc = painF_NULL;
 	self->e_DieFunc = dieF_NULL;
-	//	self->e_UseFunc  = useF_NULL;
-
 	self->takedamage = qfalse;
 
-	if (!(self->spawnflags & 4))
+	// ---------------------------------------------------------
+	// Make non-solid if spawnflags do not force solidity
+	// ---------------------------------------------------------
+	if ((self->spawnflags & 4) == 0)
 	{
-		//We don't want to stay solid
 		self->s.solid = 0;
 		self->contents = 0;
 		self->clipmask = 0;
-		if (self != nullptr)
-		{
-			NAV::WayEdgesNowClear(self);
-		}
+
+		NAV::WayEdgesNowClear(self);
 		gi.linkentity(self);
 	}
 
-	VectorSet(up, 0, 0, 1);
+	VectorSet(up, 0.0f, 0.0f, 1.0f);
 
-	if (self && self->target)
+	// Use targets
+	if (self->target != nullptr)
 	{
 		G_UseTargets(self, attacker);
 	}
 
-	if (inflictor->client)
+	// ---------------------------------------------------------
+	// Explosion direction
+	// ---------------------------------------------------------
+	if (inflictor != nullptr && inflictor->client != nullptr)
 	{
 		VectorSubtract(self->currentOrigin, inflictor->currentOrigin, dir);
 		VectorNormalize(dir);
@@ -584,32 +601,32 @@ void misc_model_breakable_die(gentity_t* self, const gentity_t* inflictor, genti
 		VectorCopy(up, dir);
 	}
 
-	if (!(self->spawnflags & 2048)) // NO_EXPLOSION
+	// ---------------------------------------------------------
+	// Explosion / break logic
+	// ---------------------------------------------------------
+	if ((self->spawnflags & 2048) == 0) // NO_EXPLOSION
 	{
-		// Ok, we are allowed to explode, so do it now!
 		if (self->splashDamage > 0 && self->splashRadius > 0)
 		{
-			//explode
+			// Explosive break
 			vec3_t org;
 			AddSightEvent(attacker, self->currentOrigin, 256, AEL_DISCOVERED, 100);
 			AddSoundEvent(attacker, self->currentOrigin, 128, AEL_DISCOVERED, qfalse, qtrue);
-			//FIXME: am I on ground or not?
-			//FIXME: specify type of explosion?  (barrel, electrical, etc.)  Also, maybe just use the explosion effect below since it's
-			//				a bit better?
-			// up the origin a little for the damage check, because several models have their origin on the ground, so they don't alwasy do damage, not the optimal solution...
+
 			VectorCopy(self->currentOrigin, org);
-			if (self->mins[2] > -4)
+			if (self->mins[2] > -4.0f)
 			{
-				//origin is going to be below it or very very low in the model
-				//center the origin
-				org[2] = self->currentOrigin[2] + self->mins[2] + (self->maxs[2] - self->mins[2]) / 2.0f;
+				org[2] = self->currentOrigin[2] + self->mins[2]
+					+ (self->maxs[2] - self->mins[2]) / 2.0f;
 			}
+
 			G_RadiusDamage(org, self, self->splashDamage, self->splashRadius, self, MOD_UNKNOWN);
 
-			if (self->model && (Q_stricmp("models/map_objects/ships/tie_fighter.md3", self->model) == 0 ||
-				Q_stricmp("models/map_objects/ships/tie_bomber.md3", self->model) == 0))
+			if (self->model != nullptr &&
+				(Q_stricmp("models/map_objects/ships/tie_fighter.md3", self->model) == 0 ||
+					Q_stricmp("models/map_objects/ships/tie_bomber.md3", self->model) == 0))
 			{
-				//TEMP HACK for Tie Fighters- they're HUGE
+				// Tie fighter special explosion
 				G_PlayEffect("explosions/fighter_explosion2", self->currentOrigin);
 				G_Sound(self, G_SoundIndex("sound/weapons/tie_fighter/TIEexplode.wav"));
 				self->s.loopSound = 0;
@@ -623,22 +640,26 @@ void misc_model_breakable_die(gentity_t* self, const gentity_t* inflictor, genti
 		}
 		else
 		{
-			//just break
+			// Non-explosive break
 			AddSightEvent(attacker, self->currentOrigin, 128, AEL_DISCOVERED);
 			AddSoundEvent(attacker, self->currentOrigin, 64, AEL_SUSPICIOUS, qfalse, qtrue);
-			//FIXME: am I on ground or not?
-			// This is the default explosion
+
 			CG_MiscModelExplosion(self->absmin, self->absmax, size, self->material);
 			G_Sound(self, G_SoundIndex("sound/weapons/explosions/cargoexplode.wav"));
 		}
 	}
 
+	// ---------------------------------------------------------
+	// Disable further thinking
+	// ---------------------------------------------------------
 	self->e_ThinkFunc = thinkF_NULL;
 	self->nextthink = -1;
 
-	if (self->s.modelindex2 != -1 && !(self->spawnflags & 8))
+	// ---------------------------------------------------------
+	// Swap to broken model or free entity
+	// ---------------------------------------------------------
+	if (self->s.modelindex2 != -1 && (self->spawnflags & 8) == 0)
 	{
-		//FIXME: modelindex doesn't get set to -1 if the damage model doesn't exist
 		self->svFlags |= SVF_BROKEN;
 		self->s.modelindex = self->s.modelindex2;
 		G_ActivateBehavior(self, BSET_DEATH);

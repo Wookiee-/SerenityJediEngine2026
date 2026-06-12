@@ -33,8 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "b_local.h"
 
 extern int wp_saber_init_blade_data(gentity_t* ent);
-extern void G_CreateG2AttachedWeaponModel(gentity_t* ent, const char* ps_weapon_model, int bolt_num,
-	int weapon_num);
+extern void G_CreateG2AttachedWeaponModel(gentity_t* ent, const char* ps_weapon_model, const int bolt_num, const int weapon_num);
 extern void Boba_Precache();
 extern void Mando_Precache();
 extern qboolean HeIsJedi(const gentity_t* ent);
@@ -61,9 +60,9 @@ float DEFAULT_MINS_1 = -16;
 float DEFAULT_MAXS_0 = 16;
 float DEFAULT_MAXS_1 = 16;
 float DEFAULT_PLAYER_RADIUS = sqrt(DEFAULT_MAXS_0 * DEFAULT_MAXS_0 + DEFAULT_MAXS_1 * DEFAULT_MAXS_1);
-vec3_t player_mins = { DEFAULT_MINS_0, DEFAULT_MINS_1, DEFAULT_MINS_2 };
+vec3_t playerMins = { DEFAULT_MINS_0, DEFAULT_MINS_1, DEFAULT_MINS_2 };
 vec3_t playerMinsStep = { DEFAULT_MINS_0, DEFAULT_MINS_1, DEFAULT_MINS_2 + STEPSIZE };
-vec3_t player_maxs = { DEFAULT_MAXS_0, DEFAULT_MAXS_1, DEFAULT_MAXS_2 };
+vec3_t playerMaxs = { DEFAULT_MAXS_0, DEFAULT_MAXS_1, DEFAULT_MAXS_2 };
 extern void Player_CheckBurn(const gentity_t* self);
 extern void Player_CheckFreeze(const gentity_t* self);
 extern void RemoveBarrier(gentity_t* ent);
@@ -254,20 +253,20 @@ SpotWouldTelefrag
 */
 qboolean SpotWouldTelefrag(const gentity_t* spot, const team_t checkteam)
 {
-	gentity_t* touch[MAX_GENTITIES];
+	static gentity_t* touch[MAX_GENTITIES];
 	vec3_t mins, maxs;
 
 	// If we have a mins, use that instead of the hardcoded bounding box
 	if (!VectorCompare(spot->mins, vec3_origin) && VectorLength(spot->mins))
 		VectorAdd(spot->s.origin, spot->mins, mins);
 	else
-		VectorAdd(spot->s.origin, player_mins, mins);
+		VectorAdd(spot->s.origin, playerMins, mins);
 
 	// If we have a maxs, use that instead of the hardcoded bounding box
 	if (!VectorCompare(spot->maxs, vec3_origin) && VectorLength(spot->maxs))
 		VectorAdd(spot->s.origin, spot->maxs, maxs);
 	else
-		VectorAdd(spot->s.origin, player_maxs, maxs);
+		VectorAdd(spot->s.origin, playerMaxs, maxs);
 
 	const int num = gi.EntitiesInBox(mins, maxs, touch, MAX_GENTITIES);
 
@@ -290,27 +289,24 @@ qboolean SpotWouldTelefrag(const gentity_t* spot, const team_t checkteam)
 	return qfalse;
 }
 
-qboolean spot_would_telefrag2(const gentity_t* mover, vec3_t dest)
+qboolean SpotWouldTelefrag2(const gentity_t* mover, vec3_t dest)
 {
-	gentity_t* touch[MAX_GENTITIES];
+	static gentity_t* touch[MAX_GENTITIES]; // moved off stack
 	vec3_t mins, maxs;
 
 	VectorAdd(dest, mover->mins, mins);
 	VectorAdd(dest, mover->maxs, maxs);
+
 	const int num = gi.EntitiesInBox(mins, maxs, touch, MAX_GENTITIES);
 
 	for (int i = 0; i < num; i++)
 	{
 		const gentity_t* hit = touch[i];
 		if (hit == mover)
-		{
 			continue;
-		}
 
 		if (hit->contents & mover->contents)
-		{
 			return qtrue;
-		}
 	}
 
 	return qfalse;
@@ -445,7 +441,7 @@ gentity_t* SelectSpawnPoint(vec3_t avoid_point, const team_t team, vec3_t origin
 		trace_t tr;
 
 		origin[2] = MIN_WORLD_COORD;
-		gi.trace(&tr, spot->s.origin, player_mins, player_maxs, origin, ENTITYNUM_NONE, MASK_PLAYERSOLID,
+		gi.trace(&tr, spot->s.origin, playerMins, playerMaxs, origin, ENTITYNUM_NONE, MASK_PLAYERSOLID,
 			static_cast<EG2_Collision>(0), 0);
 		if (tr.fraction < 1.0 && !tr.allsolid && !tr.startsolid)
 		{
@@ -811,41 +807,67 @@ Player_CacheFromPrevLevel
 */
 extern gitem_t* FindItemForInventory(int inv);
 
-void player_cache_from_prev_level()
+void Player_CacheFromPrevLevel()
 {
 	char s[MAX_STRING_CHARS];
 
+	// ---------------------------------------------------------
+	// Load the saved player string
+	// ---------------------------------------------------------
 	gi.Cvar_VariableStringBuffer(sCVARNAME_PLAYERSAVE, s, sizeof s);
 
-	if (s[0]) // actually this would be safe anyway because of the way sscanf() works, but this is clearer
+	// Nothing saved → nothing to cache
+	if (s[0] == '\0')
 	{
-		int i;
-		int iDummy, bits, ibits;
+		return;
+	}
 
-		sscanf(s, "%i %i %i %i",
-			&iDummy, //client->ps.stats[STAT_HEALTH],
-			&iDummy, //client->ps.stats[STAT_ARMOR],
-			&bits, //client->ps.stats[STAT_WEAPONS]
-			&ibits //client->ps.stats[STAT_ITEMS]
-		);
+	// ---------------------------------------------------------
+	// Parse the first four integers:
+	//   health, armor, weapon bits, item bits
+	// ---------------------------------------------------------
+	int dummy = 0;
+	int weaponBits = 0;
+	int itemBits = 0;
 
-		for (i = 1; i < 16; i++)
+	const int parsed = sscanf(
+		s,
+		"%i %i %i %i",
+		&dummy,        // STAT_HEALTH (ignored)
+		&dummy,        // STAT_ARMOR  (ignored)
+		&weaponBits,   // STAT_WEAPONS
+		&itemBits      // STAT_ITEMS
+	);
+
+	if (parsed < 4)
+	{
+		Com_Printf("Player_CacheFromPrevLevel: sscanf failed\n");
+		return;
+	}
+
+	// ---------------------------------------------------------
+	// Register weapons based on bitmask
+	// ---------------------------------------------------------
+	for (int i = 1; i < 16; i++)
+	{
+		if ((weaponBits & (1 << i)) != 0)
 		{
-			if (bits & 1 << i)
-			{
-				RegisterItem(FindItemForWeapon(static_cast<weapon_t>(i)));
-			}
+			RegisterItem(FindItemForWeapon(static_cast<weapon_t>(i)));
 		}
+	}
 
-		for (i = 0; i < 16; i++)
+	// ---------------------------------------------------------
+	// Register inventory items based on bitmask
+	// ---------------------------------------------------------
+	for (int i = 0; i < 16; i++)
+	{
+		if ((itemBits & (1 << i)) != 0)
 		{
-			if (ibits & 1 << i)
-			{
-				RegisterItem(FindItemForInventory(i));
-			}
+			RegisterItem(FindItemForInventory(i));
 		}
 	}
 }
+
 
 /*
 ============
@@ -855,7 +877,7 @@ Player_RestoreFromPrevLevel
   Argument		: gentity_t *ent
 ============
 */
-static void player_restore_from_prev_level(gentity_t* ent)
+static void Player_RestoreFromPrevLevel(gentity_t* ent)
 {
 	gclient_t* client = ent->client;
 
@@ -3093,7 +3115,7 @@ qboolean ClientSpawn(gentity_t* ent, SavedGameJustLoaded_e e_saved_game_just_loa
 		// do it before setting health back up, so farthest
 		// ranging doesn't count this client
 		// don't spawn near existing origin if possible
-		spawn_point = SelectSpawnPoint(ent->client->ps.origin,static_cast<team_t>(ent->client->ps.persistant[PERS_TEAM]), spawn_origin,spawn_angles);
+		spawn_point = SelectSpawnPoint(ent->client->ps.origin, static_cast<team_t>(ent->client->ps.persistant[PERS_TEAM]), spawn_origin, spawn_angles);
 
 		ent->client->pers.teamState.state = TEAM_ACTIVE;
 
@@ -3157,8 +3179,8 @@ qboolean ClientSpawn(gentity_t* ent, SavedGameJustLoaded_e e_saved_game_just_loa
 		client->renderInfo.lookTargetClearTime = 0;
 		client->renderInfo.lookMode = LM_ENT;
 
-		VectorCopy(player_mins, ent->mins);
-		VectorCopy(player_maxs, ent->maxs);
+		VectorCopy(playerMins, ent->mins);
+		VectorCopy(playerMaxs, ent->maxs);
 		client->crouchheight = CROUCH_MAXS_2;
 		client->standheight = DEFAULT_MAXS_2;
 
@@ -3282,7 +3304,7 @@ qboolean ClientSpawn(gentity_t* ent, SavedGameJustLoaded_e e_saved_game_just_loa
 
 		// restore some player data
 		//
-		player_restore_from_prev_level(ent);
+		Player_RestoreFromPrevLevel(ent);
 
 		//FIXME: put this BEFORE the Player_RestoreFromPrevLevel check above?
 		if (e_saved_game_just_loaded == eNO)

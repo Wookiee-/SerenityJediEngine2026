@@ -182,208 +182,185 @@ extern qboolean WP_SaberLose(gentity_t* self, vec3_t throw_dir);
 
 gentity_t* TossClientItems(gentity_t* self)
 {
+	// ---------------------------------------------------------
+	// Safety: self and self->client must be valid
+	// ---------------------------------------------------------
+	if (self == nullptr || self->client == nullptr)
+	{
+		Com_Printf("TossClientItems: NULL self or client\n");
+		return nullptr;
+	}
+
 	gentity_t* dropped = nullptr;
 	gitem_t* item = nullptr;
 	gclient_t* client = self->client;
+
 	const char* info = CG_ConfigString(CS_SERVERINFO);
 	const char* s = Info_ValueForKey(info, "mapname");
 
-	if (!g_AllowWeaponDropping->integer)
+	// ---------------------------------------------------------
+	// Global restrictions
+	// ---------------------------------------------------------
+	if (g_AllowWeaponDropping->integer == 0)
 	{
-		return nullptr; // reduce memory use to increase fps
-	}
-
-	if (strcmp(s, "md_ga_jedi") == 0
-		|| strcmp(s, "md_ga_sith") == 0
-		|| strcmp(s, "md_gb_sith") == 0
-		|| strcmp(s, "md_gb_jedi") == 0)
-	{
-		return nullptr; // reduce memory use to increase fps
-	}
-
-	if (client
-		&& (client->NPC_class == CLASS_SEEKER
-			|| client->NPC_class == CLASS_REMOTE
-			|| client->NPC_class == CLASS_SABER_DROID
-			|| client->NPC_class == CLASS_VEHICLE
-			|| client->NPC_class == CLASS_ATST
-			|| client->NPC_class == CLASS_SBD))
-	{
-		// these things are so small that they shouldn't bother throwing anything
 		return nullptr;
 	}
-	// drop the weapon if not a saber or enemy-only weapon
+
+	if (strcmp(s, "md_ga_jedi") == 0 ||
+		strcmp(s, "md_ga_sith") == 0 ||
+		strcmp(s, "md_gb_sith") == 0 ||
+		strcmp(s, "md_gb_jedi") == 0)
+	{
+		return nullptr;
+	}
+
+	// ---------------------------------------------------------
+	// NPC classes that never drop items
+	// ---------------------------------------------------------
+	if (client->NPC_class == CLASS_SEEKER ||
+		client->NPC_class == CLASS_REMOTE ||
+		client->NPC_class == CLASS_SABER_DROID ||
+		client->NPC_class == CLASS_VEHICLE ||
+		client->NPC_class == CLASS_ATST ||
+		client->NPC_class == CLASS_SBD)
+	{
+		return nullptr;
+	}
+
+	// ---------------------------------------------------------
+	// Weapon drop logic
+	// ---------------------------------------------------------
 	int weapon = self->s.weapon;
 
 	if (weapon == WP_SABER)
 	{
+		// Right-hand saber
 		if (self->weaponModel[0] < 0)
 		{
-			//don't have one in right hand
 			self->s.weapon = WP_NONE;
 		}
-		else if (!(client->ps.saber[0].saberFlags & SFL_NOT_DISARMABLE)
-			|| g_saberPickuppableDroppedSabers->integer)
+		else if ((client->ps.saber[0].saberFlags & SFL_NOT_DISARMABLE) == 0 ||
+			g_saberPickuppableDroppedSabers->integer != 0)
 		{
-			//okay to drop it
-			if (WP_SaberLose(self, nullptr))
+			if (WP_SaberLose(self, nullptr) == qtrue)
 			{
 				self->s.weapon = WP_NONE;
 			}
 		}
-		if (g_saberPickuppableDroppedSabers->integer)
+
+		// Left-hand saber
+		if (g_saberPickuppableDroppedSabers->integer != 0 &&
+			self->weaponModel[1] >= 0)
 		{
-			//drop your left one, too
-			if (self->weaponModel[1] >= 0)
+			if ((client->ps.saber[0].saberFlags & SFL_NOT_DISARMABLE) == 0 ||
+				g_saberPickuppableDroppedSabers->integer != 0)
 			{
-				//have one in left
-				if (!(client->ps.saber[0].saberFlags & SFL_NOT_DISARMABLE)
-					|| g_saberPickuppableDroppedSabers->integer)
+				if (client->ps.saber[1].name &&
+					client->ps.saber[1].name[0] != '\0')
 				{
-					//okay to drop it
-					//just drop an item
-					if (client->ps.saber[1].name
-						&& client->ps.saber[1].name[0])
+					if (G_DropSaberItem(client->ps.saber[1].name,
+						client->ps.saber[1].blade[0].color,
+						client->renderInfo.handLPoint,
+						client->ps.velocity,
+						self->currentAngles) != nullptr)
 					{
-						//have a valid string to use for saberType
-						//turn it into a pick-uppable item!
-						if (G_DropSaberItem(client->ps.saber[1].name, client->ps.saber[1].blade[0].color,
-							client->renderInfo.handLPoint, client->ps.velocity,
-							self->currentAngles) != nullptr)
-						{
-							//dropped it
-							WP_RemoveSaber(self, 1);
-						}
+						WP_RemoveSaber(self, 1);
 					}
 				}
 			}
 		}
 	}
-	else if (weapon == WP_BLASTER_PISTOL)
+	else if (weapon == WP_STUN_BATON ||
+		weapon == WP_MELEE ||
+		weapon == WP_DROIDEKA)
 	{
-		//FIXME: either drop the pistol and make the pickup only give ammo or drop ammo
+		// Never drop these
 	}
-	else if (weapon == WP_STUN_BATON || weapon == WP_MELEE || weapon == WP_DROIDEKA)
-	{
-		//never drop these
-	}
-	else if (weapon > WP_SABER && weapon <= MAX_PLAYER_WEAPONS && playerUsableWeapons[weapon])
+	else if (weapon > WP_SABER &&
+		weapon <= MAX_PLAYER_WEAPONS &&
+		playerUsableWeapons[weapon] == qtrue)
 	{
 		self->s.weapon = WP_NONE;
 
-		if (weapon == WP_THERMAL && client && client->ps.torsoAnim == BOTH_ATTACK10)
+		if (weapon == WP_THERMAL &&
+			client->ps.torsoAnim == BOTH_ATTACK10)
 		{
-			//we were getting ready to throw the thermal, drop it!
-			client->ps.weaponChargeTime = level.time - FRAMETIME; //so it just kind of drops it
+			client->ps.weaponChargeTime = level.time - FRAMETIME;
 			dropped = WP_DropThermal(self);
 		}
 		else
 		{
-			// find the item type for this weapon
 			item = FindItemForWeapon(static_cast<weapon_t>(weapon));
 		}
-		if (item && !dropped)
+
+		if (item != nullptr && dropped == nullptr)
 		{
-			// spawn the item
 			dropped = Drop_Item(self, item, 0, qtrue);
-			//TEST: dropped items never go away
+
 			dropped->e_ThinkFunc = thinkF_NULL;
 			dropped->nextthink = -1;
 
-			if (!self->s.number)
+			if (self->s.number == 0)
 			{
-				//player's dropped items never go away
-				dropped->count = 0; //no ammo
+				dropped->count = 0;
 			}
 			else
 			{
-				//FIXME: base this on the NPC's actual amount of ammo he's used up...
 				switch (weapon)
 				{
 				case WP_BRYAR_PISTOL:
-				case WP_SBD_PISTOL: //SBD WEAPON
-				case WP_BLASTER_PISTOL:
-					dropped->count = 20;
-					break;
-				case WP_BLASTER:
-					dropped->count = 15;
-					break;
-				case WP_DISRUPTOR:
-					dropped->count = 20;
-					break;
-				case WP_BOWCASTER:
-					dropped->count = 5;
-					break;
+				case WP_SBD_PISTOL:
+				case WP_BLASTER_PISTOL: dropped->count = 20; break;
+				case WP_BLASTER:        dropped->count = 15; break;
+				case WP_DISRUPTOR:      dropped->count = 20; break;
+				case WP_BOWCASTER:      dropped->count = 5;  break;
 				case WP_REPEATER:
-				case WP_WRIST_BLASTER:
-					dropped->count = 20;
-					break;
-				case WP_DEMP2:
-					dropped->count = 10;
-					break;
-				case WP_FLECHETTE:
-					dropped->count = 30;
-					break;
-				case WP_ROCKET_LAUNCHER:
-					dropped->count = 3;
-					break;
-				case WP_CONCUSSION:
-					dropped->count = 200; //12;
-					break;
-				case WP_THERMAL:
-					dropped->count = 4;
-					break;
-				case WP_TRIP_MINE:
-					dropped->count = 3;
-					break;
-				case WP_DET_PACK:
-					dropped->count = 1;
-					break;
-				case WP_STUN_BATON:
-					dropped->count = 20;
-					break;
-				default:
-					dropped->count = 0;
-					break;
+				case WP_WRIST_BLASTER:  dropped->count = 20; break;
+				case WP_DEMP2:          dropped->count = 10; break;
+				case WP_FLECHETTE:      dropped->count = 30; break;
+				case WP_ROCKET_LAUNCHER:dropped->count = 3;  break;
+				case WP_CONCUSSION:     dropped->count = 200;break;
+				case WP_THERMAL:        dropped->count = 4;  break;
+				case WP_TRIP_MINE:      dropped->count = 3;  break;
+				case WP_DET_PACK:       dropped->count = 1;  break;
+				case WP_STUN_BATON:     dropped->count = 20; break;
+				default:                dropped->count = 0;  break;
 				}
 			}
-			// well, dropped weapons are G2 models, so they have to be initialised if they want to draw..give us a radius so we don't get prematurely culled
-			if (weapon != WP_THERMAL
-				&& weapon != WP_TRIP_MINE
-				&& weapon != WP_DET_PACK)
+
+			if (weapon != WP_THERMAL &&
+				weapon != WP_TRIP_MINE &&
+				weapon != WP_DET_PACK)
 			{
-				gi.G2API_InitGhoul2Model(dropped->ghoul2, item->world_model, G_ModelIndex(item->world_model), NULL_HANDLE, NULL_HANDLE, 0, 0);
+				gi.G2API_InitGhoul2Model(dropped->ghoul2,
+					item->world_model,
+					G_ModelIndex(item->world_model),
+					NULL_HANDLE, NULL_HANDLE,
+					0, 0);
 				dropped->s.radius = 10;
 			}
+
 			dropped->TimeOfWeaponDrop = level.time + WeaponRemovalTime();
 		}
 	}
-	else if (client && client->NPC_class == CLASS_MARK1)
+	else if (client->NPC_class == CLASS_MARK1)
 	{
-		if (Q_irand(1, 2) > 1)
-		{
-			item = FindItemForAmmo(AMMO_METAL_BOLTS);
-		}
-		else
-		{
-			item = FindItemForAmmo(AMMO_BLASTER);
-		}
+		item = (Q_irand(1, 2) > 1)
+			? FindItemForAmmo(AMMO_METAL_BOLTS)
+			: FindItemForAmmo(AMMO_BLASTER);
+
 		Drop_Item(self, item, 0, qtrue);
 	}
-	else if (client && client->NPC_class == CLASS_MARK2)
+	else if (client->NPC_class == CLASS_MARK2)
 	{
-		if (Q_irand(1, 2) > 1)
-		{
-			item = FindItemForAmmo(AMMO_METAL_BOLTS);
-		}
-		else
-		{
-			item = FindItemForAmmo(AMMO_POWERCELL);
-		}
+		item = (Q_irand(1, 2) > 1)
+			? FindItemForAmmo(AMMO_METAL_BOLTS)
+			: FindItemForAmmo(AMMO_POWERCELL);
+
 		Drop_Item(self, item, 0, qtrue);
 	}
 
-	return dropped; //NOTE: presumes only drop one thing
+	return dropped;
 }
 
 static void G_DropKey(gentity_t* self)
@@ -484,28 +461,40 @@ static void G_CheckVictoryScript(gentity_t* self)
 	{
 		if (self->NPC && self->s.weapon == WP_SABER)
 		{
-			//Jedi taunt from within their AI
-			self->NPC->blockedSpeechDebounceTime = 0; //get them ready to taunt
+			// Jedi taunt from within their AI
+			self->NPC->blockedSpeechDebounceTime = 0;
 			return;
 		}
+
 		if (self->client && self->client->NPC_class == CLASS_GALAKMECH)
 		{
 			self->wait = 1;
 			TIMER_Set(self, "gloatTime", Q_irand(5000, 8000));
-			self->NPC->blockedSpeechDebounceTime = 0; //get him ready to taunt
+
+			// FIX: ensure NPC exists before dereferencing
+			if (self->NPC)
+			{
+				self->NPC->blockedSpeechDebounceTime = 0;
+			}
+
 			return;
 		}
-		//FIXME: any way to not say this *right away*?  Wait for victim's death anim/scream to finish?
-		if (self->NPC && self->NPC->group && self->NPC->group->commander && self->NPC->group->commander->NPC && self->
-			NPC->group->commander->NPC->rank > self->NPC->rank && !Q_irand(0, 2))
+
+		// Commander taunts
+		if (self->NPC &&
+			self->NPC->group &&
+			self->NPC->group->commander &&
+			self->NPC->group->commander->NPC &&
+			self->NPC->group->commander->NPC->rank > self->NPC->rank &&
+			!Q_irand(0, 2))
 		{
-			//sometimes have the group commander speak instead
-			self->NPC->group->commander->NPC->greetingDebounceTime = level.time + Q_irand(2000, 5000);
+			self->NPC->group->commander->NPC->greetingDebounceTime =
+				level.time + Q_irand(2000, 5000);
 		}
 		else if (self->NPC)
 		{
-			self->NPC->greetingDebounceTime = level.time + Q_irand(2000, 5000);
-			G_AddVoiceEvent(self, Q_irand(EV_VICTORY1, EV_VICTORY3), 2000);
+			self->NPC->greetingDebounceTime =
+				level.time + Q_irand(2000, 5000);
 		}
 	}
 }
@@ -6604,21 +6593,33 @@ static void G_CheckLightningKnockdown(gentity_t* targ, gentity_t* attacker, vec3
 
 void G_ApplyKnockback(gentity_t* targ, vec3_t new_dir, float knockback)
 {
-	vec3_t kvel;
-	float mass;
-
-	if (targ
-		&& targ->client
-		&& (targ->client->NPC_class == CLASS_ATST
-			|| targ->client->NPC_class == CLASS_RANCOR
-			|| targ->client->NPC_class == CLASS_SAND_CREATURE
-			|| targ->client->NPC_class == CLASS_WAMPA))
+	// ---------------------------------------------------------
+	// Safety: targ must be valid
+	// ---------------------------------------------------------
+	if (targ == nullptr)
 	{
-		//much to large to *ever* throw
+		Com_Printf("G_ApplyKnockback: NULL targ\n");
 		return;
 	}
 
-	//--- TEMP TEST
+	vec3_t kvel;
+	float mass = 200.0f;
+
+	// ---------------------------------------------------------
+	// Large NPCs never get thrown
+	// ---------------------------------------------------------
+	if (targ->client != nullptr &&
+		(targ->client->NPC_class == CLASS_ATST ||
+			targ->client->NPC_class == CLASS_RANCOR ||
+			targ->client->NPC_class == CLASS_SAND_CREATURE ||
+			targ->client->NPC_class == CLASS_WAMPA))
+	{
+		return;
+	}
+
+	// ---------------------------------------------------------
+	// TEMP TEST: force upward bias
+	// ---------------------------------------------------------
 	if (new_dir[2] <= 0.0f)
 	{
 		new_dir[2] += (0.0f - new_dir[2]) * 1.2f;
@@ -6626,43 +6627,68 @@ void G_ApplyKnockback(gentity_t* targ, vec3_t new_dir, float knockback)
 
 	knockback *= 2.0f;
 
-	if (knockback > 120)
+	if (knockback > 120.0f)
 	{
-		knockback = 120;
+		knockback = 120.0f;
 	}
-	//--- TEMP TEST
 
-	if (targ && targ->physicsBounce > 0.0f) //overide the mass
+	// ---------------------------------------------------------
+	// Mass override
+	// ---------------------------------------------------------
+	if (targ->physicsBounce > 0.0f)
+	{
 		mass = targ->physicsBounce;
-	else
-		mass = 200;
-
-	if (g_gravity->value > 0)
-	{
-		VectorScale(new_dir, g_knockback->value * knockback / mass * 0.8, kvel);
-		kvel[2] = new_dir[2] * (g_knockback->value * knockback) / (mass * 1.5) + 20;
-	}
-	else
-	{
-		VectorScale(new_dir, g_knockback->value * knockback / mass, kvel);
 	}
 
-	if (targ && targ->client)
+	// ---------------------------------------------------------
+	// Compute knockback velocity
+	// ---------------------------------------------------------
+	if (g_gravity->value > 0.0f)
 	{
-		VectorAdd(targ->client->ps.velocity, kvel, targ->client->ps.velocity);
+		VectorScale(new_dir,
+			(g_knockback->value * knockback / mass) * 0.8f,
+			kvel);
+
+		kvel[2] = new_dir[2] *
+			((g_knockback->value * knockback) / (mass * 1.5f)) +
+			20.0f;
 	}
-	else if (targ->s.pos.trType != TR_STATIONARY && targ->s.pos.trType != TR_LINEAR_STOP && targ->s.pos.trType != TR_NONLINEAR_STOP)
+	else
 	{
-		VectorAdd(targ->s.pos.trDelta, kvel, targ->s.pos.trDelta);
+		VectorScale(new_dir,
+			(g_knockback->value * knockback / mass),
+			kvel);
+	}
+
+	// ---------------------------------------------------------
+	// Apply velocity to client or physics object
+	// ---------------------------------------------------------
+	if (targ->client != nullptr)
+	{
+		VectorAdd(targ->client->ps.velocity,
+			kvel,
+			targ->client->ps.velocity);
+	}
+	else if (targ->s.pos.trType != TR_STATIONARY &&
+		targ->s.pos.trType != TR_LINEAR_STOP &&
+		targ->s.pos.trType != TR_NONLINEAR_STOP)
+	{
+		VectorAdd(targ->s.pos.trDelta,
+			kvel,
+			targ->s.pos.trDelta);
+
 		VectorCopy(targ->currentOrigin, targ->s.pos.trBase);
 		targ->s.pos.trTime = level.time;
 	}
 
-	// set the timer so that the other client can't cancel
-	// out the movement immediately
-	if (targ->client && !targ->client->ps.pm_time)
+	// ---------------------------------------------------------
+	// Knockback movement timer
+	// ---------------------------------------------------------
+	if (targ->client != nullptr &&
+		targ->client->ps.pm_time == 0)
 	{
-		int t = knockback * 2;
+		int t = static_cast<int>(knockback * 2.0f);
+
 		if (t < 50)
 		{
 			t = 50;
@@ -6671,6 +6697,7 @@ void G_ApplyKnockback(gentity_t* targ, vec3_t new_dir, float knockback)
 		{
 			t = 200;
 		}
+
 		targ->client->ps.pm_time = t;
 		targ->client->ps.pm_flags |= PMF_TIME_KNOCKBACK;
 	}
@@ -8241,8 +8268,8 @@ void G_Damage(gentity_t* targ, gentity_t* inflictor, gentity_t* attacker, const 
 		}
 	}
 
-	if (targ->client && attacker->client && targ->health > 0 && g_standard_humanoid(targ) && !
-		NPC_IsNotDismemberable(targ))
+	if (targ->client && attacker->client && targ->health > 0 &&
+		g_standard_humanoid(targ) && !NPC_IsNotDismemberable(targ))
 	{
 		//do head shots
 		if (inflictor->s.weapon == WP_BLASTER
@@ -8793,28 +8820,37 @@ extern void G_GetMassAndVelocityForEnt(const gentity_t* ent, float* mass, vec3_t
 ============
 G_RadiusDamage
 ============
-*/
-void G_RadiusDamage(const vec3_t origin, gentity_t* attacker, const float damage, float radius, const gentity_t* ignore,
-	const int mod)
+*/void G_RadiusDamage(const vec3_t origin, gentity_t* attacker, const float damage, float radius,const gentity_t* ignore, const int mod)
 {
-	gentity_t* entity_list[MAX_GENTITIES];
-	vec3_t mins{}, maxs{};
+	// ---------------------------------------------------------
+	// Static array avoids stack overflow (fixes C6262)
+	// ---------------------------------------------------------
+	static gentity_t* entity_list[MAX_GENTITIES];
+
+	vec3_t mins{};
+	vec3_t maxs{};
 	vec3_t v{};
 	vec3_t dir;
-	int i;
+
 	int d_flags = DAMAGE_RADIUS;
 
-	if (radius < 1)
+	if (radius < 1.0f)
 	{
-		radius = 1;
+		radius = 1.0f;
 	}
 
-	for (i = 0; i < 3; i++)
+	// ---------------------------------------------------------
+	// Compute bounding box
+	// ---------------------------------------------------------
+	for (int i = 0; i < 3; i++)
 	{
 		mins[i] = origin[i] - radius;
 		maxs[i] = origin[i] + radius;
 	}
 
+	// ---------------------------------------------------------
+	// Special explosion effects
+	// ---------------------------------------------------------
 	if (mod == MOD_ROCKET)
 	{
 		Do_DustFallNear(origin, 10);
@@ -8825,21 +8861,36 @@ void G_RadiusDamage(const vec3_t origin, gentity_t* attacker, const float damage
 		d_flags |= DAMAGE_NO_KNOCKBACK;
 	}
 
+	// ---------------------------------------------------------
+	// Query entities in radius
+	// ---------------------------------------------------------
 	const int num_listed_entities = gi.EntitiesInBox(mins, maxs, entity_list, MAX_GENTITIES);
 
 	for (int e = 0; e < num_listed_entities; e++)
 	{
 		gentity_t* ent = entity_list[e];
 
+		if (ent == nullptr)
+		{
+			continue;
+		}
 		if (ent == ignore)
+		{
 			continue;
-		if (!ent->takedamage)
+		}
+		if (ent->takedamage == qfalse)
+		{
 			continue;
-		if (!ent->contents)
+		}
+		if (ent->contents == 0)
+		{
 			continue;
+		}
 
-		// find the distance from the edge of the bounding box
-		for (i = 0; i < 3; i++)
+		// ---------------------------------------------------------
+		// Distance from bounding box
+		// ---------------------------------------------------------
+		for (int i = 0; i < 3; i++)
 		{
 			if (origin[i] < ent->absmin[i])
 			{
@@ -8851,7 +8902,7 @@ void G_RadiusDamage(const vec3_t origin, gentity_t* attacker, const float damage
 			}
 			else
 			{
-				v[i] = 0;
+				v[i] = 0.0f;
 			}
 		}
 
@@ -8861,40 +8912,45 @@ void G_RadiusDamage(const vec3_t origin, gentity_t* attacker, const float damage
 			continue;
 		}
 
-		float points = damage * (1.0 - dist / radius);
+		float points = damage * (1.0f - dist / radius);
 
-		// Lessen damage to vehicles that are moving away from the explosion
-		if (ent->client && (ent->client->NPC_class == CLASS_VEHICLE || G_IsRidingVehicle(ent)))
+		// ---------------------------------------------------------
+		// Vehicle damage reduction when moving away
+		// ---------------------------------------------------------
+		if (ent->client != nullptr &&
+			(ent->client->NPC_class == CLASS_VEHICLE || G_IsRidingVehicle(ent)))
 		{
-			const gentity_t* bike = ent;
-
-			if (G_IsRidingVehicle(ent) && ent->owner)
-			{
-				bike = ent->owner;
-			}
+			const gentity_t* bike = (G_IsRidingVehicle(ent) && ent->owner != nullptr)
+				? ent->owner
+				: ent;
 
 			vec3_t veh_move_direction;
-
 			float mass;
+
 			G_GetMassAndVelocityForEnt(bike, &mass, veh_move_direction);
+
 			const float veh_move_speed = VectorNormalize(veh_move_direction);
+
 			if (veh_move_speed > 300.0f)
 			{
 				vec3_t explosion_direction;
 				VectorSubtract(bike->currentOrigin, origin, explosion_direction);
 				VectorNormalize(explosion_direction);
 
-				const float explosionDirectionSimilarity = DotProduct(veh_move_direction, explosion_direction);
-				if (explosionDirectionSimilarity > 0.0f)
+				const float similarity = DotProduct(veh_move_direction, explosion_direction);
+
+				if (similarity > 0.0f)
 				{
-					points *= 1.0f - explosionDirectionSimilarity;
+					points *= (1.0f - similarity);
 				}
 			}
 		}
 
-		if (CanDamage(ent, origin))
+		// ---------------------------------------------------------
+		// Apply damage if visible
+		// ---------------------------------------------------------
+		if (CanDamage(ent, origin) == qtrue)
 		{
-			//FIXME: still do a little damage in in PVS and close?
 			if (ent->svFlags & (SVF_GLASS_BRUSH | SVF_BBRUSH))
 			{
 				VectorAdd(ent->absmin, ent->absmax, v);
@@ -8906,15 +8962,12 @@ void G_RadiusDamage(const vec3_t origin, gentity_t* attacker, const float damage
 			}
 
 			VectorSubtract(v, origin, dir);
-			// push the center of mass higher than the origin so players
-			// get knocked into the air more
-			dir[2] += 24;
+			dir[2] += 24.0f;
 
 			if (ent->svFlags & SVF_GLASS_BRUSH)
 			{
 				if (points > 1.0f)
 				{
-					// we want to cap this at some point, otherwise it just gets crazy
 					if (points > 6.0f)
 					{
 						VectorScale(dir, 6.0f, dir);
@@ -8925,7 +8978,7 @@ void G_RadiusDamage(const vec3_t origin, gentity_t* attacker, const float damage
 					}
 				}
 
-				ent->splashRadius = radius; // * ( 1.0 - dist / radius );
+				ent->splashRadius = radius;
 			}
 
 			G_Damage(ent, nullptr, attacker, dir, origin, static_cast<int>(points), d_flags, mod);

@@ -42,10 +42,6 @@ Ghoul2 Insert End
 
 extern botlib_export_t* botlib_export;
 
-extern qboolean loadCamera(const char* name);
-extern void startCamera(int time);
-extern qboolean getCameraInfo(int time, vec3_t* origin, vec3_t* angles);
-
 /*
 ====================
 CL_GetUserCmd
@@ -78,7 +74,7 @@ qboolean CL_GetUserCmd(const int cmdNumber, usercmd_t* ucmd)
 CL_GetParseEntityState
 ====================
 */
-qboolean CL_GetParseEntityState(const int parseentity_number, entityState_t* state)
+static qboolean CL_GetParseEntityState(const int parseentity_number, entityState_t* state)
 {
 	// can't return anything that hasn't been parsed yet
 	if (parseentity_number >= cl.parseEntitiesNum)
@@ -201,7 +197,7 @@ int gCLTotalclientNum = 0;
 extern cvar_t* cl_autolodscale;
 //if we want to do autolodscaling
 
-void CL_DoAutoLODScale(void)
+static void CL_DoAutoLODScale(void)
 {
 	float finalLODScaleFactor = 0;
 
@@ -217,17 +213,17 @@ void CL_DoAutoLODScale(void)
 =====================
 CL_ConfigstringModified
 =====================
-*/
-void CL_ConfigstringModified(void)
+*/static void CL_ConfigstringModified(void)
 {
-	int i;
-	char* dup;
+	int i = 0;
+	char* dup = nullptr;
 
 	const int index = atoi(Cmd_Argv(1));
 	if (index < 0 || index >= MAX_CONFIGSTRINGS)
 	{
 		Com_Error(ERR_DROP, "CL_ConfigstringModified: bad index %i", index);
 	}
+
 	// get everything after "cs <num>"
 	char* s = Cmd_ArgsFrom(2);
 
@@ -237,9 +233,21 @@ void CL_ConfigstringModified(void)
 		return; // unchanged
 	}
 
-	// build the new gameState_t
-	gameState_t oldGs = cl.gameState;
+	// ---------------------------------------------------------
+	// FIX: Move large temporary off the stack
+	// ---------------------------------------------------------
+	gameState_t* oldGs = (gameState_t*)Z_Malloc(sizeof(gameState_t), TAG_TEMP_WORKSPACE, qfalse);
+	if (!oldGs)
+	{
+		Com_Printf("CL_ConfigstringModified: Z_Malloc failed\n");
+		return;
+	}
 
+	Com_Memcpy(oldGs, &cl.gameState, sizeof(gameState_t));
+
+	// ---------------------------------------------------------
+	// Rebuild gameState
+	// ---------------------------------------------------------
 	Com_Memset(&cl.gameState, 0, sizeof cl.gameState);
 
 	// leave the first 0 for uninitialized strings
@@ -253,45 +261,46 @@ void CL_ConfigstringModified(void)
 		}
 		else
 		{
-			dup = oldGs.stringData + oldGs.stringOffsets[i];
+			dup = oldGs->stringData + oldGs->stringOffsets[i];
 		}
-		if (!dup[0])
+
+		if (!dup || dup[0] == '\0')
 		{
-			continue; // leave with the default empty string
+			continue; // leave empty
 		}
 
 		const int len = strlen(dup);
 
 		if (len + 1 + cl.gameState.dataCount > MAX_GAMESTATE_CHARS)
 		{
+			Z_Free(oldGs);
 			Com_Error(ERR_DROP, "MAX_GAMESTATE_CHARS exceeded");
 		}
 
-		// append it to the gameState string buffer
+		// append to buffer
 		cl.gameState.stringOffsets[i] = cl.gameState.dataCount;
-		Com_Memcpy(cl.gameState.stringData + cl.gameState.dataCount, dup, len + 1);
+		Com_Memcpy(cl.gameState.stringData + cl.gameState.dataCount, dup, static_cast<size_t>(len) + 1);
 		cl.gameState.dataCount += len + 1;
 	}
 
+	Z_Free(oldGs);
+
+	// ---------------------------------------------------------
+	// Auto LOD scaling logic (unchanged)
+	// ---------------------------------------------------------
 	if (cl_autolodscale && cl_autolodscale->integer)
 	{
-		if (index >= CS_PLAYERS &&
-			index < CS_G2BONES)
+		if (index >= CS_PLAYERS && index < CS_G2BONES)
 		{
-			//this means that a client was updated in some way. Go through and count the clients.
 			int clientCount = 0;
-			i = CS_PLAYERS;
 
-			while (i < CS_G2BONES)
+			for (i = CS_PLAYERS; i < CS_G2BONES; i++)
 			{
 				s = cl.gameState.stringData + cl.gameState.stringOffsets[i];
-
 				if (s && s[0])
 				{
 					clientCount++;
 				}
-
-				i++;
 			}
 
 			gCLTotalclientNum = clientCount;
@@ -306,15 +315,15 @@ void CL_ConfigstringModified(void)
 
 	if (index == CS_SYSTEMINFO)
 	{
-		// parse serverId and other cvars
 		CL_SystemInfoChanged();
 	}
 }
+
 #ifndef MAX_STRINGED_SV_STRING
 #define MAX_STRINGED_SV_STRING 1024
 #endif
 // just copied it from CG_CheckSVStringEdRef(
-void CL_CheckSVStringEdRef(char* buf, const char* str)
+static void CL_CheckSVStringEdRef(char* buf, const char* str)
 {
 	//I don't really like doing this. But it utilizes the system that was already in place.
 	int i = 0;
@@ -651,7 +660,7 @@ or bursted delayed packets.
 
 constexpr auto RESET_TIME = 500;
 
-void CL_AdjustTimeDelta(void)
+static void CL_AdjustTimeDelta(void)
 {
 	cl.newSnapshots = qfalse;
 

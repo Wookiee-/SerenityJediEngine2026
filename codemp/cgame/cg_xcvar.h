@@ -213,7 +213,7 @@ XCVAR_DEF(cg_truespin, "0", NULL, CVAR_ARCHIVE)
 XCVAR_DEF(cg_truemoveroll, "0", NULL, CVAR_ARCHIVE)
 XCVAR_DEF(cg_truesaberonly, "0", NULL, CVAR_ARCHIVE)
 XCVAR_DEF(cg_trueeyeposition, "0.0", NULL, CVAR_NONE)
-XCVAR_DEF(cg_trueinvertsaber, "1", NULL, CVAR_ARCHIVE)
+XCVAR_DEF(cg_trueinvertsaber, "2", NULL, CVAR_ARCHIVE)
 XCVAR_DEF(cg_truefov, "90", NULL, CVAR_ARCHIVE)
 XCVAR_DEF(cg_truebobbing, "1", NULL, CVAR_ARCHIVE)
 
@@ -262,5 +262,6 @@ XCVAR_DEF(cg_undersizedview, "60", NULL, CVAR_ARCHIVE)
 XCVAR_DEF(com_rend2, "0", NULL, CVAR_ARCHIVE)
 XCVAR_DEF(cg_textprintscale, "0.5f", NULL, CVAR_ARCHIVE)
 XCVAR_DEF(g_noIgniteTwirl, "0", NULL, CVAR_ARCHIVE)
+XCVAR_DEF(in_joystick, "1", NULL, CVAR_ARCHIVE)
 
 #undef XCVAR_DEF

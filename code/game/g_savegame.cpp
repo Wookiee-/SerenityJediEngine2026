@@ -1155,6 +1155,7 @@ static void ReadGEntities(const qboolean qbAutosave)
 	}
 }
 
+extern void CG_WriteTheEvilCGHackStuff();
 void WriteLevel(const qboolean qbAutosave)
 {
 	if (!qbAutosave) //-always save the client
@@ -1175,8 +1176,6 @@ void WriteLevel(const qboolean qbAutosave)
 	WriteGEntities(qbAutosave);
 	Quake3Game()->VariableSave();
 	G_LoadSave_WriteMiscData();
-
-	extern void CG_WriteTheEvilCGHackStuff();
 	CG_WriteTheEvilCGHackStuff();
 
 	// (Do NOT put any write-code below this line)
@@ -1192,6 +1191,8 @@ void WriteLevel(const qboolean qbAutosave)
 		INT_ID('D', 'O', 'N', 'E'),
 		iDONE);
 }
+
+extern void CG_ReadTheEvilCGHackStuff();
 
 void ReadLevel(const qboolean qbAutosave, const qboolean qbLoadTransition)
 {
@@ -1236,8 +1237,6 @@ void ReadLevel(const qboolean qbAutosave, const qboolean qbLoadTransition)
 	ReadGEntities(qbAutosave);
 	Quake3Game()->VariableLoad();
 	G_LoadSave_ReadMiscData();
-
-	extern void CG_ReadTheEvilCGHackStuff();
 	CG_ReadTheEvilCGHackStuff();
 
 	static int iDONE = 1234;

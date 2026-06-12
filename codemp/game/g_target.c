@@ -1165,8 +1165,8 @@ qboolean CheckforGoodSpawnPoint(vec3_t location, const qboolean playersolidcheck
 {
 	trace_t tr;
 	vec3_t locend;
-	const vec3_t player_mins = { -15, -15, DEFAULT_MINS_2 };
-	const vec3_t player_maxs = { 15, 15, DEFAULT_MAXS_2 };
+	const vec3_t playerMins = { -15, -15, DEFAULT_MINS_2 };
+	const vec3_t playerMaxs = { 15, 15, DEFAULT_MAXS_2 };
 
 	VectorCopy(location, locend);
 	locend[2] -= 900;
@@ -1175,12 +1175,12 @@ qboolean CheckforGoodSpawnPoint(vec3_t location, const qboolean playersolidcheck
 	if (playersolidcheck)
 	{
 		//use a playersolid check
-		trap->Trace(&tr, location, player_mins, player_maxs, locend, -1, MASK_PLAYERSOLID, qfalse, 0, 0);
+		trap->Trace(&tr, location, playerMins, playerMaxs, locend, -1, MASK_PLAYERSOLID, qfalse, 0, 0);
 	}
 	else
 	{
 		//otherwise just check solid
-		trap->Trace(&tr, location, player_mins, player_maxs, locend, -1, MASK_SOLID, qfalse, 0, 0);
+		trap->Trace(&tr, location, playerMins, playerMaxs, locend, -1, MASK_SOLID, qfalse, 0, 0);
 	}
 
 	if (tr.startsolid || tr.fraction == 1)

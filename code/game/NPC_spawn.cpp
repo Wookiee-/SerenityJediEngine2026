@@ -48,7 +48,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 extern qboolean G_CheckInSolid(gentity_t* self, qboolean fix);
 extern void client_userinfo_changed(int clientNum);
-extern qboolean spot_would_telefrag2(const gentity_t* mover, vec3_t dest);
+extern qboolean SpotWouldTelefrag2(const gentity_t* mover, vec3_t dest);
 extern void Jedi_Cloak(gentity_t* self);
 extern void Saboteur_Cloak(gentity_t* self);
 extern cvar_t* com_outcast;
