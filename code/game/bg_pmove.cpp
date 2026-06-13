@@ -17485,15 +17485,12 @@ void PM_WeaponLightsaber()
 	int anim = -1;
 	int newmove = LS_NONE;
 
-<<<<<<< HEAD
 	if ((uintptr_t)pm == (uintptr_t)-1 || pm == nullptr || pm->ps == nullptr)
 	{
 		Com_Printf("PM_WeaponLightsaber: pm corrupted (0x%llX) or null\n", (unsigned long long)(uintptr_t)pm);
 		return;
 	}
 
-=======
->>>>>>> 80430da2f5757d8a59da2391c69dd460591c2ecb
 	const qboolean is_holding_block_button = pm->ps->ManualBlockingFlags & 1 << HOLDINGBLOCK ? qtrue : qfalse;
 	const qboolean is_holding_block_button_and_attack = pm->ps->ManualBlockingFlags & 1 << HOLDINGBLOCKANDATTACK ? qtrue : qfalse;
 	const qboolean walking_blocking = pm->ps->ManualBlockingFlags & 1 << MBF_BLOCKWALKING ? qtrue : qfalse;
