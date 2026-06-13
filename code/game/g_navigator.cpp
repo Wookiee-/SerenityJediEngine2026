@@ -70,7 +70,7 @@ extern cvar_t* g_nav2;
 extern cvar_t* g_developer;
 extern int delayedShutDown;
 extern vec3_t playerMinsStep;
-extern vec3_t player_maxs;
+extern vec3_t playerMaxs;
 extern cvar_t* com_outcast;
 
 ////////////////////////////////////////////////////////////////////////////////////////

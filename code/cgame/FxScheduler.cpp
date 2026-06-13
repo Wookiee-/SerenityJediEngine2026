@@ -884,7 +884,7 @@ void CFxScheduler::PlayEffect(const char* file, const int client_id, const bool 
 			// if the delay is so small, we may as well just create this bit right now
 			if (delay < 1 && !isPortal)
 			{
-				CreateEffect(prim, client_id, -delay);
+				CreateEffect(prim, client_id);
 			}
 			else
 			{
@@ -937,7 +937,7 @@ bool gEffectsInPortal = false;
 // Return:
 //	none
 //------------------------------------------------------
-void CFxScheduler::CreateEffect(CPrimitiveTemplate* fx, const int client_id, int delay) const
+void CFxScheduler::CreateEffect(CPrimitiveTemplate* fx, const int client_id) const
 {
 	vec3_t sRGB, eRGB;
 	vec3_t vel, accel;
@@ -1338,86 +1338,135 @@ void CFxScheduler::PlayEffect(const char* file, vec3_t origin, vec3_t forward, c
 //------------------------------------------------------
 void CFxScheduler::AddScheduledEffects(const bool portal)
 {
-	int oldEntNum = -1, oldBoltIndex = -1, oldModelNum = -1;
-	qboolean doesBoltExist = qfalse;
+	int oldEntNum = -1;
+	int old_bolt_index = -1;
+	int old_model_num = -1;
+	qboolean does_bolt_exist = qfalse;
 
 	if (portal)
 	{
-		gEffectsInPortal = true;
+		gEffectsInPortal = qtrue;
 	}
 	else
 	{
 		AddLoopedEffects();
 	}
 
-	for (auto itr = mFxSchedule.begin(); itr != mFxSchedule.end(); /* do nothing */)
+	for (auto itr = mFxSchedule.begin(); itr != mFxSchedule.end(); /* nothing */)
 	{
 		SScheduledEffect* effect = *itr;
 
-		if (portal == effect->mPortalEffect && effect->mStartTime <= theFxHelper.mTime)
+		if (portal == effect->mPortalEffect &&
+			effect->mStartTime <= theFxHelper.mTime)
 		{
+			// ------------------------------------------------------------
+			// CLIENT-ID EFFECT
+			// ------------------------------------------------------------
 			if (effect->mClientID >= 0)
 			{
-				CreateEffect(effect->mpTemplate, effect->mClientID,
-					theFxHelper.mTime - effect->mStartTime);
+				CreateEffect(effect->mpTemplate, effect->mClientID);
 			}
+
+			// ------------------------------------------------------------
+			// NORMAL EFFECT (no bolt)
+			// ------------------------------------------------------------
 			else if (effect->mBoltNum == -1)
 			{
-				// normal effect
-				if (effect->mEntNum != -1) // -1
+				if (effect->mEntNum != -1)
 				{
-					// Find out where the entity currently is
-					CreateEffect(effect->mpTemplate,
-						cg_entities[effect->mEntNum].lerpOrigin, effect->mAxis,
-						theFxHelper.mTime - (*itr)->mStartTime);
+					// NOTE: mEntNum is assumed valid here by original code;
+					// this path is used for non-bolted effects and typically
+					// comes from trusted scheduling.
+					CreateEffect(
+						effect->mpTemplate,
+						cg_entities[effect->mEntNum].lerpOrigin,
+						effect->mAxis,
+						theFxHelper.mTime - effect->mStartTime);
 				}
 				else
 				{
-					CreateEffect(effect->mpTemplate,
-						effect->mOrigin, effect->mAxis,
+					CreateEffect(
+						effect->mpTemplate,
+						effect->mOrigin,
+						effect->mAxis,
 						theFxHelper.mTime - effect->mStartTime);
 				}
 			}
+
+			// ------------------------------------------------------------
+			// BOLTED EFFECT
+			// ------------------------------------------------------------
 			else
 			{
 				vec3_t axis[3];
 				vec3_t origin;
-				//bolted on effect
-				// do we need to go and re-get the bolt matrix again? Since it takes time lets try to do it only once
-				if (effect->mModelNum != oldModelNum || effect->mEntNum != oldEntNum || effect->mBoltNum !=
-					oldBoltIndex)
+
+				// Only re-fetch bolt matrix if something changed
+				if (effect->mModelNum != old_model_num ||
+					effect->mEntNum != oldEntNum ||
+					effect->mBoltNum != old_bolt_index)
 				{
-					const centity_t& cent = cg_entities[effect->mEntNum];
-					if (cent.gent->ghoul2.IsValid())
+					does_bolt_exist = qfalse;
+
+					// --------------------------------------------
+					// VALIDATE ENTITY INDEX
+					// --------------------------------------------
+					if (effect->mEntNum < 0 || effect->mEntNum >= MAX_GENTITIES)
 					{
-						if (effect->mModelNum >= 0 && effect->mModelNum < cent.gent->ghoul2.size())
+						gi.Printf(
+							"CFxScheduler::AddScheduledEffects: invalid entNum %d (max %d)\n",
+							effect->mEntNum, MAX_GENTITIES);
+					}
+					else
+					{
+						const centity_t& cent = cg_entities[effect->mEntNum];
+
+						if (cent.gent != NULL && cent.gent->ghoul2.IsValid() == qtrue)
 						{
-							if (cent.gent->ghoul2[effect->mModelNum].mModelindex >= 0)
+							const int modelNum = effect->mModelNum;
+
+							if (modelNum >= 0 && modelNum < cent.gent->ghoul2.size())
 							{
-								doesBoltExist = static_cast<qboolean>(theFxHelper.GetOriginAxisFromBolt(
-									cent, effect->mModelNum, effect->mBoltNum, origin, axis) != 0);
+								if (cent.gent->ghoul2[modelNum].mModelindex >= 0)
+								{
+									does_bolt_exist = (theFxHelper.GetOriginAxisFromBolt(
+										cent,
+										modelNum,
+										effect->mBoltNum,
+										origin,
+										axis) != 0)
+										? qtrue
+										: qfalse;
+								}
 							}
 						}
 					}
 
-					oldModelNum = effect->mModelNum;
+					old_model_num = effect->mModelNum;
 					oldEntNum = effect->mEntNum;
-					oldBoltIndex = effect->mBoltNum;
+					old_bolt_index = effect->mBoltNum;
 				}
 
-				// only do this if we found the bolt
-				if (doesBoltExist)
+				// Only spawn if bolt exists
+				if (does_bolt_exist == qtrue)
 				{
-					if (effect->mIsRelative)
+					if (effect->mIsRelative == qtrue)
 					{
-						CreateEffect(effect->mpTemplate,
-							vec3_origin, axis,
-							0, effect->mEntNum, effect->mModelNum, effect->mBoltNum);
+						CreateEffect(
+							effect->mpTemplate,
+							vec3_origin,
+							axis,
+							0,
+							effect->mEntNum,
+							effect->mModelNum,
+							effect->mBoltNum);
 					}
 					else
 					{
-						CreateEffect(effect->mpTemplate,
-							origin, axis,
+						CreateEffect(
+							effect->mpTemplate,
+							origin,
+							axis,
 							theFxHelper.mTime - effect->mStartTime);
 					}
 				}
@@ -1435,7 +1484,7 @@ void CFxScheduler::AddScheduledEffects(const bool portal)
 	// Add all active effects into the scene
 	FX_Add(portal);
 
-	gEffectsInPortal = false;
+	gEffectsInPortal = qfalse;
 }
 
 //------------------------------------------------------

@@ -109,24 +109,24 @@ void CG_BuildSolidList(void)
 	//changed..
 	if (cg_numSolidEntities < MAX_ENTITIES_IN_SNAPSHOT)
 	{
-		const vec3_t player_mins = { -15, -15, DEFAULT_MINS_2 };
-		const vec3_t player_maxs = { 15, 15, DEFAULT_MAXS_2 };
+		const vec3_t playerMins = { -15, -15, DEFAULT_MINS_2 };
+		const vec3_t playerMaxs = { 15, 15, DEFAULT_MAXS_2 };
 
-		int i1 = player_maxs[0];
+		int i1 = playerMaxs[0];
 		if (i1 < 1)
 			i1 = 1;
 		if (i1 > 255)
 			i1 = 255;
 
 		// z is not symetric
-		int j = -player_mins[2];
+		int j = -playerMins[2];
 		if (j < 1)
 			j = 1;
 		if (j > 255)
 			j = 255;
 
-		// and z player_maxs can be negative...
-		int k = player_maxs[2] + 32;
+		// and z playerMaxs can be negative...
+		int k = playerMaxs[2] + 32;
 		if (k < 1)
 			k = 1;
 		if (k > 255)

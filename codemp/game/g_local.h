@@ -1725,7 +1725,7 @@ void G_ClearTeamVote(const gentity_t* ent, int team);
 // g_active.c
 //
 void G_CheckClientTimeouts(gentity_t* ent);
-void ClientThink(int clientNum, const usercmd_t* ucmd);
+void ClientThink(const int clientNum, const usercmd_t* ucmd);
 void ClientEndFrame(gentity_t* ent);
 void G_RunClient(gentity_t* ent);
 

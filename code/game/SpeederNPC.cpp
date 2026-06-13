@@ -92,8 +92,8 @@ extern void NPC_SetAnim(gentity_t* ent, int setAnimParts, int anim, int setAnimF
 
 #ifdef QAGAME //SP or gameside MP
 extern vmCvar_t cg_thirdPersonAlpha;
-extern vec3_t player_mins;
-extern vec3_t player_maxs;
+extern vec3_t playerMins;
+extern vec3_t playerMaxs;
 extern cvar_t* g_speederControlScheme;
 extern void ChangeWeapon(const gentity_t* ent, int new_weapon);
 extern void PM_SetAnim(const pmove_t* pm, int setAnimParts, int anim, int setAnimFlags, int blendTime);

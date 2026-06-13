@@ -1711,46 +1711,63 @@ During normal gameplay, a client packet will contain something like:
 */
 void CL_WritePacket(void)
 {
-	msg_t buf;
-	byte data[MAX_MSGLEN];
-	int i;
-	usercmd_t nullcmd;
+	msg_t      buf;
+	byte* data;
+	int        i;
+	usercmd_t  nullcmd;
+	usercmd_t* oldcmd;
 
-	// don't send anything if playing back a demo
-	if (clc.demoplaying || cls.state == CA_CINEMATIC)
+	// ---------------------------------------------------------
+	// Do not send anything if playing back a demo or in cinematic
+	// ---------------------------------------------------------
+	if (clc.demoplaying == qtrue || cls.state == CA_CINEMATIC)
 	{
 		return;
 	}
 
-	Com_Memset(&nullcmd, 0, sizeof nullcmd);
-	usercmd_t* oldcmd = &nullcmd;
+	// ---------------------------------------------------------
+	// Allocate packet buffer on heap (fixes large stack usage)
+	// ---------------------------------------------------------
+	data = static_cast<byte*>(Z_Malloc(MAX_MSGLEN, TAG_TEMP_WORKSPACE, qfalse));
+	if (data == nullptr)
+	{
+		Com_Printf("CL_WritePacket: Failed to allocate packet buffer\n");
+		return;
+	}
 
-	MSG_Init(&buf, data, sizeof data);
+	Com_Memset(&nullcmd, 0, sizeof(nullcmd));
+	oldcmd = &nullcmd;
 
+	MSG_Init(&buf, data, MAX_MSGLEN);
 	MSG_Bitstream(&buf);
-	// write the current serverId so the server
-	// can tell if this is from the current gameState
+
+	// ---------------------------------------------------------
+	// Server/game state identifiers
+	// ---------------------------------------------------------
+	// Current serverId so server can tell if this is from current gameState
 	MSG_WriteLong(&buf, cl.serverId);
 
-	// write the last message we received, which can
-	// be used for delta compression, and is also used
-	// to tell if we dropped a gamestate
+	// Last server message sequence we received
 	MSG_WriteLong(&buf, clc.serverMessageSequence);
 
-	// write the last reliable message we received
+	// Last reliable server command we received
 	MSG_WriteLong(&buf, clc.serverCommandSequence);
 
-	// write any unacknowledged clientCommands
+	// ---------------------------------------------------------
+	// Write any unacknowledged reliable client commands
+	// ---------------------------------------------------------
 	for (i = clc.reliableAcknowledge + 1; i <= clc.reliableSequence; i++)
 	{
 		MSG_WriteByte(&buf, clc_clientCommand);
 		MSG_WriteLong(&buf, i);
-		MSG_WriteString(&buf, clc.reliableCommands[i & MAX_RELIABLE_COMMANDS - 1]);
+
+		const int index = (i & (MAX_RELIABLE_COMMANDS - 1));
+		MSG_WriteString(&buf, clc.reliableCommands[index]);
 	}
 
-	// we want to send all the usercmds that were generated in the last
-	// few packet, so even if a couple packets are dropped in a row,
-	// all the cmds will make it to the server
+	// ---------------------------------------------------------
+	// Determine how many usercmds to send
+	// ---------------------------------------------------------
 	if (cl_packetdup->integer < 0)
 	{
 		Cvar_Set("cl_packetdup", "0");
@@ -1759,24 +1776,33 @@ void CL_WritePacket(void)
 	{
 		Cvar_Set("cl_packetdup", "5");
 	}
-	const int oldPacketNum = clc.netchan.outgoingSequence - 1 - cl_packetdup->integer & PACKET_MASK;
+
+	const int oldPacketNum =
+		(clc.netchan.outgoingSequence - 1 - cl_packetdup->integer) & PACKET_MASK;
+
 	int count = cl.cmdNumber - cl.outPackets[oldPacketNum].p_CmdNumber;
+
 	if (count > MAX_PACKET_USERCMDS)
 	{
 		count = MAX_PACKET_USERCMDS;
 		Com_Printf("MAX_PACKET_USERCMDS\n");
 	}
+
+	// ---------------------------------------------------------
+	// Write usercmds (move/moveNoDelta)
+	// ---------------------------------------------------------
 	if (count >= 1)
 	{
-		if (cl_showSend->integer)
+		if (cl_showSend->integer != 0)
 		{
 			Com_Printf("(%i)", count);
 		}
 
-		// begin a client move command
-		if (cl_nodelta->integer || !cl.snap.valid
-			|| clc.demowaiting
-			|| clc.serverMessageSequence != cl.snap.messageNum)
+		// Choose move type based on delta availability
+		if (cl_nodelta->integer != 0 ||
+			cl.snap.valid == qfalse ||
+			clc.demowaiting == qtrue ||
+			clc.serverMessageSequence != cl.snap.messageNum)
 		{
 			MSG_WriteByte(&buf, clc_moveNoDelta);
 		}
@@ -1785,58 +1811,64 @@ void CL_WritePacket(void)
 			MSG_WriteByte(&buf, clc_move);
 		}
 
-		// write the command count
+		// Command count
 		MSG_WriteByte(&buf, count);
 
-		// use the checksum feed in the key
+		// Build encryption key
 		int key = clc.checksumFeed;
-		// also use the message acknowledge
 		key ^= clc.serverMessageSequence;
-		// also use the last acknowledged server command in the key
-		key ^= Com_HashKey(clc.serverCommands[clc.serverCommandSequence & MAX_RELIABLE_COMMANDS - 1], 32);
 
-		// write all the commands, including the predicted command
+		const int cmdIndex =
+			(clc.serverCommandSequence & (MAX_RELIABLE_COMMANDS - 1));
+		key ^= Com_HashKey(clc.serverCommands[cmdIndex], 32);
+
+		// Write all commands, including predicted
 		for (i = 0; i < count; i++)
 		{
-			const int j = cl.cmdNumber - count + i + 1 & CMD_MASK;
+			const int j = (cl.cmdNumber - count + i + 1) & CMD_MASK;
 			usercmd_t* cmd = &cl.cmds[j];
+
 			MSG_WriteDeltaUsercmdKey(&buf, key, oldcmd, cmd);
 			oldcmd = cmd;
 		}
 
-		if (cl.gcmdSentValue)
+		if (cl.gcmdSentValue == qtrue)
 		{
-			//hmm, just clear here, I guess.. hoping it will resolve issues with gencmd values sometimes not going through.
 			cl.gcmdSendValue = qfalse;
 			cl.gcmdSentValue = qfalse;
 			cl.gcmdValue = 0;
 		}
 	}
 
-	//
-	// deliver the message
-	//
+	// ---------------------------------------------------------
+	// Deliver the message
+	// ---------------------------------------------------------
 	const int packetNum = clc.netchan.outgoingSequence & PACKET_MASK;
+
 	cl.outPackets[packetNum].p_realtime = cls.realtime;
 	cl.outPackets[packetNum].p_serverTime = oldcmd->serverTime;
 	cl.outPackets[packetNum].p_CmdNumber = cl.cmdNumber;
 	clc.lastPacketSentTime = cls.realtime;
 
-	if (cl_showSend->integer)
+	if (cl_showSend->integer != 0)
 	{
 		Com_Printf("%i ", buf.cursize);
 	}
 
 	CL_Netchan_Transmit(&clc.netchan, &buf);
 
-	// clients never really should have messages large enough
-	// to fragment, but in case they do, fire them all off
-	// at once
-	while (clc.netchan.unsentFragments)
+	// Fire any remaining fragments
+	while (clc.netchan.unsentFragments != qfalse)
 	{
 		CL_Netchan_TransmitNextFragment(&clc.netchan);
 	}
+
+	// ---------------------------------------------------------
+	// Free heap buffer
+	// ---------------------------------------------------------
+	Z_Free(data);
 }
+
 
 /*
 =================

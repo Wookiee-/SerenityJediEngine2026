@@ -33,7 +33,7 @@ extern void G_DebugPrint(int level, const char* format, ...);
 
 extern qboolean G_CheckInSolid(gentity_t* self, qboolean fix);
 extern qboolean client_userinfo_changed(int clientNum);
-extern qboolean spot_would_telefrag2(const gentity_t* mover, vec3_t dest);
+extern qboolean SpotWouldTelefrag2(const gentity_t* mover, vec3_t dest);
 extern void Jedi_Cloak(gentity_t* self);
 
 extern void Q3_SetParm(int entID, int parmNum, const char* parmValue);

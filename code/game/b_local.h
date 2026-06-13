@@ -367,16 +367,31 @@ constexpr auto NIF_BLOCKED = 0x00000008; //blocked from moving;
 -------------------------
 struct navInfo_s
 -------------------------
-*/
-
-using navInfo_t = struct navInfo_s
+*/using navInfo_t = struct navInfo_s
 {
-	gentity_t* blocker;
-	vec3_t direction;
-	vec3_t pathDirection;
-	float distance;
-	trace_t trace;
-	int flags;
+	// ---------------------------------------------------------
+	// Navigation blocker information
+	// ---------------------------------------------------------
+	gentity_t* blocker;      // Entity blocking the path (may be nullptr)
+	vec3_t     direction;    // Direction from NPC to blocker
+	vec3_t     pathDirection;// Direction NPC is trying to move
+	float      distance;     // Distance to blocker
+	trace_t    trace;        // Collision trace result
+	int        flags;        // Navigation flags
+
+	// ---------------------------------------------------------
+	// Constructor — safe initialization, no behaviour change
+	// ---------------------------------------------------------
+	navInfo_s()
+		: blocker(nullptr),
+		distance(0.0f),
+		flags(0)
+	{
+		VectorClear(direction);
+		VectorClear(pathDirection);
+		// trace is intentionally left uninitialized — trace_t is POD and
+		// its fields are filled by the trace system before use.
+	}
 };
 
 extern void NAV_GetLastMove(navInfo_t& info);

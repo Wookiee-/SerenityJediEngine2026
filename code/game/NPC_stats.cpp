@@ -47,8 +47,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 extern void WP_RemoveSaber(gentity_t* ent, int saberNum);
 extern qboolean NPCsPrecached;
-extern vec3_t player_mins;
-extern vec3_t player_maxs;
+extern vec3_t playerMins;
+extern vec3_t playerMaxs;
 extern stringID_table_t WPTable[];
 extern qboolean is_outcast_map();
 
@@ -2199,8 +2199,8 @@ qboolean NPC_ParseParms(const char* npc_name, gentity_t* npc)
 	ri->torsoPitchRangeUp = 30;
 	ri->torsoPitchRangeDown = 50;
 
-	VectorCopy(player_mins, npc->mins);
-	VectorCopy(player_maxs, npc->maxs);
+	VectorCopy(playerMins, npc->mins);
+	VectorCopy(playerMaxs, npc->maxs);
 	npc->client->crouchheight = CROUCH_MAXS_2;
 	npc->client->standheight = DEFAULT_MAXS_2;
 

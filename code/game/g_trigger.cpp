@@ -33,7 +33,7 @@ constexpr auto ENTDIST_NPC = 2;
 extern qboolean G_PointInBounds(const vec3_t point, const vec3_t mins, const vec3_t maxs);
 extern qboolean G_ClearTrace(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int ignore,
 	int clipmask);
-extern qboolean spot_would_telefrag2(const gentity_t* mover, vec3_t dest);
+extern qboolean SpotWouldTelefrag2(const gentity_t* mover, vec3_t dest);
 extern qboolean PM_CrouchAnim(int anim);
 extern void Boba_FlyStart(gentity_t* self);
 extern qboolean Boba_Flying(const gentity_t* self);
@@ -1054,7 +1054,7 @@ void trigger_teleporter_touch(const gentity_t* self, gentity_t* other, trace_t* 
 			}
 		}
 
-		if (other->client->playerTeam != TEAM_FREE && spot_would_telefrag2(other, dest->currentOrigin))
+		if (other->client->playerTeam != TEAM_FREE && SpotWouldTelefrag2(other, dest->currentOrigin))
 			//SpotWouldTelefrag( dest, other->client->playerTeam ) )
 		{
 			//Don't go through if something blocking on the other side

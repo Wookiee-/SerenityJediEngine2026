@@ -12691,13 +12691,15 @@ float manual_running_and_saberblocking(const gentity_t* defender)
 qboolean manual_meleeblocking(const gentity_t* defender) //Is this guy blocking or not?
 {
 	if (defender->client->ps.weapon == WP_MELEE
-		&& defender->client->buttons & BUTTON_WALKING
+		&& (!(defender->client->buttons & BUTTON_WALKING))
 		&& defender->client->buttons & BUTTON_BLOCK
 		&& !PM_KickMove(defender->client->ps.saberMove)
 		&& !PM_KickingAnim(defender->client->ps.torsoAnim)
 		&& !PM_KickingAnim(defender->client->ps.legsAnim)
 		&& !PM_InRoll(&defender->client->ps)
 		&& !PM_InKnockDown(&defender->client->ps)
+		&& !PM_RunningAnim(defender->client->ps.legsAnim)
+		&& !PM_WalkingAnim(defender->client->ps.legsAnim)
 		&& !(defender->client->ps.pm_flags & PMF_DUCKED))
 	{
 		return qtrue;

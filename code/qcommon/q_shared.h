@@ -562,48 +562,44 @@ constexpr auto MAX_G2_COLLISIONS = 32;
 // a trace is returned when a box is swept through the world
 using trace_t = struct
 {
-	qboolean allsolid; // if true, plane is not valid
-	qboolean startsolid; // if true, the initial point was in a solid area
-	float fraction; // time completed, 1.0 = didn't hit anything
-	vec3_t endpos; // final position
-	cplane_t plane; // surface normal at impact, transformed to world space
-	int surfaceFlags; // surface hit
-	int contents; // contents on other side of surface hit
-	int entityNum; // entity the contacted sirface is a part of
-	/*
-	Ghoul2 Insert Start
-	*/
+	qboolean allsolid = qfalse;
+	qboolean startsolid = qfalse;
+	float fraction = 1.0f;
+	vec3_t endpos = { 0,0,0 };
+	cplane_t plane = {};
+	int surfaceFlags = 0;
+	int contents = 0;
+	int entityNum = 0;
 	CCollisionRecord G2CollisionMap[MAX_G2_COLLISIONS];
 	// map that describes all of the parts of ghoul2 models that got hit
 	/*
 	Ghoul2 Insert End
 	*/
 
-	void sg_export(
-		ojk::SavedGameHelper& saved_game) const
+	void sg_export(ojk::SavedGameHelper& saved_game) const
 	{
-		saved_game.write<int8_t>(allsolid);
-		saved_game.write<int8_t>(startsolid);
+		// Use 32-bit values for cross-module consistency
+		saved_game.write<int32_t>(static_cast<int32_t>(allsolid));
+		saved_game.write<int32_t>(static_cast<int32_t>(startsolid));
 		saved_game.write<float>(fraction);
-		saved_game.write<float>(endpos);
+		saved_game.write<>(endpos);
 		saved_game.write<>(plane);
-		saved_game.write<int8_t>(surfaceFlags);
-		saved_game.write<int8_t>(contents);
-		saved_game.write<int8_t>(entityNum);
+		saved_game.write<int32_t>(surfaceFlags);
+		saved_game.write<int32_t>(contents);
+		saved_game.write<int32_t>(entityNum);
 		saved_game.write<>(G2CollisionMap);
 	}
-
-	void sg_import(
-		ojk::SavedGameHelper& saved_game)
+	void sg_import(ojk::SavedGameHelper& saved_game)
 	{
-		saved_game.read<int8_t>(allsolid);
-		saved_game.read<int8_t>(startsolid);
+		int32_t tmp;
+		saved_game.read<int32_t>(tmp); allsolid = static_cast<qboolean>(tmp);
+		saved_game.read<int32_t>(tmp); startsolid = static_cast<qboolean>(tmp);
 		saved_game.read<float>(fraction);
-		saved_game.read<float>(endpos);
+		saved_game.read<>(endpos);
 		saved_game.read<>(plane);
-		saved_game.read<int8_t>(surfaceFlags);
-		saved_game.read<int8_t>(contents);
-		saved_game.read<int8_t>(entityNum);
+		saved_game.read<int32_t>(surfaceFlags);
+		saved_game.read<int32_t>(contents);
+		saved_game.read<int32_t>(entityNum);
 		saved_game.read<>(G2CollisionMap);
 	}
 };
@@ -2251,8 +2247,7 @@ public:
 	//this without a lot of hassle?)
 	int			hackingBaseTime;
 	int         saberstuckinwalltimer;
-
-	int weaponfiredelaytime;
+	int          weaponfiredelaytime;
 
 #endif // !JK2_MODE
 

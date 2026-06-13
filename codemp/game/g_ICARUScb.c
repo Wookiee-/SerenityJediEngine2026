@@ -3067,7 +3067,7 @@ MoveOwner
   Argument		: sharedEntity_t *self
 ============
 */
-qboolean spot_would_telefrag2(const gentity_t* mover, vec3_t dest);
+qboolean SpotWouldTelefrag2(const gentity_t* mover, vec3_t dest);
 
 void MoveOwner(gentity_t* self)
 {
@@ -3081,7 +3081,7 @@ void MoveOwner(gentity_t* self)
 		return;
 	}
 
-	if (spot_would_telefrag2(owner, self->r.currentOrigin))
+	if (SpotWouldTelefrag2(owner, self->r.currentOrigin))
 	{
 		self->think = MoveOwner;
 	}
@@ -3105,7 +3105,7 @@ static qboolean Q3_SetTeleportDest(const int entID, vec3_t org)
 
 	if (teleEnt)
 	{
-		if (spot_would_telefrag2(teleEnt, org))
+		if (SpotWouldTelefrag2(teleEnt, org))
 		{
 			gentity_t* teleporter = G_Spawn();
 
@@ -6563,7 +6563,7 @@ void SolidifyOwner(gentity_t* self)
 
 	const int oldContents = owner->r.contents;
 	owner->r.contents = CONTENTS_BODY;
-	if (spot_would_telefrag2(owner, owner->r.currentOrigin))
+	if (SpotWouldTelefrag2(owner, owner->r.currentOrigin))
 	{
 		owner->r.contents = oldContents;
 		self->think = SolidifyOwner;
@@ -6596,7 +6596,7 @@ static qboolean Q3_SetSolid(const int entID, const qboolean solid)
 		//FIXME: Presumption
 		const int oldContents = ent->r.contents;
 		ent->r.contents = CONTENTS_BODY;
-		if (spot_would_telefrag2(ent, ent->r.currentOrigin))
+		if (SpotWouldTelefrag2(ent, ent->r.currentOrigin))
 		{
 			gentity_t* solidifier = G_Spawn();
 

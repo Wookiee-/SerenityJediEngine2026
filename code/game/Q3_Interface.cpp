@@ -53,7 +53,7 @@ extern void ChangeWeapon(const gentity_t* ent, int new_weapon);
 extern char* G_GetLocationForEnt(const gentity_t* ent);
 extern void NPC_BSSearchStart(int home_wp, bState_t b_state);
 extern void InitMoverTrData(gentity_t* ent);
-extern qboolean spot_would_telefrag2(const gentity_t* mover, vec3_t dest);
+extern qboolean SpotWouldTelefrag2(const gentity_t* mover, vec3_t dest);
 extern cvar_t* g_sex;
 extern cvar_t* g_timescale;
 extern void G_SetEnemy(gentity_t* self, gentity_t* enemy);
@@ -1265,7 +1265,7 @@ void MoveOwner(gentity_t* self)
 		return;
 	}
 
-	if (spot_would_telefrag2(self->owner, self->currentOrigin))
+	if (SpotWouldTelefrag2(self->owner, self->currentOrigin))
 	{
 		self->e_ThinkFunc = thinkF_MoveOwner;
 	}
@@ -1290,7 +1290,7 @@ static qboolean Q3_SetTeleportDest(const int entID, vec3_t org)
 
 	if (teleEnt)
 	{
-		if (spot_would_telefrag2(teleEnt, org))
+		if (SpotWouldTelefrag2(teleEnt, org))
 		{
 			gentity_t* teleporter = G_Spawn();
 
@@ -5663,7 +5663,7 @@ void SolidifyOwner(gentity_t* self)
 
 	const int oldContents = self->owner->contents;
 	self->owner->contents = CONTENTS_BODY;
-	if (spot_would_telefrag2(self->owner, self->owner->currentOrigin))
+	if (SpotWouldTelefrag2(self->owner, self->owner->currentOrigin))
 	{
 		self->owner->contents = oldContents;
 		self->e_ThinkFunc = thinkF_SolidifyOwner;
@@ -5700,7 +5700,7 @@ static qboolean Q3_SetSolid(const int entID, const qboolean solid)
 		//FIXME: Presumption
 		const int oldContents = ent->contents;
 		ent->contents = CONTENTS_BODY;
-		if (spot_would_telefrag2(ent, ent->currentOrigin))
+		if (SpotWouldTelefrag2(ent, ent->currentOrigin))
 		{
 			gentity_t* solidifier = G_Spawn();
 

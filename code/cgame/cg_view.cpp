@@ -363,6 +363,11 @@ CG_CalcIdealThirdPersonViewTarget
 */
 static void CG_CalcIdealThirdPersonViewTarget()
 {
+	// Ensure snapshot exists before dereferencing.
+	if (cg.snap == NULL)
+	{
+		return;
+	}
 	// Initialize IdealTarget
 	const auto uses_view_entity = static_cast<qboolean>(cg.snap->ps.viewEntity && cg.snap->ps.viewEntity < ENTITYNUM_WORLD);
 	VectorCopy(cg.refdef.vieworg, cameraFocusLoc);
@@ -2023,32 +2028,29 @@ static void CG_DrawSkyBoxPortal()
 	{
 		CG_Error("CG_DrawSkyBoxPortal: error parsing skybox configstring.  No fog state\n");
 	}
-	else
+	if (atoi(token))
 	{
-		if (atoi(token))
+		// this camera has fog
+		token = COM_ParseExt(&cstr, qfalse);
+		if (!VALIDSTRING(token))
 		{
-			// this camera has fog
-			token = COM_ParseExt(&cstr, qfalse);
-			if (!VALIDSTRING(token))
-			{
-				CG_Error("CG_DrawSkyBoxPortal: error parsing skybox configstring.  No fog[0]\n");
-			}
-
-			token = COM_ParseExt(&cstr, qfalse);
-			if (!VALIDSTRING(token))
-			{
-				CG_Error("CG_DrawSkyBoxPortal: error parsing skybox configstring.  No fog[1]\n");
-			}
-
-			token = COM_ParseExt(&cstr, qfalse);
-			if (!VALIDSTRING(token))
-			{
-				CG_Error("CG_DrawSkyBoxPortal: error parsing skybox configstring.  No fog[2]\n");
-			}
-
-			COM_ParseExt(&cstr, qfalse);
-			COM_ParseExt(&cstr, qfalse);
+			CG_Error("CG_DrawSkyBoxPortal: error parsing skybox configstring.  No fog[0]\n");
 		}
+
+		token = COM_ParseExt(&cstr, qfalse);
+		if (!VALIDSTRING(token))
+		{
+			CG_Error("CG_DrawSkyBoxPortal: error parsing skybox configstring.  No fog[1]\n");
+		}
+
+		token = COM_ParseExt(&cstr, qfalse);
+		if (!VALIDSTRING(token))
+		{
+			CG_Error("CG_DrawSkyBoxPortal: error parsing skybox configstring.  No fog[2]\n");
+		}
+
+		COM_ParseExt(&cstr, qfalse);
+		COM_ParseExt(&cstr, qfalse);
 	}
 
 	COM_EndParseSession();
@@ -2062,9 +2064,9 @@ static void CG_DrawSkyBoxPortal()
 	}
 
 	cg.refdef.rdflags |= RDF_SKYBOXPORTAL; //mark portal scene specialness
-	cg.refdef.rdflags |= RDF_DRAWSKYBOX; //draw portal skies
+	cg.refdef.rdflags |= RDF_DRAWSKYBOX; //drawk portal skies
 
-	cgi_CM_SnapPVS(cg.refdef.vieworg, cg.refdef.areamask); //fill in my area mask for this view origin
+	cgi_CM_SnapPVS(cg.refdef.vieworg, cg.refdef.areamask); //fill in my areamask for this view origin
 	// draw the skybox
 	cgi_R_RenderScene(&cg.refdef);
 
@@ -2115,6 +2117,8 @@ static qboolean cg_rangedFogging = qfalse; //so we know if we should go back to 
 
 void CG_DrawActiveFrame(const int serverTime, const stereoFrame_t stereoView)
 {
+	const qboolean holding_walking_button = (cg.predictedPlayerState.pm_flags & PMF_WALKING_HELD) ? qtrue : qfalse;
+
 	qboolean inwater = qfalse;
 
 	cg.time = serverTime;
@@ -2177,12 +2181,14 @@ void CG_DrawActiveFrame(const int serverTime, const stereoFrame_t stereoView)
 	}
 	wasForceSpeed = isForceSpeed;
 
-	float m_pitch_override = 0.0f;
-	float m_yaw_override = 0.0f;
+	float mPitchOverride = 0.0f;
+	float mYawOverride = 0.0f;
+
 	if (cg.snap->ps.clientNum == 0 && cg_scaleVehicleSensitivity.integer)
 	{
 		//pointless check, but..
-		if (cg_entities[0].gent->s.eFlags & EF_LOCKED_TO_WEAPON)
+		if (cg_entities[0].gent != NULL &&
+			(cg_entities[0].gent->s.eFlags & EF_LOCKED_TO_WEAPON))
 		{
 			speed *= 0.25f;
 		}
@@ -2195,27 +2201,38 @@ void CG_DrawActiveFrame(const int serverTime, const stereoFrame_t stereoView)
 			{
 				if (!in_joystick->integer)
 				{
-					m_pitch_override = p_veh->m_pVehicleInfo->mousePitch;
+					mPitchOverride = p_veh->m_pVehicleInfo->mousePitch;
 				}
 				else
 				{
-					m_pitch_override = 0.08f;
+					mPitchOverride = 0.08f;
 				}
 			}
 			if (p_veh->m_pVehicleInfo->mouseYaw)
 			{
 				if (!in_joystick->integer)
 				{
-					m_yaw_override = p_veh->m_pVehicleInfo->mouseYaw;
+					mYawOverride = p_veh->m_pVehicleInfo->mouseYaw;
 				}
 				else
 				{
-					m_yaw_override = 0.08f;
+					mYawOverride = 0.08f;
 				}
 			}
 		}
 	}
-	cgi_SetUserCmdValue(cg.weaponSelect, speed, m_pitch_override, m_yaw_override);
+	// ---------------------------------------------------------
+    // Precision mode for joystick: slow aim when WALK held
+    // ---------------------------------------------------------
+	if (in_joystick->integer &&
+		(holding_walking_button))
+	{
+		mPitchOverride = 0.05f;
+		mYawOverride = 0.05f;
+	}
+
+
+	cgi_SetUserCmdValue(cg.weaponSelect, speed, mPitchOverride, mYawOverride);
 
 	// this counter will be bumped for every valid scene we generate
 	cg.clientFrame++;

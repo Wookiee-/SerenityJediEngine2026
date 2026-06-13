@@ -53,6 +53,21 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #if !defined(RUFL_HSTRING_INC)
 #include "../Rufl/hstring.h"
 #endif
+#include <Ratl/pool_vs.h>
+#include "bstate.h"
+#include "ai.h"
+#include "surfaceflags.h"
+#include "ghoul2_shared.h"
+#include "anims.h"
+#include <qcommon/q_platform.h>
+#include <qcommon/q_shared.h>
+#include "weapons.h"
+#include "b_public.h"
+#include "g_shared.h"
+#include <cassert>
+#include "teams.h"
+#include <qcommon/q_math.h>
+#include "bg_public.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Defines
@@ -171,28 +186,23 @@ static void HT_Speech(const gentity_t* self, const int speech_type, const float 
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // The Troop
-//
-// Troopers primarly derive their behavior from cooperation as a collective group of
-// individuals.  They join Troops, each of which has a leader responsible for direcing
-// the movement of the rest of the group.
-//
 ////////////////////////////////////////////////////////////////////////////////////////
 class c_troop
 {
 	////////////////////////////////////////////////////////////////////////////////////
 	// Various Troop Wide Data
 	////////////////////////////////////////////////////////////////////////////////////
-	int mTroopHandle = 0;
-	int mTroopTeam = 0;
+	int  mTroopHandle = 0;
+	int  mTroopTeam = 0;
 	bool mTroopReform = false;
 
-	float mFormSpacingFwd = 0;
-	float mFormSpacingRight = 0;
+	float mFormSpacingFwd = 0.0f;
+	float mFormSpacingRight = 0.0f;
 
 public:
 	bool Empty() const { return mActors.empty(); }
-	int Team() const { return mTroopTeam; }
-	int Handle() const { return mTroopHandle; }
+	int  Team()  const { return mTroopTeam; }
+	int  Handle() const { return mTroopHandle; }
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Initialize - Clear out all data, all actors, reset all variables
@@ -205,26 +215,29 @@ public:
 		mTroopHandle = TroopHandle;
 		mTroopTeam = 0;
 		mTroopReform = false;
+		mTargetVisable = false;
+		mTargetVisableStartTime = 0;
+		mTargetVisableStopTime = 0;
+		mTargetIndex = 0;
+		mTargetLastKnownTime = 0;
+		mTargetLastKnownPositionVisited = false;
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// DistanceSq - Quick Operation to see how far an ent is from the rest of the troop
 	////////////////////////////////////////////////////////////////////////////////////
-	float DistanceSq(const gentity_t* ent)
+	float DistanceSq(const gentity_t* ent) const
 	{
-		if (mActors.size())
+		if (!ent || mActors.empty() || !mActors[0])
 		{
-			return DistanceSquared(ent->currentOrigin, mActors[0]->currentOrigin);
+			return 0.0f;
 		}
-		return 0.0f;
+		return DistanceSquared(ent->currentOrigin, mActors[0]->currentOrigin);
 	}
 
 private:
 	////////////////////////////////////////////////////////////////////////////////////
 	// The Actors
-	//
-	// Actors are all the troopers who belong to the group, their positions in this
-	// vector affect their positions in the troop, whith the first actor as the leader
 	////////////////////////////////////////////////////////////////////////////////////
 	ratl::vector_vs<gentity_t*, MAX_ENTS_PER_TROOP> mActors;
 
@@ -233,15 +246,35 @@ private:
 	////////////////////////////////////////////////////////////////////////////////////
 	void MakeActorLeader(const int index)
 	{
+		if (mActors.empty())
+		{
+			return;
+		}
+
+		if (index < 0 || index >= mActors.size())
+		{
+			return;
+		}
+
+		gentity_t* oldLeader = mActors[0];
+
+		if (oldLeader && oldLeader->client)
+		{
+			oldLeader->client->leader = nullptr;
+		}
+
 		if (index != 0)
 		{
-			mActors[0]->client->leader = nullptr;
 			mActors.swap(index, 0);
 		}
-		mActors[0]->client->leader = mActors[0];
-		if (mActors[0])
+
+		gentity_t* newLeader = mActors[0];
+
+		if (newLeader && newLeader->client)
 		{
-			if (mActors[0]->client->NPC_class == CLASS_HAZARD_TROOPER)
+			newLeader->client->leader = newLeader;
+
+			if (newLeader->client->NPC_class == CLASS_HAZARD_TROOPER)
 			{
 				mFormSpacingFwd = 75.0f;
 				mFormSpacingRight = 50.0f;
@@ -260,14 +293,22 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////
 	void AddActor(gentity_t* actor)
 	{
+		if (!actor || !actor->NPC || !actor->client || mActors.full())
+		{
+			return;
+		}
+
 		assert(actor->NPC->troop == 0 && !mActors.full());
+
 		actor->NPC->troop = mTroopHandle;
 		mActors.push_back(actor);
 		mTroopReform = true;
+
 		if (mActors.size() == 1 || actor->NPC->rank > mActors[0]->NPC->rank)
 		{
 			MakeActorLeader(mActors.size() - 1);
 		}
+
 		if (!mTroopTeam)
 		{
 			mTroopTeam = actor->client->playerTeam;
@@ -279,63 +320,74 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////
 	void RemoveActor(const gentity_t* actor)
 	{
+		if (!actor || !actor->NPC)
+		{
+			return;
+		}
+
 		assert(actor->NPC->troop == mTroopHandle);
+
 		int bestNewLeader = -1;
 		int num_ents = mActors.size();
-		//bool	found = false;
 		mTroopReform = true;
 
-		// Find The Actor
-		//----------------
-		for (int i = 0; i < num_ents; i++)
+		for (int i = 0; i < num_ents; )
 		{
 			if (mActors[i] == actor)
 			{
-				//found = true;
 				mActors.erase_swap(i);
 				num_ents--;
+
 				if (i == 0 && !mActors.empty())
 				{
 					bestNewLeader = 0;
 				}
+				continue;
 			}
 
-			if (bestNewLeader >= 0 && mActors[i]->NPC->rank > mActors[bestNewLeader]->NPC->rank)
+			if (bestNewLeader >= 0 &&
+				mActors[i] && mActors[bestNewLeader] &&
+				mActors[i]->NPC && mActors[bestNewLeader]->NPC &&
+				mActors[i]->NPC->rank > mActors[bestNewLeader]->NPC->rank)
 			{
 				bestNewLeader = i;
 			}
+
+			i++;
 		}
+
 		if (!mActors.empty() && bestNewLeader >= 0)
 		{
 			MakeActorLeader(bestNewLeader);
 		}
 
-		//assert(found);
-		actor->NPC->troop = 0;
+		const_cast<gentity_t*>(actor)->NPC->troop = 0;
 	}
 
 private:
 	////////////////////////////////////////////////////////////////////////////////////
 	// Enemy
-	//
-	// The troop has a collective enemy that it knows about, which is updated by all
-	// the members of the group;
 	////////////////////////////////////////////////////////////////////////////////////
 	gentity_t* mTarget = nullptr;
-	bool mTargetVisable = false;
-	int mTargetVisableStartTime = 0;
-	int mTargetVisableStopTime = 0;
-	CVec3 mTargetVisablePosition;
-	int mTargetIndex = 0;
-	int mTargetLastKnownTime = 0;
-	CVec3 mTargetLastKnownPosition;
-	bool mTargetLastKnownPositionVisited = false;
+	bool       mTargetVisable = false;
+	int        mTargetVisableStartTime = 0;
+	int        mTargetVisableStopTime = 0;
+	CVec3      mTargetVisablePosition;
+	int        mTargetIndex = 0;
+	int        mTargetLastKnownTime = 0;
+	CVec3      mTargetLastKnownPosition;
+	bool       mTargetLastKnownPositionVisited = false;
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// RegisterTarget - Records That the target is seen, when and where
 	////////////////////////////////////////////////////////////////////////////////////
 	void RegisterTarget(gentity_t* target, const int index, const bool visable)
 	{
+		if (!target || mActors.empty() || !mActors[0])
+		{
+			return;
+		}
+
 		if (!mTarget)
 		{
 			HT_Speech(mActors[0], SPEECH_DETECTED, 0);
@@ -366,11 +418,11 @@ private:
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
-	// RegisterTarget - Records That the target is seen, when and where
+	// TargetLastKnownPositionVisited
 	////////////////////////////////////////////////////////////////////////////////////
 	bool TargetLastKnownPositionVisited()
 	{
-		if (!mTargetLastKnownPositionVisited)
+		if (!mTargetLastKnownPositionVisited && !mActors.empty() && mActors[0])
 		{
 			const float dist = DistanceSquared(mTargetLastKnownPosition.v, mActors[0]->currentOrigin);
 			mTargetLastKnownPositionVisited = dist < TARGET_POS_VISITED;
@@ -393,13 +445,18 @@ private:
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Target Visibility
-	//
-	// Compute all factors that can add visibility to a target
 	////////////////////////////////////////////////////////////////////////////////////
 	static float TargetVisibility(const gentity_t* target)
 	{
+		if (!target)
+		{
+			return 0.0f;
+		}
+
 		float Scale = 0.8f;
-		if (target->client && target->client->ps.weapon == WP_SABER && target->client->ps.SaberActive())
+		if (target->client &&
+			target->client->ps.weapon == WP_SABER &&
+			target->client->ps.SaberActive())
 		{
 			Scale += 0.1f;
 		}
@@ -407,13 +464,23 @@ private:
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
-	//
+	// Target Noise Level
 	////////////////////////////////////////////////////////////////////////////////////
 	static float TargetNoiseLevel(const gentity_t* target)
 	{
+		if (!target)
+		{
+			return 0.0f;
+		}
+
 		float Scale = 0.1f;
-		Scale += target->resultspeed / static_cast<float>(g_speed->integer);
-		if (target->client && target->client->ps.weapon == WP_SABER && target->client->ps.SaberActive())
+		if (g_speed && g_speed->integer > 0)
+		{
+			Scale += target->resultspeed / static_cast<float>(g_speed->integer);
+		}
+		if (target->client &&
+			target->client->ps.weapon == WP_SABER &&
+			target->client->ps.SaberActive())
 		{
 			Scale += 0.2f;
 		}
@@ -425,19 +492,27 @@ private:
 	////////////////////////////////////////////////////////////////////////////////////
 	void ScanForTarget(const int scannerIndex)
 	{
-		int targetIndex = 0;
-		int targetStop = ENTITYNUM_WORLD;
+		if (mActors.empty() || scannerIndex < 0 || scannerIndex >= mActors.size())
+		{
+			return;
+		}
 
 		gentity_t* scanner = mActors[scannerIndex];
+		if (!scanner || !scanner->NPC)
+		{
+			return;
+		}
+
+		int   targetIndex = 0;
+		int   targetStop = ENTITYNUM_WORLD;
+
 		const gNPCstats_t* scannerStats = &scanner->NPC->stats;
-		const float scannerMaxViewDist = scannerStats->visrange;
-		const float scannerMaxHearDist = scannerStats->earshot;
-		const CVec3 scannerPos(scanner->currentOrigin);
-		CVec3 scannerFwd(scanner->currentAngles);
+		const float        scannerMaxViewDist = scannerStats->visrange;
+		const float        scannerMaxHearDist = scannerStats->earshot;
+		const CVec3        scannerPos(scanner->currentOrigin);
+		CVec3              scannerFwd(scanner->currentAngles);
 		scannerFwd.AngToVec();
 
-		// If Existing Target, Only Check It
-		//-----------------------------------
 		if (mTarget)
 		{
 			targetIndex = mTargetIndex;
@@ -464,14 +539,13 @@ private:
 			CVec3 targetDirection = targetPos - scannerPos;
 			const float targetDistance = targetDirection.SafeNorm();
 
-			// Can The Scanner SEE The Target?
-			//---------------------------------
+			// SEE
 			if (targetDistance < scannerMaxViewDist)
 			{
-				constexpr float scannerMinVisability = 0.1f;
-				float targetVisibility = TargetVisibility(target);
-				targetVisibility *= targetDirection.Dot(scannerFwd);
-				if (targetVisibility > scannerMinVisability)
+				constexpr float scanner_min_visability = 0.1f;
+				float target_visibility = TargetVisibility(target);
+				target_visibility *= targetDirection.Dot(scannerFwd);
+				if (target_visibility > scanner_min_visability)
 				{
 					if (NPC_ClearLOS(targetPos.v))
 					{
@@ -482,14 +556,13 @@ private:
 				}
 			}
 
-			// Can The Scanner HEAR The Target?
-			//----------------------------------
+			// HEAR
 			if (targetDistance < scannerMaxHearDist)
 			{
-				constexpr float scannerMinNoiseLevel = 0.3f;
-				float targetNoiseLevel = TargetNoiseLevel(target);
-				targetNoiseLevel *= 1.0f - targetDistance / scannerMaxHearDist; // scale by distance
-				if (targetNoiseLevel > scannerMinNoiseLevel)
+				constexpr float scanner_min_noise_level = 0.3f;
+				float target_noise_level = TargetNoiseLevel(target);
+				target_noise_level *= 1.0f - targetDistance / scannerMaxHearDist;
+				if (target_noise_level > scanner_min_noise_level)
 				{
 					RegisterTarget(target, targetIndex, false);
 					RestoreNPCGlobals();
@@ -497,61 +570,60 @@ private:
 				}
 			}
 		}
+
 		RestoreNPCGlobals();
 	}
 
 private:
 	////////////////////////////////////////////////////////////////////////////////////
 	// Troop State
-	//
-	// The troop as a whole can be acting under a number of different "behavior states"
 	////////////////////////////////////////////////////////////////////////////////////
 	enum ETroopState
 	{
 		TS_NONE = 0,
-		// No troop wide activity active
 
 		TS_ADVANCE,
-		// CHOOSE A NEW ADVANCE TACTIC
 		TS_ADVANCE_REGROUP,
-		// All ents move into squad position
 		TS_ADVANCE_SEARCH,
-		// Slow advance, looking left to right, in formation
 		TS_ADVANCE_COVER,
-		// One at a time moves forward, goes off path, provides cover
 		TS_ADVANCE_FORMATION,
-		// In formation jog to goal location
 
 		TS_ATTACK,
-		// CHOOSE A NEW ATTACK TACTIC
 		TS_ATTACK_LINE,
-		// Form 2 lines, front kneel, back stand
 		TS_ATTACK_FLANK,
-		// Same As Line, except scouting group attemts to get around other side of target
 		TS_ATTACK_SURROUND,
-		// Get on all sides of target
 		TS_ATTACK_COVER,
-		//
 
 		TS_MAX
 	};
 
-	ETroopState mState;
+	ETroopState mState = TS_NONE;
 
 	CVec3 mFormHead;
 	CVec3 mFormFwd;
 	CVec3 mFormRight;
 
 	////////////////////////////////////////////////////////////////////////////////////
-	// TroopInFormation - A quick check to see if the troop is currently in formation
+	// TroopInFormation
 	////////////////////////////////////////////////////////////////////////////////////
 	bool TroopInFormation()
 	{
-		float max_actor_range_sq = (mActors.size() / static_cast<float>(2) + 2) * mFormSpacingFwd;
-		max_actor_range_sq *= max_actor_range_sq;
-		for (int actor_index = 1; actor_index < mActors.size(); actor_index++)
+		if (mActors.size() <= 1)
 		{
-			if (DistanceSq(mActors[actor_index]) > max_actor_range_sq)
+			return true;
+		}
+
+		float maxActorRange = (mActors.size() / 2.0f + 2.0f) * mFormSpacingFwd;
+		float maxActorRangeSq = maxActorRange * maxActorRange;
+
+		for (int actorIndex = 1; actorIndex < mActors.size(); actorIndex++)
+		{
+			if (!mActors[actorIndex])
+			{
+				continue;
+			}
+
+			if (DistanceSq(mActors[actorIndex]) > maxActorRangeSq)
 			{
 				return false;
 			}
@@ -564,159 +636,139 @@ private:
 	////////////////////////////////////////////////////////////////////////////////////
 	struct SActorOrder
 	{
-		CVec3 mPosition;
-		int mCombatPoint;
-		bool mKneelAndShoot;
+		CVec3 mPosition{};
+		int   mCombatPoint = -1;
+		bool  mKneelAndShoot = false;
 	};
 
 	ratl::array_vs<SActorOrder, MAX_ENTS_PER_TROOP> mOrders;
 
 	////////////////////////////////////////////////////////////////////////////////////
-	// LeaderIssueAndUpdateOrders - Tell Everyone Where To Go
+	// LeaderIssueAndUpdateOrders
 	////////////////////////////////////////////////////////////////////////////////////
 	void LeaderIssueAndUpdateOrders(const ETroopState NextState)
 	{
-		int actorIndex;
-		const int actorCount = mActors.size();
-
-		// Always Put Guys Closest To The Order Locations In Those Locations
-		//-------------------------------------------------------------------
-		for (int orderIndex = 1; orderIndex < actorCount; orderIndex++)
+		const int actor_count = mActors.size();
+		if (actor_count == 0 || !mActors[0])
 		{
-			// Don't re-assign points combat point related orders
-			//----------------------------------------------------
-			if (mOrders[orderIndex].mCombatPoint == -1)
+			return;
+		}
+
+		// Assign closest actors to order positions
+		for (int orderIndex = 1; orderIndex < actor_count; orderIndex++)
+		{
+			if (mOrders[orderIndex].mCombatPoint != -1)
 			{
-				int closestActorIndex = orderIndex;
-				float closestActorDistance = DistanceSquared(mOrders[orderIndex].mPosition.v,
-					mActors[orderIndex]->currentOrigin);
-				for (actorIndex = orderIndex + 1; actorIndex < actorCount; actorIndex++)
+				continue;
+			}
+
+			int   closest_actor_index = orderIndex;
+			float closest_actor_distance = DistanceSquared(mOrders[orderIndex].mPosition.v,
+				mActors[orderIndex]->currentOrigin);
+
+			for (int actor_index = orderIndex + 1; actor_index < actor_count; actor_index++)
+			{
+				if (!mActors[actor_index])
 				{
-					const float currentDistance = DistanceSquared(mOrders[orderIndex].mPosition.v,
-						mActors[actorIndex]->currentOrigin);
-					if (currentDistance < closestActorDistance)
-					{
-						closestActorDistance = currentDistance;
-						closestActorIndex = actorIndex;
-					}
+					continue;
 				}
-				if (orderIndex != closestActorIndex)
+
+				const float currentDistance = DistanceSquared(mOrders[orderIndex].mPosition.v,
+					mActors[actor_index]->currentOrigin);
+				if (currentDistance < closest_actor_distance)
 				{
-					mActors.swap(orderIndex, closestActorIndex);
+					closest_actor_distance = currentDistance;
+					closest_actor_index = actor_index;
 				}
+			}
+
+			if (orderIndex != closest_actor_index)
+			{
+				mActors.swap(orderIndex, closest_actor_index);
 			}
 		}
 
-		// Now Copy The Orders Out To The Actors
-		//---------------------------------------
-		for (actorIndex = 1; actorIndex < actorCount; actorIndex++)
+		// Copy orders to actors
+		for (int actor_index = 1; actor_index < actor_count; actor_index++)
 		{
-			VectorCopy(mOrders[actorIndex].mPosition.v, mActors[actorIndex]->pos1);
+			if (!mActors[actor_index])
+			{
+				continue;
+			}
+			VectorCopy(mOrders[actor_index].mPosition.v, mActors[actor_index]->pos1);
 		}
 
-		// PHASE I - VOICE COMMANDS & ANIMATIONS
-		//=======================================
 		gentity_t* leader = mActors[0];
 
+		// Phase I: voice/anim
 		if (NextState != mState)
 		{
-			if (mActors.size() > 0)
+			switch (NextState)
 			{
-				switch (NextState)
-				{
-				case TS_ADVANCE_REGROUP:
-				{
-					break;
-				}
-				case TS_ADVANCE_SEARCH:
-				{
-					HT_Speech(leader, SPEECH_LOOK, 0);
-					break;
-				}
-				case TS_ADVANCE_COVER:
-				{
-					HT_Speech(leader, SPEECH_COVER, 0);
-					NPC_SetAnim(leader, SETANIM_TORSO, TORSO_HANDSIGNAL4,
-						SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLDLESS);
-					break;
-				}
-				case TS_ADVANCE_FORMATION:
-				{
-					HT_Speech(leader, SPEECH_ESCAPING, 0);
-					break;
-				}
-
-				case TS_ATTACK_LINE:
-				{
-					HT_Speech(leader, SPEECH_CHASE, 0);
-					NPC_SetAnim(leader, SETANIM_TORSO, TORSO_HANDSIGNAL1,
-						SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLDLESS);
-					break;
-				}
-				case TS_ATTACK_FLANK:
-				{
-					HT_Speech(leader, SPEECH_OUTFLANK, 0);
-					NPC_SetAnim(leader, SETANIM_TORSO, TORSO_HANDSIGNAL3,
-						SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLDLESS);
-					break;
-				}
-				case TS_ATTACK_SURROUND:
-				{
-					HT_Speech(leader, SPEECH_GIVEUP, 0);
-					NPC_SetAnim(leader, SETANIM_TORSO, TORSO_HANDSIGNAL2,
-						SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLDLESS);
-					break;
-				}
-				case TS_ATTACK_COVER:
-				{
-					HT_Speech(leader, SPEECH_COVER, 0);
-					break;
-				}
-				default:
-				{
-				}
-				}
+			case TS_ADVANCE_SEARCH:
+				HT_Speech(leader, SPEECH_LOOK, 0);
+				break;
+			case TS_ADVANCE_COVER:
+				HT_Speech(leader, SPEECH_COVER, 0);
+				NPC_SetAnim(leader, SETANIM_TORSO, TORSO_HANDSIGNAL4,
+					SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLDLESS);
+				break;
+			case TS_ADVANCE_FORMATION:
+				HT_Speech(leader, SPEECH_ESCAPING, 0);
+				break;
+			case TS_ATTACK_LINE:
+				HT_Speech(leader, SPEECH_CHASE, 0);
+				NPC_SetAnim(leader, SETANIM_TORSO, TORSO_HANDSIGNAL1,
+					SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLDLESS);
+				break;
+			case TS_ATTACK_FLANK:
+				HT_Speech(leader, SPEECH_OUTFLANK, 0);
+				NPC_SetAnim(leader, SETANIM_TORSO, TORSO_HANDSIGNAL3,
+					SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLDLESS);
+				break;
+			case TS_ATTACK_SURROUND:
+				HT_Speech(leader, SPEECH_GIVEUP, 0);
+				NPC_SetAnim(leader, SETANIM_TORSO, TORSO_HANDSIGNAL2,
+					SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLDLESS);
+				break;
+			case TS_ATTACK_COVER:
+				HT_Speech(leader, SPEECH_COVER, 0);
+				break;
+			default:
+				break;
 			}
 		}
-
-		// If Attacking, And Not Forced To Reform, Don't Recalculate Orders
-		//------------------------------------------------------------------
 		else if (NextState > TS_ATTACK && !mTroopReform)
 		{
 			return;
 		}
 
-		// PHASE II - COMPUTE THE NEW FORMATION HEAD, FORWARD, AND RIGHT VECTORS
-		//=======================================================================
+		// Phase II: formation vectors
 		mFormHead = leader->currentOrigin;
 		mFormFwd = NAV::HasPath(leader) ? NAV::NextPosition(leader) : mTargetLastKnownPosition;
 		mFormFwd -= mFormHead;
-		mFormFwd[2] = 0;
-		mFormFwd *= -1.0f; // Form Forward Goes Behind The Leader
+		mFormFwd[2] = 0.0f;
+		mFormFwd *= -1.0f;
 		mFormFwd.Norm();
 
 		mFormRight = mFormFwd;
 		mFormRight.Cross(CVec3::mZ);
 
-		// Scale Vectors By Spacing Distances
-		//------------------------------------
 		mFormFwd *= mFormSpacingFwd;
 		mFormRight *= mFormSpacingRight;
 
-		// If Attacking, Move Head Forward Some To Center On Target
-		//----------------------------------------------------------
 		if (NextState > TS_ATTACK)
 		{
 			if (!mTroopReform)
 			{
-				const int FwdNum = actorCount / 2 + 1;
-				for (int i = 0; i < FwdNum; i++)
+				const int fwd_num = actor_count / 2 + 1;
+				for (int i = 0; i < fwd_num; i++)
 				{
 					mFormHead -= mFormFwd;
 				}
 			}
-			trace_t trace;
 
+			trace_t trace;
 			mOrders[0].mPosition = mFormHead;
 
 			gi.trace(&trace,
@@ -727,8 +779,7 @@ private:
 				mActors[0]->s.number,
 				mActors[0]->clipmask,
 				static_cast<EG2_Collision>(0),
-				0
-			);
+				0);
 
 			if (trace.fraction < 1.0f)
 			{
@@ -744,119 +795,106 @@ private:
 
 		CVec3 FormTgtToHead(mFormHead);
 		FormTgtToHead -= mTargetLastKnownPosition;
-		/*float		FormTgtToHeadDist = */
 		FormTgtToHead.SafeNorm();
 
 		CVec3 BaseAngleToHead(FormTgtToHead);
 		BaseAngleToHead.VecToAng();
 
-		//		int			NumPerSide = mActors.size()/2;
-		//		float		WidestAngle = FORMATION_SURROUND_FAN * (NumPerSide+1);
-
-		// PHASE III - USE FORMATION VECTORS TO COMPUTE ORDERS FOR ALL ACTORS
-		//====================================================================
-		for (actorIndex = 1; actorIndex < actorCount; actorIndex++)
+		// Phase III: per‑actor orders
+		for (int actor_index = 1; actor_index < actor_count; actor_index++)
 		{
-			SaveNPCGlobals();
-			SetNPCGlobals(mActors[actorIndex]);
-
-			SActorOrder& Order = mOrders[actorIndex];
-			const float FwdScale = static_cast<float>(((actorIndex + 1) / 2));
-			const float SideScale = actorIndex % 2 == 0 ? -1.0f : 1.0f;
-
-			if (mActors[actorIndex]->NPC->combatPoint != -1)
+			gentity_t* actor = mActors[actor_index];
+			if (!actor || !actor->NPC)
 			{
-				NPC_FreeCombatPoint(mActors[actorIndex]->NPC->combatPoint, qfalse);
-				mActors[actorIndex]->NPC->combatPoint = -1;
+				continue;
+			}
+
+			SaveNPCGlobals();
+			SetNPCGlobals(actor);
+
+			SActorOrder& Order = mOrders[actor_index];
+			const float  fwd_scale = static_cast<float>((actor_index + 1) / 2);
+			const float  side_scale = (actor_index % 2 == 0) ? -1.0f : 1.0f;
+
+			if (actor->NPC->combatPoint != -1)
+			{
+				NPC_FreeCombatPoint(actor->NPC->combatPoint, qfalse);
+				actor->NPC->combatPoint = -1;
 			}
 
 			Order.mPosition = mFormHead;
 			Order.mCombatPoint = -1;
 			Order.mKneelAndShoot = false;
 
-			// Advance Orders
-			//----------------
+			// Advance
 			if (NextState < TS_ATTACK)
 			{
-				if (NextState == TS_ADVANCE_REGROUP || NextState == TS_ADVANCE_SEARCH || NextState ==
-					TS_ADVANCE_FORMATION)
+				if (NextState == TS_ADVANCE_REGROUP ||
+					NextState == TS_ADVANCE_SEARCH ||
+					NextState == TS_ADVANCE_FORMATION ||
+					NextState == TS_ADVANCE_COVER)
 				{
-					Order.mPosition.ScaleAdd(mFormFwd, FwdScale);
-					Order.mPosition.ScaleAdd(mFormRight, SideScale);
-				}
-				else if (NextState == TS_ADVANCE_COVER)
-				{
-					// TODO: Take Turns Switching Who Is In Front
-					Order.mPosition.ScaleAdd(mFormFwd, FwdScale);
-					Order.mPosition.ScaleAdd(mFormRight, SideScale);
+					Order.mPosition.ScaleAdd(mFormFwd, fwd_scale);
+					Order.mPosition.ScaleAdd(mFormRight, side_scale);
 				}
 			}
-
-			// Setup Initial Attack Orders
-			//-----------------------------
+			// Attack
 			else
 			{
-				if (NextState == TS_ATTACK_LINE || NextState == TS_ATTACK_FLANK && actorIndex < 4)
+				if (NextState == TS_ATTACK_LINE ||
+					(NextState == TS_ATTACK_FLANK && actor_index < 4))
 				{
-					Order.mPosition.ScaleAdd(mFormFwd, FwdScale);
-					Order.mPosition.ScaleAdd(mFormRight, SideScale);
+					Order.mPosition.ScaleAdd(mFormFwd, fwd_scale);
+					Order.mPosition.ScaleAdd(mFormRight, side_scale);
 				}
-				else if (NextState == TS_ATTACK_FLANK && actorIndex >= 4)
+				else if (NextState == TS_ATTACK_FLANK && actor_index >= 4)
 				{
-					int cp_flags = CP_HAS_ROUTE | CP_AVOID_ENEMY | CP_CLEAR | CP_COVER | CP_FLANK | CP_APPROACH_ENEMY;
-					constexpr float avoidDist = 128.0f;
+					int cpFlags = CP_HAS_ROUTE | CP_AVOID_ENEMY | CP_CLEAR | CP_COVER | CP_FLANK | CP_APPROACH_ENEMY;
+					constexpr float avoid_dist = 128.0f;
 
 					Order.mCombatPoint = NPC_FindCombatPointRetry(
-						mActors[actorIndex]->currentOrigin,
-						mActors[actorIndex]->currentOrigin,
-						mActors[actorIndex]->currentOrigin,
-						&cp_flags,
-						avoidDist,
+						actor->currentOrigin,
+						actor->currentOrigin,
+						actor->currentOrigin,
+						&cpFlags,
+						avoid_dist,
 						0);
 
-					if (Order.mCombatPoint != -1 && cp_flags & CP_CLEAR)
+					if (Order.mCombatPoint != -1 && (cpFlags & CP_CLEAR))
 					{
 						Order.mPosition = level.combatPoints[Order.mCombatPoint].origin;
 						NPC_SetCombatPoint(Order.mCombatPoint);
 					}
 					else
 					{
-						Order.mPosition.ScaleAdd(mFormFwd, FwdScale);
-						Order.mPosition.ScaleAdd(mFormRight, SideScale);
+						Order.mPosition.ScaleAdd(mFormFwd, fwd_scale);
+						Order.mPosition.ScaleAdd(mFormRight, side_scale);
 					}
 				}
 				else if (NextState == TS_ATTACK_SURROUND)
 				{
-					Order.mPosition.ScaleAdd(mFormFwd, FwdScale);
-					Order.mPosition.ScaleAdd(mFormRight, SideScale);
-
-					/*					CVec3	FanAngles = BaseAngleToHead;
-										FanAngles[YAW] += (SideScale * (WidestAngle-(FwdScale*FORMATION_SURROUND_FAN)));
-										FanAngles.AngToVec();
-
-										Order.mPosition = mTargetLastKnownPosition;
-										Order.mPosition.ScaleAdd(FanAngles,		FormTgtToHeadDist);
-					*/
+					Order.mPosition.ScaleAdd(mFormFwd, fwd_scale);
+					Order.mPosition.ScaleAdd(mFormRight, side_scale);
 				}
 				else if (NextState == TS_ATTACK_COVER)
 				{
-					Order.mPosition.ScaleAdd(mFormFwd, FwdScale);
-					Order.mPosition.ScaleAdd(mFormRight, SideScale);
+					Order.mPosition.ScaleAdd(mFormFwd, fwd_scale);
+					Order.mPosition.ScaleAdd(mFormRight, side_scale);
 				}
 			}
 
 			if (NextState >= TS_ATTACK)
 			{
 				trace_t trace;
-				CVec3 OrderUp(Order.mPosition);
+				CVec3   OrderUp(Order.mPosition);
 				OrderUp[2] += 10.0f;
 
 				gi.trace(&trace,
 					Order.mPosition.v,
-					mActors[actorIndex]->mins,
-					mActors[actorIndex]->maxs,
+					actor->mins,
+					actor->maxs,
 					OrderUp.v,
-					mActors[actorIndex]->s.number,
+					actor->s.number,
 					CONTENTS_SOLID | CONTENTS_TERRAIN | CONTENTS_MONSTERCLIP | CONTENTS_BOTCLIP,
 					static_cast<EG2_Collision>(0),
 					0);
@@ -864,14 +902,14 @@ private:
 				if (trace.startsolid || trace.allsolid)
 				{
 					int cpFlags = CP_HAS_ROUTE | CP_AVOID_ENEMY | CP_CLEAR | CP_COVER | CP_FLANK | CP_APPROACH_ENEMY;
-					constexpr float avoidDist = 128.0f;
+					constexpr float avoid_dist = 128.0f;
 
 					Order.mCombatPoint = NPC_FindCombatPointRetry(
-						mActors[actorIndex]->currentOrigin,
-						mActors[actorIndex]->currentOrigin,
-						mActors[actorIndex]->currentOrigin,
+						actor->currentOrigin,
+						actor->currentOrigin,
+						actor->currentOrigin,
 						&cpFlags,
-						avoidDist,
+						avoid_dist,
 						0);
 
 					if (Order.mCombatPoint != -1)
@@ -885,6 +923,7 @@ private:
 					}
 				}
 			}
+
 			RestoreNPCGlobals();
 		}
 
@@ -893,7 +932,7 @@ private:
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
-	// SufficientCoverNearby - Look at nearby combat points, see if there is enough
+	// SufficientCoverNearby
 	////////////////////////////////////////////////////////////////////////////////////
 	static bool SufficientCoverNearby()
 	{
@@ -903,7 +942,7 @@ private:
 
 public:
 	////////////////////////////////////////////////////////////////////////////////////
-	// Update - This is the primary "think" function from the troop
+	// Update - primary "think"
 	////////////////////////////////////////////////////////////////////////////////////
 	void Update()
 	{
@@ -911,60 +950,67 @@ public:
 		{
 			return;
 		}
-		ScanForTarget(0 /*Q_irand(0, (mActors.size()-1))*/);
-		if (mTarget)
-		{
-			ETroopState NextState = mState;
-			const int TimeSinceLastSeen = level.time - mTargetVisableStopTime;
-			//	int			TimeVisable			= (mTargetVisableStopTime - mTargetVisableStartTime);
-			const bool Attack = TimeSinceLastSeen < 2000;
 
-			if (Attack)
+		ScanForTarget(0);
+
+		if (!mTarget)
+		{
+			return;
+		}
+
+		ETroopState NextState = mState;
+		const int   TimeSinceLastSeen = level.time - mTargetVisableStopTime;
+		const bool  Attack = TimeSinceLastSeen < 2000;
+
+		if (Attack)
+		{
+			if (mState < TS_ATTACK)
 			{
-				// If Not Currently Attacking, Or We Want To Pick A New Attack Tactic
-				//--------------------------------------------------------------------
-				if (mState < TS_ATTACK /*|| TODO: Timer To Pick New Tactic */)
+				if (TroopInFormation())
 				{
-					if (TroopInFormation())
-					{
-						NextState = mActors.size() > 4 ? TS_ATTACK_FLANK : TS_ATTACK_LINE;
-					}
-					else
-					{
-						NextState = SufficientCoverNearby() ? TS_ATTACK_COVER : TS_ATTACK_SURROUND;
-					}
-				}
-			}
-			else
-			{
-				if (!TroopInFormation())
-				{
-					NextState = TS_ADVANCE_REGROUP;
+					NextState = (mActors.size() > 4) ? TS_ATTACK_FLANK : TS_ATTACK_LINE;
 				}
 				else
 				{
-					if (TargetLastKnownPositionVisited())
-					{
-						NextState = TS_ADVANCE_SEARCH;
-					}
-					else
-					{
-						NextState = TimeSinceLastSeen < 10000 ? TS_ADVANCE_COVER : TS_ADVANCE_FORMATION;
-					}
+					NextState = SufficientCoverNearby() ? TS_ATTACK_COVER : TS_ATTACK_SURROUND;
 				}
 			}
-			LeaderIssueAndUpdateOrders(NextState);
 		}
+		else
+		{
+			if (!TroopInFormation())
+			{
+				NextState = TS_ADVANCE_REGROUP;
+			}
+			else
+			{
+				if (TargetLastKnownPositionVisited())
+				{
+					NextState = TS_ADVANCE_SEARCH;
+				}
+				else
+				{
+					NextState = (TimeSinceLastSeen < 10000) ? TS_ADVANCE_COVER : TS_ADVANCE_FORMATION;
+				}
+			}
+		}
+
+		LeaderIssueAndUpdateOrders(NextState);
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
-	// MergeInto - Merges all actors into anther troop
+	// MergeInto - Merges all actors into another troop
 	////////////////////////////////////////////////////////////////////////////////////
 	void MergeInto(c_troop& Other)
 	{
 		const int num_ents = mActors.size();
 		for (int i = 0; i < num_ents; i++)
 		{
+			if (!mActors[i] || !mActors[i]->NPC || !mActors[i]->client)
+			{
+				continue;
+			}
+
 			mActors[i]->client->leader = nullptr;
 			mActors[i]->NPC->troop = 0;
 			Other.AddActor(mActors[i]);
@@ -987,23 +1033,21 @@ public:
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
-	//
-	////////////////////////////////////////////////////////////////////////////////////
 	gentity_t* TrackingTarget() const
 	{
 		return mTarget;
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
-	//
-	////////////////////////////////////////////////////////////////////////////////////
 	gentity_t* TroopLeader()
 	{
+		if (mActors.empty())
+		{
+			return nullptr;
+		}
 		return mActors[0];
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////
-	//
 	////////////////////////////////////////////////////////////////////////////////////
 	int TimeSinceSeenTarget() const
 	{
@@ -1011,15 +1055,11 @@ public:
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
-	//
-	////////////////////////////////////////////////////////////////////////////////////
 	CVec3& TargetVisablePosition()
 	{
 		return mTargetVisablePosition;
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////
-	//
 	////////////////////////////////////////////////////////////////////////////////////
 	float FormSpacingFwd() const
 	{
@@ -1027,38 +1067,31 @@ public:
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
-	//
-	////////////////////////////////////////////////////////////////////////////////////
 	gentity_t* TooCloseToTroopMember(const gentity_t* actor)
 	{
+		if (!actor)
+		{
+			return nullptr;
+		}
+
 		for (int i = 0; i < mActors.size(); i++)
 		{
-			// Only avoid guys ahead of us in the formation
-			//----------------------------------------------
+			if (!mActors[i])
+			{
+				continue;
+			}
+
 			if (actor == mActors[i])
 			{
 				return nullptr;
 			}
-			//	if (mActors[i]->resultspeed<10.0f)
-			//	{
-			//		continue;
-			//	}
 
-			if (i == 0)
+			if (Distance(actor->currentOrigin, mActors[i]->currentOrigin) < mFormSpacingFwd * 0.5f)
 			{
-				if (Distance(actor->currentOrigin, mActors[i]->currentOrigin) < mFormSpacingFwd * 0.5f)
-				{
-					return mActors[i];
-				}
-			}
-			else
-			{
-				if (Distance(actor->currentOrigin, mActors[i]->currentOrigin) < mFormSpacingFwd * 0.5f)
-				{
-					return mActors[i];
-				}
+				return mActors[i];
 			}
 		}
+
 		assert("Somehow this actor is not actually in the troop..." == nullptr);
 		return nullptr;
 	}
@@ -1261,11 +1294,11 @@ static int Trooper_CanHitTarget(gentity_t* actor, const gentity_t* target, c_tro
 	CVec3& MuzzleToTarget)
 {
 	trace_t tr;
-	CVec3 muzzlePoint(actor->currentOrigin);
-	CalcEntitySpot(actor, SPOT_WEAPON, muzzlePoint.v);
+	CVec3 MuzzlePoint(actor->currentOrigin);
+	CalcEntitySpot(actor, SPOT_WEAPON, MuzzlePoint.v);
 
 	MuzzleToTarget = troop.TargetVisablePosition();
-	MuzzleToTarget -= muzzlePoint;
+	MuzzleToTarget -= MuzzlePoint;
 	MuzzleToTargetDistance = MuzzleToTarget.SafeNorm();
 
 	CVec3 MuzzleDirection(actor->currentAngles);
@@ -1277,7 +1310,7 @@ static int Trooper_CanHitTarget(gentity_t* actor, const gentity_t* target, c_tro
 	{
 		// Clear Line Of Sight To Target?
 		//--------------------------------
-		gi.trace(&tr, muzzlePoint.v, nullptr, nullptr, troop.TargetVisablePosition().v, actor->s.number, MASK_SHOT,
+		gi.trace(&tr, MuzzlePoint.v, nullptr, nullptr, troop.TargetVisablePosition().v, actor->s.number, MASK_SHOT,
 			static_cast<EG2_Collision>(0), 0);
 		if (tr.startsolid || tr.allsolid)
 		{
@@ -1455,7 +1488,6 @@ static void Trooper_Think(gentity_t* actor)
 			ucmd.upmove = -127; // Set Crouch Height
 		}
 	}
-
 	else
 	{
 		NPC_BSST_Default();
@@ -1504,8 +1536,7 @@ bool NPC_IsTrooper(const gentity_t* actor)
 	return actor &&
 		actor->NPC &&
 		actor->s.weapon &&
-		!!(actor->NPC->scriptFlags & SCF_NO_GROUPS) // &&
-		;
+		!!(actor->NPC->scriptFlags & SCF_NO_GROUPS);
 }
 
 void NPC_LeaveTroop(const gentity_t* actor)

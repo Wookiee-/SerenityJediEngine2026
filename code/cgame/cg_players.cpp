@@ -3403,29 +3403,37 @@ static void CG_PlayerAngles(centity_t* cent, vec3_t legs[3], vec3_t torso[3], ve
 	float torso_pitch_clamp_min, torso_pitch_clamp_max;
 	float legs_yaw_swing_tol_min, legs_yaw_swing_tol_max;
 	float max_yaw_speed, yaw_speed, looking_speed;
-	float look_angle_speed = LOOK_TALKING_SPEED; //shut up the compiler
-	int pain_time{}, pain_direction{}, currentTime{};
+	float look_angle_speed = LOOK_TALKING_SPEED;
 
-	qboolean looking = qfalse, talking = qfalse;
+	// Basic safety: require valid cent, gent, client
+	if (cent == NULL || cent->gent == NULL || cent->gent->client == NULL)
+	{
+		return;
+	}
 
-	if ((cg.renderingThirdPerson || cg_trueguns.integer && !cg.zoomMode || cent->gent->client->ps.weapon == WP_SABER
-		|| cent->gent->client->ps.weapon == WP_MELEE) && cent->gent && cent->gent->s.number == 0)
+	// Local player third‑person / trueguns / saber/melee special case
+	if ((cg.renderingThirdPerson ||
+		(cg_trueguns.integer && (cg.zoomMode == qfalse)) ||
+		cent->gent->client->ps.weapon == WP_SABER ||
+		cent->gent->client->ps.weapon == WP_MELEE) &&
+		cent->gent->s.number == 0)
 	{
 		VectorCopy(cent->lerpAngles, view_angles);
 
-		view_angles[YAW] = view_angles[ROLL] = 0;
-		view_angles[PITCH] *= 0.5;
+		view_angles[YAW] = 0.0f;
+		view_angles[ROLL] = 0.0f;
+		view_angles[PITCH] *= 0.5f;
 		AnglesToAxis(view_angles, head);
 
-		view_angles[PITCH] *= 0.75;
+		view_angles[PITCH] *= 0.75f;
 		cent->pe.torso.pitchAngle = view_angles[PITCH];
 		cent->pe.torso.yawAngle = view_angles[YAW];
 		AnglesToAxis(view_angles, torso);
 
 		VectorCopy(cent->lerpAngles, look_angles);
-		look_angles[PITCH] = 0;
+		look_angles[PITCH] = 0.0f;
 
-		//FIXME: this needs to properly set the legs.yawing field so we don't erroneously play the turning anim, but we do play it when turning in place
+		// Turn‑in‑place detection for legs
 		if (look_angles[YAW] == cent->pe.legs.yawAngle)
 		{
 			cent->pe.legs.yawing = qfalse;
@@ -3435,23 +3443,22 @@ static void CG_PlayerAngles(centity_t* cent, vec3_t legs[3], vec3_t torso[3], ve
 			cent->pe.legs.yawing = qtrue;
 		}
 
-		if (cent->gent->client->ps.velocity[0] || cent->gent->client->ps.velocity[1])
+		// If moving, bias legs yaw toward movement direction
+		if (cent->gent->client->ps.velocity[0] != 0.0f ||
+			cent->gent->client->ps.velocity[1] != 0.0f)
 		{
-			float move_yaw;
-			move_yaw = vectoyaw(cent->gent->client->ps.velocity);
+			const float move_yaw = vectoyaw(cent->gent->client->ps.velocity);
 			look_angles[YAW] = cent->lerpAngles[YAW] + AngleDelta(cent->lerpAngles[YAW], move_yaw);
 		}
 
 		cent->pe.legs.yawAngle = look_angles[YAW];
-		if (cent->gent->client)
-		{
-			cent->gent->client->renderInfo.legsYaw = look_angles[YAW];
-		}
-		AnglesToAxis(look_angles, legs);
+		cent->gent->client->renderInfo.legsYaw = look_angles[YAW];
 
+		AnglesToAxis(look_angles, legs);
 		return;
 	}
 
+	// Non‑local player / NPC setup
 	if (cent->currentState.clientNum != 0)
 	{
 		head_yaw_clamp_min = -cent->gent->client->renderInfo.headYawRangeLeft;
@@ -3459,21 +3466,23 @@ static void CG_PlayerAngles(centity_t* cent, vec3_t legs[3], vec3_t torso[3], ve
 		head_pitch_clamp_min = -cent->gent->client->renderInfo.headPitchRangeUp;
 		head_pitch_clamp_max = cent->gent->client->renderInfo.headPitchRangeDown;
 
-		torso_yaw_swing_tol_min = head_yaw_clamp_min * 0.3;
-		torso_yaw_swing_tol_max = head_yaw_clamp_max * 0.3;
-		torso_pitch_swing_tol_min = head_pitch_clamp_min * 0.5;
-		torso_pitch_swing_tol_max = head_pitch_clamp_max * 0.5;
+		torso_yaw_swing_tol_min = head_yaw_clamp_min * 0.3f;
+		torso_yaw_swing_tol_max = head_yaw_clamp_max * 0.3f;
+		torso_pitch_swing_tol_min = head_pitch_clamp_min * 0.5f;
+		torso_pitch_swing_tol_max = head_pitch_clamp_max * 0.5f;
+
 		torso_yaw_clamp_min = -cent->gent->client->renderInfo.torsoYawRangeLeft;
 		torso_yaw_clamp_max = cent->gent->client->renderInfo.torsoYawRangeRight;
 		torso_pitch_clamp_min = -cent->gent->client->renderInfo.torsoPitchRangeUp;
 		torso_pitch_clamp_max = cent->gent->client->renderInfo.torsoPitchRangeDown;
 
-		legs_yaw_swing_tol_min = torso_yaw_clamp_min * 0.5;
-		legs_yaw_swing_tol_max = torso_yaw_clamp_max * 0.5;
+		legs_yaw_swing_tol_min = torso_yaw_clamp_min * 0.5f;
+		legs_yaw_swing_tol_max = torso_yaw_clamp_max * 0.5f;
 
-		if (cent->gent && cent->gent->next_roff_time && cent->gent->next_roff_time >= cg.time)
+		// Roff‑driven: lock body to head yaw
+		if (cent->gent->next_roff_time != 0 &&
+			cent->gent->next_roff_time >= cg.time)
 		{
-			//Following a roff, body must keep up with head, yaw-wise
 			head_yaw_clamp_min =
 				head_yaw_clamp_max =
 				torso_yaw_swing_tol_min =
@@ -3481,40 +3490,48 @@ static void CG_PlayerAngles(centity_t* cent, vec3_t legs[3], vec3_t torso[3], ve
 				torso_yaw_clamp_min =
 				torso_yaw_clamp_max =
 				legs_yaw_swing_tol_min =
-				legs_yaw_swing_tol_max = 0;
+				legs_yaw_swing_tol_max = 0.0f;
 		}
 
-		yaw_speed = max_yaw_speed = cent->gent->NPC->stats.yawSpeed / 150; //about 0.33 normally
+		if (cent->gent->NPC != NULL)
+		{
+			yaw_speed = cent->gent->NPC->stats.yawSpeed / 150.0f;
+		}
+		else
+		{
+			yaw_speed = CG_SWINGSPEED;
+		}
+		max_yaw_speed = yaw_speed;
 	}
 	else
 	{
-		head_yaw_clamp_min = -70;
-		head_yaw_clamp_max = 70;
+		// Local player default clamps
+		head_yaw_clamp_min = -70.0f;
+		head_yaw_clamp_max = 70.0f;
+		head_pitch_clamp_min = -90.0f;
+		head_pitch_clamp_max = 90.0f;
 
-		head_pitch_clamp_min = -90;
-		head_pitch_clamp_max = 90;
+		torso_yaw_swing_tol_min = -90.0f;
+		torso_yaw_swing_tol_max = 90.0f;
+		torso_pitch_swing_tol_min = -90.0f;
+		torso_pitch_swing_tol_max = 90.0f;
 
-		torso_yaw_swing_tol_min = -90;
-		torso_yaw_swing_tol_max = 90;
-		torso_pitch_swing_tol_min = -90;
-		torso_pitch_swing_tol_max = 90;
-		torso_yaw_clamp_min = -90;
-		torso_yaw_clamp_max = 90;
-		torso_pitch_clamp_min = -90;
-		torso_pitch_clamp_max = 90;
+		torso_yaw_clamp_min = -90.0f;
+		torso_yaw_clamp_max = 90.0f;
+		torso_pitch_clamp_min = -90.0f;
+		torso_pitch_clamp_max = 90.0f;
 
-		legs_yaw_swing_tol_min = -90;
-		legs_yaw_swing_tol_max = 90;
+		legs_yaw_swing_tol_min = -90.0f;
+		legs_yaw_swing_tol_max = 90.0f;
 
-		yaw_speed = max_yaw_speed = CG_SWINGSPEED;
+		yaw_speed = CG_SWINGSPEED;
+		max_yaw_speed = CG_SWINGSPEED;
 	}
 
-	if (yaw_speed <= 0)
+	if (yaw_speed <= 0.0f)
 	{
-		//Just in case
-		yaw_speed = 0.5f; //was 0.33
+		yaw_speed = 0.5f;
 	}
-
 	looking_speed = yaw_speed;
 
 	VectorCopy(cent->lerpAngles, head_angles);
@@ -3522,28 +3539,36 @@ static void CG_PlayerAngles(centity_t* cent, vec3_t legs[3], vec3_t torso[3], ve
 	VectorClear(legs_angles);
 	VectorClear(torso_angles);
 
-	// --------- yaw -------------
+	// --------- yaw: legs ---------
 
-	//Clamp and swing the legs
 	legs_angles[YAW] = head_angles[YAW];
 
-	if (cent->gent->client->renderInfo.renderFlags & RF_LOCKEDANGLE)
+	if ((cent->gent->client->renderInfo.renderFlags & RF_LOCKEDANGLE) != 0)
 	{
-		cent->gent->client->renderInfo.legsYaw = cent->pe.legs.yawAngle = cent->gent->client->renderInfo.lockYaw;
+		cent->gent->client->renderInfo.legsYaw = cent->pe.legs.yawAngle =
+			cent->gent->client->renderInfo.lockYaw;
 		cent->pe.legs.yawing = qfalse;
 		legs_angles[YAW] = cent->pe.legs.yawAngle;
 	}
 	else
 	{
 		qboolean always_face = qfalse;
-		if (cent->gent && cent->gent->health > 0)
+
+		if (cent->gent != NULL && cent->gent->health > 0)
 		{
-			if (cent->gent->enemy)
+			if (cent->gent->enemy != NULL)
 			{
 				always_face = qtrue;
 			}
-			if (CG_PlayerLegsYawFromMovement(cent, cent->gent->client->ps.velocity, &legs_angles[YAW], head_angles[YAW],
-				torso_yaw_clamp_min, torso_yaw_clamp_max, always_face))
+
+			if (CG_PlayerLegsYawFromMovement(
+				cent,
+				cent->gent->client->ps.velocity,
+				&legs_angles[YAW],
+				head_angles[YAW],
+				torso_yaw_clamp_min,
+				torso_yaw_clamp_max,
+				always_face) == qtrue)
 			{
 				if (legs_angles[YAW] == cent->pe.legs.yawAngle)
 				{
@@ -3553,173 +3578,180 @@ static void CG_PlayerAngles(centity_t* cent, vec3_t legs[3], vec3_t torso[3], ve
 				{
 					cent->pe.legs.yawing = qtrue;
 				}
+
 				cent->pe.legs.yawAngle = legs_angles[YAW];
-				if (cent->gent->client)
-				{
-					cent->gent->client->renderInfo.legsYaw = legs_angles[YAW];
-				}
+				cent->gent->client->renderInfo.legsYaw = legs_angles[YAW];
 			}
 			else
 			{
-				CG_SwingAngles(legs_angles[YAW], legs_yaw_swing_tol_min, legs_yaw_swing_tol_max, torso_yaw_clamp_min,
-					torso_yaw_clamp_max, max_yaw_speed, &cent->pe.legs.yawAngle, &cent->pe.legs.yawing);
+				CG_SwingAngles(
+					legs_angles[YAW],
+					legs_yaw_swing_tol_min,
+					legs_yaw_swing_tol_max,
+					torso_yaw_clamp_min,
+					torso_yaw_clamp_max,
+					max_yaw_speed,
+					&cent->pe.legs.yawAngle,
+					&cent->pe.legs.yawing);
+
 				legs_angles[YAW] = cent->pe.legs.yawAngle;
-				if (cent->gent->client)
-				{
-					cent->gent->client->renderInfo.legsYaw = legs_angles[YAW];
-				}
+				cent->gent->client->renderInfo.legsYaw = legs_angles[YAW];
 			}
 		}
 		else
 		{
-			CG_SwingAngles(legs_angles[YAW], legs_yaw_swing_tol_min, legs_yaw_swing_tol_max, torso_yaw_clamp_min,
+			CG_SwingAngles(
+				legs_angles[YAW],
+				legs_yaw_swing_tol_min,
+				legs_yaw_swing_tol_max,
+				torso_yaw_clamp_min,
 				torso_yaw_clamp_max,
-				max_yaw_speed, &cent->pe.legs.yawAngle, &cent->pe.legs.yawing);
+				max_yaw_speed,
+				&cent->pe.legs.yawAngle,
+				&cent->pe.legs.yawing);
+
 			legs_angles[YAW] = cent->pe.legs.yawAngle;
-			if (cent->gent && cent->gent->client)
+
+			if (cent->gent != NULL && cent->gent->client != NULL)
 			{
 				cent->gent->client->renderInfo.legsYaw = legs_angles[YAW];
 			}
 		}
 	}
 
-	// torso
-	// If applicable, swing the lower parts to catch up with the head
-	CG_SwingAngles(head_angles[YAW], torso_yaw_swing_tol_min, torso_yaw_swing_tol_max, head_yaw_clamp_min,
+	// --------- yaw: torso ---------
+
+	CG_SwingAngles(
+		head_angles[YAW],
+		torso_yaw_swing_tol_min,
+		torso_yaw_swing_tol_max,
+		head_yaw_clamp_min,
 		head_yaw_clamp_max,
-		yaw_speed, &cent->pe.torso.yawAngle, &cent->pe.torso.yawing);
+		yaw_speed,
+		&cent->pe.torso.yawAngle,
+		&cent->pe.torso.yawing);
+
 	torso_angles[YAW] = cent->pe.torso.yawAngle;
 
-	// ---------- pitch -----------
-
-	//As the body twists to its extents, the back tends to arch backwards
+	// ---------- pitch: torso -----------
 
 	float dest;
-	// only show a fraction of the pitch angle in the torso
-	if (head_angles[PITCH] > 180)
+
+	if (head_angles[PITCH] > 180.0f)
 	{
-		dest = (-360 + head_angles[PITCH]) * 0.75;
+		dest = (-360.0f + head_angles[PITCH]) * 0.75f;
 	}
 	else
 	{
-		dest = head_angles[PITCH] * 0.75;
+		dest = head_angles[PITCH] * 0.75f;
 	}
 
-	CG_SwingAngles(dest, torso_pitch_swing_tol_min, torso_pitch_swing_tol_max, torso_pitch_clamp_min,
-		torso_pitch_clamp_max, 0.1f,
-		&cent->pe.torso.pitchAngle, &cent->pe.torso.pitching);
+	CG_SwingAngles(
+		dest,
+		torso_pitch_swing_tol_min,
+		torso_pitch_swing_tol_max,
+		torso_pitch_clamp_min,
+		torso_pitch_clamp_max,
+		0.1f,
+		&cent->pe.torso.pitchAngle,
+		&cent->pe.torso.pitching);
+
 	torso_angles[PITCH] = cent->pe.torso.pitchAngle;
-	// --------- roll -------------
 
-	//----------- Special head looking ---------------
+	// --------- roll / head look ---------
 
-	//FIXME: to clamp the head angles, figure out tag_head's offset from tag_torso and add
-	//	that to whatever offset we're getting here... so turning the head in an
-	//	anim that also turns the head doesn't allow the head to turn out of range.
-
-	//Start with straight ahead
 	VectorCopy(head_angles, view_angles);
 	VectorCopy(head_angles, look_angles);
 
-	//Remember last headAngles
+	// Start from last head angles
 	VectorCopy(cent->gent->client->renderInfo.lastHeadAngles, head_angles);
 
-	//See if we're looking at someone/thing
-	looking = CG_CheckLookTarget(cent, look_angles, &looking_speed);
+	// Check if we are looking at a target
+	const qboolean looking = CG_CheckLookTarget(cent, look_angles, &looking_speed);
 
-	//Figure out how fast head should be turning
-	if (cent->pe.torso.yawing || cent->pe.torso.pitching)
+	// Determine head turning speed
+	if (cent->pe.torso.yawing == qtrue || cent->pe.torso.pitching == qtrue)
 	{
-		//If torso is turning, we want to turn head just as fast
 		look_angle_speed = yaw_speed;
 	}
-	else if (talking)
+	else if (looking == qtrue)
 	{
-		//Slow for head bobbing
-		look_angle_speed = LOOK_TALKING_SPEED;
-	}
-	else if (looking)
-	{
-		//Not talking, set it up for looking at enemy, CheckLookTarget will scale it down if neccessary
 		look_angle_speed = looking_speed;
 	}
 	else if (cent->gent->client->renderInfo.lookingDebounceTime > cg.time)
 	{
-		//Not looking, not talking, head is returning from a talking head bob, use talking speed
 		look_angle_speed = LOOK_TALKING_SPEED;
 	}
 
-	if (looking || talking)
+	if (looking == qtrue)
 	{
-		//Keep this type of looking for a second after stopped looking
 		cent->gent->client->renderInfo.lookingDebounceTime = cg.time + 1000;
 	}
 
 	if (cent->gent->client->renderInfo.lookingDebounceTime > cg.time)
 	{
-		int i;
-		//Calc our actual desired head angles
-		for (i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
 		{
-			look_angles[i] = AngleNormalize360(cent->gent->client->renderInfo.headBobAngles[i] + look_angles[i]);
+			look_angles[i] = AngleNormalize360(
+				cent->gent->client->renderInfo.headBobAngles[i] + look_angles[i]);
 		}
 
 		if (VectorCompare(head_angles, look_angles) == qfalse)
 		{
-			//FIXME: This clamp goes off viewAngles,
-			//but really should go off the tag_torso's axis[0] angles, no?
-			CG_UpdateAngleClamp(look_angles[PITCH], head_pitch_clamp_min / 1.25, head_pitch_clamp_max / 1.25,
+			CG_UpdateAngleClamp(
+				look_angles[PITCH],
+				head_pitch_clamp_min / 1.25f,
+				head_pitch_clamp_max / 1.25f,
 				look_angle_speed,
-				&head_angles[PITCH], view_angles[PITCH]);
-			CG_UpdateAngleClamp(look_angles[YAW], head_yaw_clamp_min / 1.25, head_yaw_clamp_max / 1.25,
+				&head_angles[PITCH],
+				view_angles[PITCH]);
+
+			CG_UpdateAngleClamp(
+				look_angles[YAW],
+				head_yaw_clamp_min / 1.25f,
+				head_yaw_clamp_max / 1.25f,
 				look_angle_speed,
-				&head_angles[YAW], view_angles[YAW]);
-			CG_UpdateAngleClamp(look_angles[ROLL], -10, 10, look_angle_speed, &head_angles[ROLL], view_angles[ROLL]);
+				&head_angles[YAW],
+				view_angles[YAW]);
+
+			CG_UpdateAngleClamp(
+				look_angles[ROLL],
+				-10.0f,
+				10.0f,
+				look_angle_speed,
+				&head_angles[ROLL],
+				view_angles[ROLL]);
 		}
 
-		if (!cent->gent->enemy || cent->gent->enemy->s.number != cent->gent->client->renderInfo.lookTarget)
+		if (cent->gent->enemy == NULL ||
+			cent->gent->enemy->s.number != cent->gent->client->renderInfo.lookTarget)
 		{
-			float scale;
-			float swing;
-			//NOTE: Hacky, yes, I know, but necc.
-			//We want to turn the body to follow the lookTarget
-			//ONLY IF WE DON'T HAVE AN ENEMY OR OUR ENEMY IS NOT OUR LOOKTARGET
-			//This is the piece of code that was making the enemies not face where
-			//they were actually aiming.
-
-			//Yaw change
-			swing = AngleSubtract(legs_angles[YAW], head_angles[YAW]);
-			scale = fabs(swing) / (torso_yaw_clamp_max + 0.01);
-			//NOTENOTE: Some ents have a clamp of 0, which is bad for division
-
+			// Yaw swing from legs toward head
+			float swing = AngleSubtract(legs_angles[YAW], head_angles[YAW]);
+			float scale = fabsf(swing) / (torso_yaw_clamp_max + 0.01f);
 			scale *= LOOK_SWING_SCALE;
 			torso_angles[YAW] = legs_angles[YAW] - swing * scale;
 
-			//Pitch change
+			// Pitch swing from legs toward head
 			swing = AngleSubtract(legs_angles[PITCH], head_angles[PITCH]);
-			scale = fabs(swing) / (torso_pitch_clamp_max + 0.01);
-			//NOTENOTE: Some ents have a clamp of 0, which is bad for division
-
+			scale = fabsf(swing) / (torso_pitch_clamp_max + 0.01f);
 			scale *= LOOK_SWING_SCALE;
 			torso_angles[PITCH] = legs_angles[PITCH] - swing * scale;
 		}
 	}
 	else
 	{
-		//Look straight ahead
+		// Look straight ahead
 		VectorCopy(view_angles, head_angles);
 	}
 
-	//Remember current headAngles next time
+	// Remember current head angles
 	VectorCopy(head_angles, cent->gent->client->renderInfo.lastHeadAngles);
 
-	//-------------------------------------------------------------
-	// pain twitch
-	CG_AddPainTwitch(pain_time, pain_direction, currentTime, torso_angles);
-
-	// pull the angles back out of the hierarchial chain
+	// Final hierarchical decomposition
 	AnglesSubtract(head_angles, torso_angles, head_angles);
 	AnglesSubtract(torso_angles, legs_angles, torso_angles);
+
 	AnglesToAxis(legs_angles, legs);
 	AnglesToAxis(torso_angles, torso);
 	AnglesToAxis(head_angles, head);
@@ -4008,219 +4040,249 @@ void CG_LandingEffect(vec3_t origin, vec3_t normal, const int material)
 }
 
 constexpr auto FOOTSTEP_DISTANCE = 32;
-
-static void player_foot_step(const vec3_t origin,
+static void player_foot_step(
+	const vec3_t origin,
 	const vec3_t trace_dir,
 	const float orientation,
 	const float radius,
-	const centity_t* cent, const footstepType_t foot_step_type)
+	const centity_t* cent,
+	const footstepType_t foot_step_type)
 {
-	vec3_t end;
-	constexpr vec3_t maxs = { 7, 7, 2 };
-	constexpr vec3_t mins = { -7, -7, 0 };
-	trace_t trace;
-	footstep_t sound_type;
-	bool b_mark = false;
-	int effect_id = -1;
-	//float		alpha;
+	// ---------------------------------------------------------------------
+	// Basic safety: we need a valid cent to play sounds on a client channel
+	// ---------------------------------------------------------------------
+	if (cent == NULL)
+	{
+		return;
+	}
 
-	// send a trace down from the player to the ground
+	vec3_t end;
+	constexpr vec3_t mins = { -7.0f, -7.0f, 0.0f };
+	constexpr vec3_t maxs = { 7.0f,  7.0f, 2.0f };
+
+	trace_t    trace{};
+	footstep_t sound_type = FOOTSTEP_STONEWALK; // safe default, overwritten below
+	bool       b_mark = false;
+	int        effect_id = -1;
+
+	// ---------------------------------------------------------------------
+	// Trace from the foot origin downwards along trace_dir
+	// ---------------------------------------------------------------------
 	VectorCopy(origin, end);
-	VectorMA(origin, FOOTSTEP_DISTANCE, trace_dir, end); //was end[2] -= FOOTSTEP_DISTANCE;
+	VectorMA(origin, FOOTSTEP_DISTANCE, trace_dir, end);
 
 	cgi_CM_BoxTrace(&trace, origin, end, mins, maxs, 0, MASK_PLAYERSOLID);
 
-	// no shadow if too high
+	// No ground hit → no footstep
 	if (trace.fraction >= 1.0f)
 	{
 		return;
 	}
 
-	if (foot_step_type == FOOTSTEP_HEAVY_SBD_R || foot_step_type == FOOTSTEP_HEAVY_SBD_L)
+	// ---------------------------------------------------------------------
+	// Determine material and select sound/effect/mark behaviour
+	// ---------------------------------------------------------------------
+	const int material = (trace.surfaceFlags & MATERIAL_MASK);
+
+	switch (material)
 	{
-		sound_type = FOOTSTEP_SBDRUN;
-	}
-	else if (foot_step_type == FOOTSTEP_SBD_R || foot_step_type == FOOTSTEP_SBD_L)
-	{
-		sound_type = FOOTSTEP_SBDWALK;
-	}
-	else
-	{
-		//check for foot-steppable surface flag
-		switch (trace.surfaceFlags & MATERIAL_MASK)
+	case MATERIAL_MUD:
+		b_mark = true;
+		if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
 		{
-		case MATERIAL_MUD:
-			b_mark = true;
-			if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
-			{
-				sound_type = FOOTSTEP_MUDRUN;
-			}
-			else
-			{
-				sound_type = FOOTSTEP_MUDWALK;
-			}
-			effect_id = cgs.effects.footstepMud;
-			break;
-		case MATERIAL_DIRT:
-			b_mark = true;
-			if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
-			{
-				sound_type = FOOTSTEP_DIRTRUN;
-			}
-			else
-			{
-				sound_type = FOOTSTEP_DIRTWALK;
-			}
-			effect_id = cgs.effects.footstepSand;
-			break;
-		case MATERIAL_SAND:
-			b_mark = true;
-			if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
-			{
-				sound_type = FOOTSTEP_SANDRUN;
-			}
-			else
-			{
-				sound_type = FOOTSTEP_SANDWALK;
-			}
-			effect_id = cgs.effects.footstepSand;
-			break;
-		case MATERIAL_SNOW:
-			b_mark = true;
-			if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
-			{
-				sound_type = FOOTSTEP_SNOWRUN;
-			}
-			else
-			{
-				sound_type = FOOTSTEP_SNOWWALK;
-			}
-			effect_id = cgs.effects.footstepSnow;
-			break;
-		case MATERIAL_SHORTGRASS:
-		case MATERIAL_LONGGRASS:
-			if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
-			{
-				sound_type = FOOTSTEP_GRASSRUN;
-			}
-			else
-			{
-				sound_type = FOOTSTEP_GRASSWALK;
-			}
-			break;
-		case MATERIAL_SOLIDMETAL:
-			if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
-			{
-				sound_type = FOOTSTEP_METALRUN;
-			}
-			else
-			{
-				sound_type = FOOTSTEP_METALWALK;
-			}
-			break;
-		case MATERIAL_HOLLOWMETAL:
-			if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
-			{
-				sound_type = FOOTSTEP_PIPERUN;
-			}
-			else
-			{
-				sound_type = FOOTSTEP_PIPEWALK;
-			}
-			break;
-		case MATERIAL_GRAVEL:
-			if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
-			{
-				sound_type = FOOTSTEP_GRAVELRUN;
-			}
-			else
-			{
-				sound_type = FOOTSTEP_GRAVELWALK;
-			}
-			effect_id = cgs.effects.footstepGravel;
-			break;
-		case MATERIAL_LAVA:
-			b_mark = true;
-			if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
-			{
-				sound_type = FOOTSTEP_DIRTRUN;
-			}
-			else
-			{
-				sound_type = FOOTSTEP_DIRTWALK;
-			}
-			effect_id = cgs.effects.footstepSand;
-			break;
-		case MATERIAL_CARPET:
-		case MATERIAL_FABRIC:
-		case MATERIAL_CANVAS:
-		case MATERIAL_RUBBER:
-		case MATERIAL_PLASTIC:
-			if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
-			{
-				sound_type = FOOTSTEP_RUGRUN;
-			}
-			else
-			{
-				sound_type = FOOTSTEP_RUGWALK;
-			}
-			break;
-		case MATERIAL_SOLIDWOOD:
-		case MATERIAL_HOLLOWWOOD:
-			if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
-			{
-				sound_type = FOOTSTEP_WOODRUN;
-			}
-			else
-			{
-				sound_type = FOOTSTEP_WOODWALK;
-			}
-			break;
-
-		default:
-			//fall through
-		case MATERIAL_GLASS:
-		case MATERIAL_WATER:
-		case MATERIAL_FLESH:
-		case MATERIAL_BPGLASS:
-		case MATERIAL_DRYLEAVES:
-		case MATERIAL_GREENLEAVES:
-		case MATERIAL_TILES:
-		case MATERIAL_PLASTER:
-		case MATERIAL_SHATTERGLASS:
-		case MATERIAL_ARMOR:
-		case MATERIAL_COMPUTER:
-		case MATERIAL_CONCRETE:
-		case MATERIAL_ROCK:
-		case MATERIAL_ICE:
-		case MATERIAL_MARBLE:
-			if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
-			{
-				sound_type = FOOTSTEP_STONERUN;
-			}
-			else
-			{
-				sound_type = FOOTSTEP_STONEWALK;
-			}
-			break;
+			sound_type = FOOTSTEP_MUDRUN;
 		}
+		else
+		{
+			sound_type = FOOTSTEP_MUDWALK;
+		}
+		effect_id = cgs.effects.footstepMud;
+		break;
+
+	case MATERIAL_DIRT:
+		b_mark = true;
+		if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
+		{
+			sound_type = FOOTSTEP_DIRTRUN;
+		}
+		else
+		{
+			sound_type = FOOTSTEP_DIRTWALK;
+		}
+		effect_id = cgs.effects.footstepSand;
+		break;
+
+	case MATERIAL_SAND:
+		b_mark = true;
+		if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
+		{
+			sound_type = FOOTSTEP_SANDRUN;
+		}
+		else
+		{
+			sound_type = FOOTSTEP_SANDWALK;
+		}
+		effect_id = cgs.effects.footstepSand;
+		break;
+
+	case MATERIAL_SNOW:
+		b_mark = true;
+		if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
+		{
+			sound_type = FOOTSTEP_SNOWRUN;
+		}
+		else
+		{
+			sound_type = FOOTSTEP_SNOWWALK;
+		}
+		effect_id = cgs.effects.footstepSnow;
+		break;
+
+	case MATERIAL_LAVA:
+		b_mark = true;
+		if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
+		{
+			sound_type = FOOTSTEP_DIRTRUN;
+		}
+		else
+		{
+			sound_type = FOOTSTEP_DIRTWALK;
+		}
+		effect_id = cgs.effects.footstepSand;
+		break;
+
+	case MATERIAL_SHORTGRASS:
+	case MATERIAL_LONGGRASS:
+		if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
+		{
+			sound_type = FOOTSTEP_GRASSRUN;
+		}
+		else
+		{
+			sound_type = FOOTSTEP_GRASSWALK;
+		}
+		break;
+
+	case MATERIAL_SOLIDMETAL:
+		if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
+		{
+			sound_type = FOOTSTEP_METALRUN;
+		}
+		else
+		{
+			sound_type = FOOTSTEP_METALWALK;
+		}
+		break;
+
+	case MATERIAL_HOLLOWMETAL:
+		if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
+		{
+			sound_type = FOOTSTEP_PIPERUN;
+		}
+		else
+		{
+			sound_type = FOOTSTEP_PIPEWALK;
+		}
+		break;
+
+	case MATERIAL_GRAVEL:
+		if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
+		{
+			sound_type = FOOTSTEP_GRAVELRUN;
+		}
+		else
+		{
+			sound_type = FOOTSTEP_GRAVELWALK;
+		}
+		effect_id = cgs.effects.footstepGravel;
+		break;
+
+	case MATERIAL_CARPET:
+	case MATERIAL_FABRIC:
+	case MATERIAL_CANVAS:
+	case MATERIAL_RUBBER:
+	case MATERIAL_PLASTIC:
+		if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
+		{
+			sound_type = FOOTSTEP_RUGRUN;
+		}
+		else
+		{
+			sound_type = FOOTSTEP_RUGWALK;
+		}
+		break;
+
+	case MATERIAL_SOLIDWOOD:
+	case MATERIAL_HOLLOWWOOD:
+		if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
+		{
+			sound_type = FOOTSTEP_WOODRUN;
+		}
+		else
+		{
+			sound_type = FOOTSTEP_WOODWALK;
+		}
+		break;
+
+	default:
+	case MATERIAL_GLASS:
+	case MATERIAL_WATER:
+	case MATERIAL_FLESH:
+	case MATERIAL_BPGLASS:
+	case MATERIAL_DRYLEAVES:
+	case MATERIAL_GREENLEAVES:
+	case MATERIAL_TILES:
+	case MATERIAL_PLASTER:
+	case MATERIAL_SHATTERGLASS:
+	case MATERIAL_ARMOR:
+	case MATERIAL_COMPUTER:
+	case MATERIAL_CONCRETE:
+	case MATERIAL_ROCK:
+	case MATERIAL_ICE:
+	case MATERIAL_MARBLE:
+		if (foot_step_type == FOOTSTEP_HEAVY_R || foot_step_type == FOOTSTEP_HEAVY_L)
+		{
+			sound_type = FOOTSTEP_STONERUN;
+		}
+		else
+		{
+			sound_type = FOOTSTEP_STONEWALK;
+		}
+		break;
 	}
 
+	// ---------------------------------------------------------------------
+	// Play footstep sound (if valid index)
+	// ---------------------------------------------------------------------
 	if (sound_type < FOOTSTEP_TOTAL)
 	{
-		cgi_S_StartSound(nullptr, cent->currentState.clientNum, CHAN_BODY,
-			cgs.media.footsteps[sound_type][Q_irand(0, 3)]);
+		const int randomIndex = Q_irand(0, 3);
+		cgi_S_StartSound(
+			NULL,
+			cent->currentState.clientNum,
+			CHAN_BODY,
+			cgs.media.footsteps[sound_type][randomIndex]);
 	}
 
+	// ---------------------------------------------------------------------
+	// Footstep debug / control via cg_footsteps:
+	// 1 = sounds only
+	// 2 = sounds + effects
+	// 3 = sounds + effects + marks
+	// 4 = always do both effects and marks
+	// ---------------------------------------------------------------------
 	if (cg_footsteps.integer < 4)
 	{
-		//debugging - 4 always does footstep effect
-		if (cg_footsteps.integer < 2) //1 for sounds, 2 for effects, 3 for marks
+		if (cg_footsteps.integer < 2)
 		{
+			// Sounds only
 			return;
 		}
 	}
 
+	// ---------------------------------------------------------------------
+	// Spawn footstep effect (dust, splashes, etc.)
+	// ---------------------------------------------------------------------
 	if (effect_id != -1)
 	{
 		theFxScheduler.PlayEffect(effect_id, trace.endpos, trace.plane.normal);
@@ -4228,51 +4290,58 @@ static void player_foot_step(const vec3_t origin,
 
 	if (cg_footsteps.integer < 4)
 	{
-		//debugging - 4 always does footprint decal
-		if (!b_mark || cg_footsteps.integer < 3) //1 for sounds, 2 for effects, 3 for marks
+		// 4 always does footprint decal
+		if (b_mark == false || cg_footsteps.integer < 3)
 		{
+			// No mark for this material or marks disabled
 			return;
 		}
 	}
-	qhandle_t foot_mark_shader;
+
+	// ---------------------------------------------------------------------
+	// Choose footprint decal shader based on which foot
+	// ---------------------------------------------------------------------
+	qhandle_t footMarkShader;
 	switch (foot_step_type)
 	{
 	case FOOTSTEP_HEAVY_R:
-	case FOOTSTEP_HEAVY_SBD_R:
-		foot_mark_shader = cgs.media.fshrMarkShader;
+		footMarkShader = cgs.media.fshrMarkShader;
 		break;
 	case FOOTSTEP_HEAVY_L:
-	case FOOTSTEP_HEAVY_SBD_L:
-		foot_mark_shader = cgs.media.fshlMarkShader;
+		footMarkShader = cgs.media.fshlMarkShader;
 		break;
 	case FOOTSTEP_R:
-	case FOOTSTEP_SBD_R:
-		foot_mark_shader = cgs.media.fsrMarkShader;
+		footMarkShader = cgs.media.fsrMarkShader;
 		break;
 	default:
 	case FOOTSTEP_L:
-	case FOOTSTEP_SBD_L:
-		foot_mark_shader = cgs.media.fslMarkShader;
+		footMarkShader = cgs.media.fslMarkShader;
 		break;
 	}
 
-	// fade the shadow out with height
-	//	alpha = 1.0 - trace.fraction;
-
-	// add the mark as a temporary, so it goes directly to the renderer
-	// without taking a spot in the cg_marks array
-
+	// ---------------------------------------------------------------------
+	// Add footprint mark as a temporary impact mark
+	// ---------------------------------------------------------------------
 	vec3_t proj_normal;
 	VectorCopy(trace.plane.normal, proj_normal);
+
+	// If surface is reasonably flat, project straight up to avoid weird rotations
 	if (proj_normal[2] > 0.5f)
 	{
-		// footsteps will not have the correct orientation for all surfaces, so punt and set the projection to Z
 		proj_normal[0] = 0.0f;
 		proj_normal[1] = 0.0f;
 		proj_normal[2] = 1.0f;
 	}
-	CG_ImpactMark(foot_mark_shader, trace.endpos, proj_normal,
-		orientation, 1, 1, 1, 1.0f, qfalse, radius, qfalse);
+
+	CG_ImpactMark(
+		footMarkShader,
+		trace.endpos,
+		proj_normal,
+		orientation,
+		1.0f, 1.0f, 1.0f, 1.0f,
+		qfalse,
+		radius,
+		qfalse);
 }
 
 extern vmCvar_t cg_footsteps;

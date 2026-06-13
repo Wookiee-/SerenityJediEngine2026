@@ -20,6 +20,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
+#include "qcommon.h"
 #if !defined(MINIHEAP_H_INC)
 #define MINIHEAP_H_INC
 
@@ -27,56 +28,61 @@ class CMiniHeap
 {
 	char* mHeap;
 	char* mCurrentHeap;
-	int mSize;
+	int   mSize;
 #if _DEBUG
-	int mMaxAlloc;
+	int   mMaxAlloc;
 #endif
 
 public:
+	// initialise the heap
+	CMiniHeap(const int size)
+		: mHeap(nullptr)
+		, mCurrentHeap(nullptr)
+		, mSize(size)
+#if _DEBUG
+		, mMaxAlloc(0)
+#endif
+	{
+		mHeap = static_cast<char*>(Z_Malloc(size, TAG_GHOUL2, qtrue));
+
+		if (mHeap)
+		{
+			mCurrentHeap = mHeap;   // safe, explicit
+		}
+	}
+
 	// reset the heap back to the start
 	void ResetHeap()
 	{
 #if _DEBUG
-		if ((intptr_t)mCurrentHeap - (intptr_t)mHeap > mMaxAlloc)
+		const intptr_t used = (intptr_t)mCurrentHeap - (intptr_t)mHeap;
+		if (used > mMaxAlloc)
 		{
-			mMaxAlloc = (intptr_t)mCurrentHeap - (intptr_t)mHeap;
+			mMaxAlloc = (int)used;
 		}
 #endif
 		mCurrentHeap = mHeap;
 	}
 
-	// initialise the heap
-	CMiniHeap(const int size)
-	{
-		mHeap = static_cast<char*>(Z_Malloc(size, TAG_GHOUL2, qtrue));
-		mSize = size;
-#if _DEBUG
-		mMaxAlloc = 0;
-#endif
-		if (mHeap)
-		{
-			ResetHeap();
-		}
-	}
-
 	// free up the heap
 	~CMiniHeap()
 	{
-		if (mHeap)
-		{
-			// the quake heap will be long gone, no need to free it Z_Free(mHeap);
-		}
+		// quake frees all memory pools at shutdown, so no Z_Free here
 	}
 
 	// give me some space from the heap please
 	char* MiniHeapAlloc(const int size)
 	{
-		if (size < mSize - ((intptr_t)mCurrentHeap - (intptr_t)mHeap))
+		const intptr_t used = (intptr_t)mCurrentHeap - (intptr_t)mHeap;
+		const intptr_t remaining = mSize - used;
+
+		if (size < remaining)
 		{
 			char* tempAddress = mCurrentHeap;
 			mCurrentHeap += size;
 			return tempAddress;
 		}
+
 		return nullptr;
 	}
 };

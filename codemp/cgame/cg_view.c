@@ -85,7 +85,7 @@ can then be moved around
 */
 void CG_TestModel_f(void)
 {
-	vec3_t angles;
+	vec3_t angles = {0};
 
 	memset(&cg.testModelEntity, 0, sizeof cg.testModelEntity);
 	if (trap->Cmd_Argc() < 2)
@@ -2493,15 +2493,15 @@ void CG_DrawAutoMap(void)
 	}
 	else
 	{
-		vec3_t player_maxs;
-		vec3_t player_mins;
+		vec3_t playerMaxs;
+		vec3_t playerMins;
 		//Trace down and set the ground elevation as the main automap elevation point
-		VectorSet(player_mins, -15, -15, DEFAULT_MINS_2);
-		VectorSet(player_maxs, 15, 15, DEFAULT_MAXS_2);
+		VectorSet(playerMins, -15, -15, DEFAULT_MINS_2);
+		VectorSet(playerMaxs, 15, 15, DEFAULT_MAXS_2);
 
 		VectorCopy(cg.predictedPlayerState.origin, fwd);
 		fwd[2] -= 4096.0f;
-		CG_Trace(&tr, cg.predictedPlayerState.origin, player_mins, player_maxs, fwd, cg.predictedPlayerState.clientNum,
+		CG_Trace(&tr, cg.predictedPlayerState.origin, playerMins, playerMaxs, fwd, cg.predictedPlayerState.clientNum,
 			MASK_SOLID);
 
 		if (!tr.startsolid && !tr.allsolid)
@@ -2617,6 +2617,7 @@ extern int CinematicNum;
 
 void CG_DrawActiveFrame(const int serverTime, const stereoFrame_t stereoView, const qboolean demoPlayback)
 {
+	const qboolean holding_walking_button = (cg.predictedPlayerState.pm_flags & PMF_WALKING_HELD) ? qtrue : qfalse;
 	const char* cstr;
 	float mSensitivity = cg.zoomSensitivity;
 	static centity_t* veh = NULL;
@@ -2626,6 +2627,8 @@ void CG_DrawActiveFrame(const int serverTime, const stereoFrame_t stereoView, co
 	qboolean	isFighter = qfalse;
 #endif
 	qboolean inwater;
+	float mYawOverride = 0.0f;
+	float mPitchOverride = 0.0f;
 
 	if (cgQueueLoad)
 	{
@@ -2745,8 +2748,6 @@ void CG_DrawActiveFrame(const int serverTime, const stereoFrame_t stereoView, co
 	if (!isFighter)
 #endif //VEH_CONTROL_SCHEME_4
 	{
-		float mYawOverride = 0.0f;
-		float mPitchOverride = 0.0f;
 		if (cg.predictedPlayerState.m_iVehicleNum)
 		{
 			veh = &cg_entities[cg.predictedPlayerState.m_iVehicleNum];
@@ -2758,15 +2759,27 @@ void CG_DrawActiveFrame(const int serverTime, const stereoFrame_t stereoView, co
 			veh->m_pVehicle->m_pVehicleInfo->type == VH_FIGHTER &&
 			bg_fighterAltControl.integer)
 		{
-			trap->SetUserCmdValue(cg.weaponSelect, mSensitivity, mPitchOverride, mYawOverride, 0.0f, cg.forceSelect,
-				cg.itemSelect, qtrue);
+			if (in_joystick.integer)
+			{
+				mPitchOverride = 0.08f;
+				mYawOverride = 0.08f;
+			}
+			trap->SetUserCmdValue(cg.weaponSelect, mSensitivity, mPitchOverride, mYawOverride, 0.0f, cg.forceSelect,cg.itemSelect, qtrue);
 			veh = NULL;
 			//this is done because I don't want an extra assign each frame because I am so perfect and super efficient.
 		}
 		else
 		{
-			trap->SetUserCmdValue(cg.weaponSelect, mSensitivity, mPitchOverride, mYawOverride, 0.0f, cg.forceSelect,
-				cg.itemSelect, qfalse);
+			// ---------------------------------------------------------
+			// Precision mode for joystick: slow aim when WALK held
+			// ---------------------------------------------------------
+			if (in_joystick.integer &&
+				(holding_walking_button))
+			{
+				mPitchOverride = 0.05f;
+				mYawOverride = 0.05f;
+			}
+			trap->SetUserCmdValue(cg.weaponSelect, mSensitivity, mPitchOverride, mYawOverride, 0.0f, cg.forceSelect,cg.itemSelect, qfalse);
 		}
 	}
 

@@ -428,11 +428,11 @@ void CG_ProcessSnapshots()
 	// ------------------------------------------------------------------
 	// Time correction logic
 	// ------------------------------------------------------------------
-	if (cg.snap->serverTime > cg.time)
+	if (cg.snap != NULL && cg.snap->serverTime > cg.time)
 	{
 		cg.time = cg.snap->serverTime;
 #if _DEBUG
-		Com_Printf("CG_ProcessSnapshots: cg.snap->serverTime > cg.time\n");
+		Com_Printf("CG_ProcessSnapshots: corrected cg.time to cg.snap->serverTime\n");
 #endif
 	}
 
@@ -440,7 +440,7 @@ void CG_ProcessSnapshots()
 	{
 		cg.time = cg.nextSnap->serverTime - 1;
 #if _DEBUG
-		Com_Printf("CG_ProcessSnapshots: cg.nextSnap->serverTime <= cg.time\n");
+		Com_Printf("CG_ProcessSnapshots: corrected cg.time to nextSnap->serverTime - 1\n");
 #endif
 	}
 

@@ -131,12 +131,19 @@ static void AI_SetClosestBuddy(AIGroupInfo_t* group)
 
 static void AI_SortGroupByPathCostToEnemy(AIGroupInfo_t* group)
 {
-	int i;
+	if (group == nullptr)
+	{
+		Com_Printf("AI_SortGroupByPathCostToEnemy: NULL group\n");
+		return;
+	}
+
 	qboolean sort = qfalse;
 
+	// ---------------------------------------------------------
+	// Determine enemy waypoint
+	// ---------------------------------------------------------
 	if (group->enemy != nullptr)
 	{
-		//FIXME: just use enemy->waypoint?
 		group->enemyWP = NAV::GetNearestNode(group->enemy);
 	}
 	else
@@ -144,22 +151,25 @@ static void AI_SortGroupByPathCostToEnemy(AIGroupInfo_t* group)
 		group->enemyWP = WAYPOINT_NONE;
 	}
 
-	for (i = 0; i < group->numGroup; i++)
+	// ---------------------------------------------------------
+	// Compute each member's path cost
+	// ---------------------------------------------------------
+	for (int i = 0; i < group->numGroup; i++)
 	{
 		if (group->enemyWP == WAYPOINT_NONE)
 		{
-			//FIXME: just use member->waypoint?
 			group->member[i].waypoint = WAYPOINT_NONE;
 			group->member[i].pathCostToEnemy = Q3_INFINITE;
 		}
 		else
 		{
-			//FIXME: just use member->waypoint?
 			group->member[i].waypoint = NAV::GetNearestNode(group->enemy);
+
 			if (group->member[i].waypoint != WAYPOINT_NONE)
 			{
-				group->member[i].pathCostToEnemy = NAV::EstimateCostToGoal(group->member[i].waypoint, group->enemyWP);
-				//at least one of us has a path, so do sorting
+				group->member[i].pathCostToEnemy =
+					NAV::EstimateCostToGoal(group->member[i].waypoint, group->enemyWP);
+
 				sort = qtrue;
 			}
 			else
@@ -168,51 +178,58 @@ static void AI_SortGroupByPathCostToEnemy(AIGroupInfo_t* group)
 			}
 		}
 	}
-	//Now sort
-	if (sort)
+
+	// ---------------------------------------------------------
+	// Sorting
+	// ---------------------------------------------------------
+	if (sort == qtrue)
 	{
-		int j;
 		AIGroupMember_t bestMembers[MAX_GROUP_MEMBERS]{};
-		//initialize bestMembers data
-		for (j = 0; j < group->numGroup; j++)
+
+		// Initialize
+		for (int j = 0; j < group->numGroup; j++)
 		{
 			bestMembers[j].number = ENTITYNUM_NONE;
+			bestMembers[j].pathCostToEnemy = Q3_INFINITE;
+			bestMembers[j].waypoint = WAYPOINT_NONE;
 		}
 
-		for (i = 0; i < group->numGroup; i++)
+		// Insert-sort by pathCostToEnemy
+		for (int i = 0; i < group->numGroup; i++)
 		{
-			for (j = 0; j < group->numGroup; j++)
+			for (int j = 0; j < group->numGroup; j++)
 			{
 				if (bestMembers[j].number != ENTITYNUM_NONE)
 				{
-					//slot occupied
 					if (group->member[i].pathCostToEnemy < bestMembers[j].pathCostToEnemy)
 					{
-						//this guy has a shorter path than the one currently in this spot, bump him and put myself in here
-						for (int k = group->numGroup; k > j; k++)
+						// Shift down safely: k starts at last valid index
+						for (int k = group->numGroup - 1; k > j; k--)
 						{
-							memcpy(&bestMembers[k], &bestMembers[k - 1], sizeof bestMembers[k]);
+							memcpy(&bestMembers[k], &bestMembers[k - 1], sizeof(bestMembers[k]));
 						}
-						memcpy(&bestMembers[j], &group->member[i], sizeof bestMembers[j]);
+
+						memcpy(&bestMembers[j], &group->member[i], sizeof(bestMembers[j]));
 						break;
 					}
 				}
 				else
 				{
-					//slot unoccupied, reached end of list, throw self in here
-					memcpy(&bestMembers[j], &group->member[i], sizeof bestMembers[j]);
+					// First empty slot
+					memcpy(&bestMembers[j], &group->member[i], sizeof(bestMembers[j]));
 					break;
 				}
 			}
 		}
 
-		//Okay, now bestMembers is a sorted list, just copy it into group->members
-		for (i = 0; i < group->numGroup; i++)
+		// Copy sorted list back
+		for (int i = 0; i < group->numGroup; i++)
 		{
-			memcpy(&group->member[i], &bestMembers[i], sizeof group->member[i]);
+			memcpy(&group->member[i], &bestMembers[i], sizeof(group->member[i]));
 		}
 	}
 }
+
 
 static qboolean AI_FindSelfInPreviousGroup(const gentity_t* self)
 {

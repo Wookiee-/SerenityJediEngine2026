@@ -28,8 +28,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "say.h"
 #include "icarus/Q3_Interface.h"
 
-extern vec3_t player_mins;
-extern vec3_t player_maxs;
+extern vec3_t playerMins;
+extern vec3_t playerMaxs;
 extern void G_SoundOnEnt(gentity_t* ent, soundChannel_t channel, const char* sound_path);
 extern void NPC_BSNoClip(void);
 extern void G_AddVoiceEvent(const gentity_t* self, int event, int speak_debounce_time);

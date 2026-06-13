@@ -54,7 +54,7 @@ void MSG_BeginReading(msg_t* msg)
 	msg->bit = 0;
 }
 
-void MSG_ReadByteAlign(msg_t* buf)
+static void MSG_ReadByteAlign(msg_t* buf)
 {
 	// round up to the next byte
 	if (buf->bit)
@@ -448,7 +448,7 @@ extern cvar_t* cl_shownet;
 
 #define	LOG(x) if( cl_shownet->integer == 4 ) { Com_Printf("%s ", x ); };
 
-void MSG_WriteDelta(msg_t* msg, const int old_v, const int new_v, const int bits)
+static void MSG_WriteDelta(msg_t* msg, const int old_v, const int new_v, const int bits)
 {
 	if (old_v == new_v)
 	{
@@ -459,7 +459,7 @@ void MSG_WriteDelta(msg_t* msg, const int old_v, const int new_v, const int bits
 	MSG_WriteBits(msg, new_v, bits);
 }
 
-int MSG_ReadDelta(msg_t* msg, const int old_v, const int bits)
+static int MSG_ReadDelta(msg_t* msg, const int old_v, const int bits)
 {
 	if (MSG_ReadBits(msg, 1))
 	{
@@ -468,7 +468,7 @@ int MSG_ReadDelta(msg_t* msg, const int old_v, const int bits)
 	return old_v;
 }
 
-void MSG_WriteDeltaFloat(msg_t* msg, const float old_v, const float new_v)
+static void MSG_WriteDeltaFloat(msg_t* msg, const float old_v, const float new_v)
 {
 	byteAlias_t fi{};
 	if (old_v == new_v)
@@ -481,7 +481,7 @@ void MSG_WriteDeltaFloat(msg_t* msg, const float old_v, const float new_v)
 	MSG_WriteBits(msg, fi.i, 32);
 }
 
-float MSG_ReadDeltaFloat(msg_t* msg, const float old_v)
+static float MSG_ReadDeltaFloat(msg_t* msg, const float old_v)
 {
 	if (MSG_ReadBits(msg, 1))
 	{
@@ -502,14 +502,14 @@ usercmd_t communication
 */
 
 // ms is allways sent, the others are optional
-constexpr auto CM_ANGLE1 = 1 << 0;
-constexpr auto CM_ANGLE2 = 1 << 1;
-constexpr auto CM_ANGLE3 = 1 << 2;
-constexpr auto CM_FORWARD = 1 << 3;
-constexpr auto CM_SIDE = 1 << 4;
-constexpr auto CM_UP = 1 << 5;
-constexpr auto CM_BUTTONS = 1 << 6;
-constexpr auto CM_WEAPON = 1 << 7;
+#define	CM_ANGLE1 	(1<<0)
+#define	CM_ANGLE2 	(1<<1)
+#define	CM_ANGLE3 	(1<<2)
+#define	CM_FORWARD	(1<<3)
+#define	CM_SIDE		(1<<4)
+#define	CM_UP		(1<<5)
+#define	CM_BUTTONS	(1<<6)
+#define CM_WEAPON	(1<<7)
 
 /*
 =====================
@@ -739,10 +739,10 @@ Ghoul2 Insert Start
 
 // if (int)f == f and (int)f + ( 1<<(FLOAT_INT_BITS-1) ) < ( 1 << FLOAT_INT_BITS )
 // the float will be sent with FLOAT_INT_BITS, otherwise all 32 bits will be sent
-constexpr auto FLOAT_INT_BITS = 13;
+#define	FLOAT_INT_BITS	13
 #define	FLOAT_INT_BIAS	(1<<(FLOAT_INT_BITS-1))
 
-void MSG_WriteField(msg_t* msg, const int* to_f, const netField_t* field)
+static void MSG_WriteField(msg_t* msg, const int* to_f, const netField_t* field)
 {
 	if (field->bits == -1)
 	{
@@ -793,7 +793,7 @@ void MSG_WriteField(msg_t* msg, const int* to_f, const netField_t* field)
 	}
 }
 
-void MSG_ReadField(msg_t* msg, int* to_f, const netField_t* field, const int print)
+static void MSG_ReadField(msg_t* msg, int* to_f, const netField_t* field, const int print)
 {
 	if (field->bits == -1)
 	{

@@ -2370,7 +2370,7 @@ static void player_foot_step(const vec3_t origin,
 	trace_t     trace;
 	footstep_t  sound_type = FOOTSTEP_STONEWALK; // safe default, will be overridden
 	qboolean    b_mark = qfalse;
-	qhandle_t   foot_mark_shader;
+	qhandle_t   footMarkShader;
 	int         effect_id = -1;
 
 	// Trace downward to find the ground surface
@@ -2483,7 +2483,6 @@ static void player_foot_step(const vec3_t origin,
 		case MATERIAL_PLASTER:
 		case MATERIAL_SHATTERGLASS:
 		case MATERIAL_ARMOR:
-		case MATERIAL_COMPUTER:
 		case MATERIAL_CONCRETE:
 		case MATERIAL_ROCK:
 		case MATERIAL_ICE:
@@ -2529,23 +2528,23 @@ static void player_foot_step(const vec3_t origin,
 	{
 	case FOOTSTEP_HEAVY_R:
 	case FOOTSTEP_HEAVY_SBD_R:
-		foot_mark_shader = cgs.media.fshrMarkShader;
+		footMarkShader = cgs.media.fshrMarkShader;
 		break;
 
 	case FOOTSTEP_HEAVY_L:
 	case FOOTSTEP_HEAVY_SBD_L:
-		foot_mark_shader = cgs.media.fshlMarkShader;
+		footMarkShader = cgs.media.fshlMarkShader;
 		break;
 
 	case FOOTSTEP_R:
 	case FOOTSTEP_SBD_R:
-		foot_mark_shader = cgs.media.fsrMarkShader;
+		footMarkShader = cgs.media.fsrMarkShader;
 		break;
 
 	default:
 	case FOOTSTEP_L:
 	case FOOTSTEP_SBD_L:
-		foot_mark_shader = cgs.media.fslMarkShader;
+		footMarkShader = cgs.media.fslMarkShader;
 		break;
 	}
 
@@ -2555,7 +2554,7 @@ static void player_foot_step(const vec3_t origin,
 		trace.plane.normal[2] != 0.0f)
 	{
 		CG_ImpactMark(
-			foot_mark_shader,
+			footMarkShader,
 			trace.endpos,
 			trace.plane.normal,
 			orientation,

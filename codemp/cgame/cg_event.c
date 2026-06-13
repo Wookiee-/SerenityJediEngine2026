@@ -3603,8 +3603,8 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 		DEBUGNAME("EV_SABER_UNHOLSTER");
 		{
 			trace_t tr;
-			vec3_t player_mins = { -15, -15, DEFAULT_MINS_2 + 8 };
-			vec3_t player_maxs = { 15, 15, DEFAULT_MAXS_2 };
+			vec3_t playerMins = { -15, -15, DEFAULT_MINS_2 + 8 };
+			vec3_t playerMaxs = { 15, 15, DEFAULT_MAXS_2 };
 			vec3_t ang, pos, dpos;
 
 			VectorClear(ang);
@@ -3613,7 +3613,7 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 			VectorCopy(position, dpos);
 			dpos[2] -= 4096;
 
-			CG_Trace(&tr, position, player_mins, player_maxs, dpos, es->number, MASK_SOLID);
+			CG_Trace(&tr, position, playerMins, playerMaxs, dpos, es->number, MASK_SOLID);
 			VectorCopy(tr.endpos, pos);
 
 			if (tr.fraction == 1)
@@ -4012,8 +4012,8 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 		DEBUGNAME("EV_PLAYER_TELEPORT_IN");
 		{
 			trace_t tr;
-			vec3_t player_mins = { -15, -15, DEFAULT_MINS_2 + 8 };
-			vec3_t player_maxs = { 15, 15, DEFAULT_MAXS_2 };
+			vec3_t playerMins = { -15, -15, DEFAULT_MINS_2 + 8 };
+			vec3_t playerMaxs = { 15, 15, DEFAULT_MAXS_2 };
 			vec3_t ang, pos, dpos;
 
 			int doit = 1; //consider NonX (lmo)
@@ -4041,7 +4041,7 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 				VectorCopy(position, dpos);
 				dpos[2] -= 4096;
 
-				CG_Trace(&tr, position, player_mins, player_maxs, dpos, es->number, MASK_SOLID);
+				CG_Trace(&tr, position, playerMins, playerMaxs, dpos, es->number, MASK_SOLID);
 				VectorCopy(tr.endpos, pos);
 
 				trap->S_StartSound(NULL, es->number, CHAN_AUTO, cgs.media.teleInSound);
@@ -4059,8 +4059,8 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 		DEBUGNAME("EV_PLAYER_TELEPORT_OUT");
 		{
 			trace_t tr;
-			vec3_t player_mins = { -15, -15, DEFAULT_MINS_2 + 8 };
-			vec3_t player_maxs = { 15, 15, DEFAULT_MAXS_2 };
+			vec3_t playerMins = { -15, -15, DEFAULT_MINS_2 + 8 };
+			vec3_t playerMaxs = { 15, 15, DEFAULT_MAXS_2 };
 			vec3_t ang, pos, dpos;
 
 			int doit = 1; //consider NonX (lmo)
@@ -4088,7 +4088,7 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
 				VectorCopy(position, dpos);
 				dpos[2] -= 4096;
 
-				CG_Trace(&tr, position, player_mins, player_maxs, dpos, es->number, MASK_SOLID);
+				CG_Trace(&tr, position, playerMins, playerMaxs, dpos, es->number, MASK_SOLID);
 				VectorCopy(tr.endpos, pos);
 
 				trap->S_StartSound(NULL, es->number, CHAN_AUTO, cgs.media.teleOutSound);

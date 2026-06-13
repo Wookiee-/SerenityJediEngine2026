@@ -31,8 +31,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 
 #ifdef _GAME //SP or gameside MP
-extern vec3_t player_mins;
-extern vec3_t player_maxs;
+extern vec3_t playerMins;
+extern vec3_t playerMaxs;
 extern void ChangeWeapon(const gentity_t* ent, int newWeapon);
 extern int PM_AnimLength(const animNumber_t anim);
 #endif

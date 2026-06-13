@@ -2063,8 +2063,8 @@ Try and use an entity in the world, directly ahead of us
 
 extern void Touch_Button(gentity_t* ent, gentity_t* other, trace_t* trace);
 extern qboolean gSiegeRoundBegun;
-static vec3_t player_mins = { -15, -15, DEFAULT_MINS_2 };
-static vec3_t player_maxs = { 15, 15, DEFAULT_MAXS_2 };
+static vec3_t playerMins = { -15, -15, DEFAULT_MINS_2 };
+static vec3_t playerMaxs = { 15, 15, DEFAULT_MAXS_2 };
 
 void TryUse(gentity_t* ent)
 {
@@ -2331,7 +2331,7 @@ tryJetPack:
 		AngleVectors(fAng, fwd, 0, 0);
 
 		VectorMA(ent->client->ps.origin, 64.0f, fwd, fwd);
-		trap->Trace(&trToss, ent->client->ps.origin, player_mins, player_maxs, fwd, ent->s.number, ent->clipmask, qfalse,
+		trap->Trace(&trToss, ent->client->ps.origin, playerMins, playerMaxs, fwd, ent->s.number, ent->clipmask, qfalse,
 			0, 0);
 		if (trToss.fraction == 1.0f && !trToss.allsolid && !trToss.startsolid)
 		{

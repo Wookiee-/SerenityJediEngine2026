@@ -979,33 +979,45 @@ During normal gameplay, a client packet will contain something like:
 
 ===================
 */
-void CL_WritePacket()
-{
-	msg_t buf;
-	byte data[MAX_MSGLEN];
-	int i;
-	usercmd_t nullcmd;
 
-	// don't send anything if playing back a demo
-	//	if ( cls.state == CA_CINEMATIC )
-	if (cls.state == CA_CINEMATIC || CL_IsRunningInGameCinematic())
+void CL_WritePacket(void)
+{
+	// ---------------------------------------------------------
+	// Do not send packets during cinematics
+	// ---------------------------------------------------------
+	if (cls.state == CA_CINEMATIC || CL_IsRunningInGameCinematic() == qtrue)
 	{
 		return;
 	}
 
-	MSG_Init(&buf, data, sizeof data);
+	// ---------------------------------------------------------
+	// Allocate packet buffer on heap (fixes 34 KB stack usage)
+	// ---------------------------------------------------------
+	byte* data = static_cast<byte*>(Z_Malloc(MAX_MSGLEN, TAG_TEMP_WORKSPACE, qfalse));
+	if (data == nullptr)
+	{
+		Com_Printf("CL_WritePacket: Failed to allocate packet buffer\n");
+		return;
+	}
 
-	// write any unacknowledged clientCommands
-	for (i = clc.reliableAcknowledge + 1; i <= clc.reliableSequence; i++)
+	msg_t buf;
+	MSG_Init(&buf, data, MAX_MSGLEN);
+
+	// ---------------------------------------------------------
+	// Write any unacknowledged reliable commands
+	// ---------------------------------------------------------
+	for (int i = clc.reliableAcknowledge + 1; i <= clc.reliableSequence; i++)
 	{
 		MSG_WriteByte(&buf, clc_clientCommand);
 		MSG_WriteLong(&buf, i);
-		MSG_WriteString(&buf, clc.reliableCommands[i & MAX_RELIABLE_COMMANDS - 1]);
+
+		const int index = (i & (MAX_RELIABLE_COMMANDS - 1));
+		MSG_WriteString(&buf, clc.reliableCommands[index]);
 	}
 
-	// we want to send all the usercmds that were generated in the last
-	// few packet, so even if a couple packets are dropped in a row,
-	// all the cmds will make it to the server
+	// ---------------------------------------------------------
+	// Determine how many usercmds to send
+	// ---------------------------------------------------------
 	if (cl_packetdup->integer < 0)
 	{
 		Cvar_Set("cl_packetdup", "0");
@@ -1014,69 +1026,83 @@ void CL_WritePacket()
 	{
 		Cvar_Set("cl_packetdup", "5");
 	}
-	const int oldPacketNum = clc.netchan.outgoingSequence - 1 - cl_packetdup->integer & PACKET_MASK;
+
+	const int oldPacketNum =
+		(clc.netchan.outgoingSequence - 1 - cl_packetdup->integer) & PACKET_MASK;
+
 	int count = cl.cmdNumber - cl.packetCmdNumber[oldPacketNum];
+
 	if (count > MAX_PACKET_USERCMDS)
 	{
 		count = MAX_PACKET_USERCMDS;
 		Com_Printf("MAX_PACKET_USERCMDS\n");
 	}
+
+	// ---------------------------------------------------------
+	// Write usercmds
+	// ---------------------------------------------------------
 	if (count >= 1)
 	{
-		// begin a client move command
 		MSG_WriteByte(&buf, clc_move);
 
-		// write the last reliable message we received
+		// Last reliable message received
 		MSG_WriteLong(&buf, clc.serverCommandSequence);
 
-		// write the current serverId so the server
-		// can tell if this is from the current gameState
+		// Current serverId
 		MSG_WriteLong(&buf, cl.serverId);
 
-		// write the current time
+		// Current time
 		MSG_WriteLong(&buf, cls.realtime);
 
-		// let the server know what the last messagenum we
-		// got was, so the next message can be delta compressed
-		// FIXME: this could just be a bit flag, with the message implicit
-		// from the unreliable ack of the netchan
-		if (cl_nodelta->integer || !cl.frame.valid)
+		// Delta compression reference
+		if (cl_nodelta->integer != 0 || cl.frame.valid == qfalse)
 		{
-			MSG_WriteLong(&buf, -1); // no compression
+			MSG_WriteLong(&buf, -1);
 		}
 		else
 		{
 			MSG_WriteLong(&buf, cl.frame.messageNum);
 		}
 
-		// write the cmdNumber so the server can determine which ones it
-		// has already received
+		// Current cmdNumber
 		MSG_WriteLong(&buf, cl.cmdNumber);
 
-		// write the command count
+		// Number of commands
 		MSG_WriteByte(&buf, count);
 
-		// write all the commands, including the predicted command
-		memset(&nullcmd, 0, sizeof nullcmd);
+		// Write commands
+		usercmd_t nullcmd;
+		Com_Memset(&nullcmd, 0, sizeof(nullcmd));
+
 		const usercmd_t* oldcmd = &nullcmd;
-		for (i = 0; i < count; i++)
+
+		for (int i = 0; i < count; i++)
 		{
-			const int j = cl.cmdNumber - count + i + 1 & CMD_MASK;
+			const int j = (cl.cmdNumber - count + i + 1) & CMD_MASK;
 			usercmd_t* cmd = &cl.cmds[j];
+
 			MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
 			oldcmd = cmd;
 		}
 	}
 
-	//
-	// deliver the message
-	//
+	// ---------------------------------------------------------
+	// Transmit packet
+	// ---------------------------------------------------------
 	const int packetNum = clc.netchan.outgoingSequence & PACKET_MASK;
+
 	cl.packetTime[packetNum] = cls.realtime;
 	cl.packetCmdNumber[packetNum] = cl.cmdNumber;
 	clc.lastPacketSentTime = cls.realtime;
+
 	Netchan_Transmit(&clc.netchan, buf.cursize, buf.data);
+
+	// ---------------------------------------------------------
+	// Free heap buffer
+	// ---------------------------------------------------------
+	Z_Free(data);
 }
+
 
 /*
 =================

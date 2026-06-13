@@ -1636,7 +1636,7 @@ ClearRegisteredItems
 ==============
 */
 
-extern void player_cache_from_prev_level(); //g_client.cpp
+extern void Player_CacheFromPrevLevel(); //g_client.cpp
 void clear_registered_items()
 {
 	for (int i = 0; i < bg_numItems; i++)
@@ -1679,7 +1679,7 @@ void clear_registered_items()
 		RegisterItem(FindItemForInventory(INV_BARRIER));
 	}
 
-	player_cache_from_prev_level(); //reads from transition carry-over;
+	Player_CacheFromPrevLevel(); //reads from transition carry-over;
 }
 
 /*
